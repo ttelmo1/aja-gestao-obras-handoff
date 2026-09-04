@@ -19,7 +19,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 0.1 | Ambiente de desenvolvimento (PostgreSQL local) | — | ✅ | — |
 | 0.2 | Identidade visual herdada do mockup | — | ✅ | — |
 | 1 | Auth + RBAC | 12h | ✅ | 0 |
-| 2 | Cadastros base (contratante, responsável, setor) | ~3h | ⬜ | 1 |
+| 2 | Cadastros base (contratante, responsável, setor) | ~3h | ✅ | 1 |
 | 3 | Auditoria — camada de gravação | ~3h | 🔵 | 0 |
 | 4 | CRUD de obras + dashboard/filtros | 15h | ⬜ | 2, 3 |
 | 5 | Medições + cálculos financeiros | 18h | ⬜ | 4 |
@@ -258,10 +258,68 @@ que o navegador usa quando o script ainda não carregou.
   logada — hoje passa pelo fluxo de redefinição. Entra na etapa 12 se o
   cliente sentir falta.
 
-## Etapa 2 — Cadastros base ⬜
+## Etapa 2 — Cadastros base ✅
 
-**Escopo:** contratante, responsável e setor — CRUD simples, sem regra de
-negócio própria. Servem de dependência para o cadastro de obras.
+Concluída em 04/09/2026.
 
-**Pré-requisito já resolvido:** guarda de permissão pronta em `lib/guarda.ts`;
-as telas de cadastro seguem o mesmo padrão de `usuarios/`.
+**Entregue:**
+
+- CRUD de **contratantes**, **responsáveis técnicos** e **setores**, sob
+  `/cadastros` com abas.
+- Validação de CNPJ com dígito verificador, em `modules/cadastros/cnpj.ts`.
+- Exclusão com trava de vínculo e desativação como alternativa.
+- Auditoria em criação, alteração (só os campos que mudaram) e exclusão.
+- Componentes de tabela reaproveitáveis (`components/ui/tabela.tsx`).
+- Testes: **58 passando** (12 novos, todos de CNPJ).
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **CNPJ alfanumérico.** Desde julho de 2026 o CNPJ admite letras nos 12
+   primeiros caracteres (Nota Técnica Cofis/SERPRO 2024.001) — e obras
+   públicas envolvem justamente órgãos com inscrições novas. O validador usa
+   o cálculo alfanumérico, que trata número como caso particular: cada
+   caractere entra como ASCII−48, o que devolve o próprio valor para dígitos.
+   Um validador só numérico começaria a recusar CNPJ legítimo este ano.
+2. **Uma ação para criar e outra para editar seria duas.** `salvar` decide
+   pelo `id` no formulário. Os campos e as validações são os mesmos; separar
+   só criaria a chance de divergirem.
+3. **Ações dos três cadastros num arquivo só.** O que muda entre eles é o
+   schema de campos; permissão, auditoria e revalidação são idênticas.
+   Triplicar isso triplicaria o lugar onde esquecer de auditar.
+4. **Erro de índice único traduzido.** `P2002` vira "Já existe um contratante
+   com esse CNPJ", não "Unique constraint failed". O campo culpado aparece ora
+   em `meta.target`, ora em `meta.constraint`, dependendo do adaptador — por
+   isso a busca é no `meta` inteiro.
+5. **Excluir só o que ninguém referencia.** Cadastro em uso não é apagado: a
+   tela explica quantos registros dependem dele e oferece desativar, que o
+   tira das listas de seleção sem reescrever histórico de contrato.
+6. **Responsável técnico não é usuário do sistema.** Cadastros separados, como
+   manda o requisito 1.2 — o engenheiro responsável por uma obra não precisa
+   de login, e quem tem login não é responsável por nada por isso.
+
+**Verificado com o servidor de pé:**
+
+| Verificação | Resultado |
+|---|---|
+| CNPJ com dígito errado | ✅ recusado antes de tocar o banco |
+| CNPJ alfanumérico (`12ABC34501DE35`) | ✅ aceito e mascarado |
+| CNPJ repetido | ✅ "Já existe um contratante com esse CNPJ" |
+| Setor com nome repetido | ✅ mensagem própria |
+| Editar alterando um campo | ✅ salvo; auditoria guarda só o campo mudado |
+| Salvar sem mudar nada | ✅ "Nada mudou", sem gravar auditoria |
+| Excluir cadastro sem vínculo | ✅ apagado e auditado |
+| Visualizador em `/cadastros` | ✅ vê a lista; botões somem; URL direta barrada |
+
+**Pendências conhecidas:**
+
+- Sem paginação nas listas. Contratantes e setores são dezenas, não milhares;
+  se o cliente trouxer volume maior, entra na etapa 12.
+- Telefone e registro profissional são texto livre, sem máscara. Formato varia
+  (CREA, CAU, ramal, celular) e máscara errada atrapalha mais que ajuda.
+
+## Etapa 3 — Auditoria (gravação) 🔵
+
+A camada existe desde a etapa 0 e já grava em login, logout, usuários e
+cadastros. Segue 🔵 porque cada módulo novo precisa chamá-la; fecha quando a
+tramitação e as medições estiverem instrumentadas. As telas de consulta são a
+etapa 10.

@@ -182,6 +182,9 @@ o número, ou medição fora de ordem?
   registro fica para a auditoria.
 - **Obras, medições, etapas:** exclusão física, em cascata.
 - **Auditoria:** nunca. Trigger no banco bloqueia UPDATE e DELETE.
+- **Contratantes, responsáveis e setores:** exclusão física só quando ninguém
+  os referencia. Em uso, o sistema recusa e oferece desativar — some das
+  listas de seleção sem reescrever o histórico de contratos já assinados.
 
 **Perguntar:** apagar uma obra deve mesmo levar junto medições, documentos e
 tramitação? Ou obra encerrada por engano deveria ser "arquivada" e

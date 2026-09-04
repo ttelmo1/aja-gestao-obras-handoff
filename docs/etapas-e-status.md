@@ -163,6 +163,25 @@ tela desconhecida. Então a identidade vem de lá:
 ordem do mockup: Resumo · Contrato · Medições · Rerratificações · Documentos ·
 Histórico.
 
+**Cada tela do mockup tem etapa dona.** Levantado para nada do que o cliente
+já viu ficar sem endereço no plano:
+
+| Tela / bloco do mockup | Etapa |
+|---|---|
+| Painel de obras: filtros, 5 KPIs, cards com farol e barra de progresso | 4 |
+| Cabeçalho da obra com status e as 6 abas | 4 |
+| Aba Resumo: indicadores da obra, informações gerais | 4 |
+| Aba Contrato: dados contratuais e anexos | 4 (anexos na 7) |
+| Aba Medições: tabela, faixa financeira, medição em detalhe | 5 |
+| Tramitação do processo: fluxo em passos com estado por etapa | 6 |
+| Central de Documentos da Obra: upload, chips por tipo | 7 |
+| Aba Rerratificações | 8 |
+| Aba Histórico: linha do tempo com marcadores dourados | 10 |
+
+O mockup **não tem** tela de login nem de usuários — ele começa já
+autenticado. As telas da etapa 1 não tinham referência visual e seguiram a
+mesma paleta.
+
 ## Etapa 1 — Auth + RBAC ✅
 
 Concluída em 04/09/2026.

@@ -44,11 +44,28 @@ Declarado em aberto nos próprios requisitos (seção 3).
 Mais: obra paralisada é sempre 🔴; finalizada é 🟢; sem ordem de início fica
 ⚪ cinza (sem dados), não verde.
 
-**Perguntar:** os limites fazem sentido na prática do cliente? Faltou algum
-critério — por exemplo, medição atrasada ou garantia vencendo?
+**O mockup sugere outra coisa, e isso importa.** Os três faróis de
+`docs/raw/mockup.html` são legendados *"Próxima medição dentro do prazo"*,
+*"Medição próxima"* e *"Medição vencida"* — ali o farol mede **prazo de
+medição**, um critério só, e não a saúde geral da obra. Pode ser que o
+cliente espere algo bem mais simples do que os três critérios que assumimos.
 
-**Custo de mudar:** baixo. Números isolados em `LIMITES_PROVISORIOS`.
-**Onde:** `src/modules/farol/regras.ts`.
+O mockup também usa **verde, laranja e vermelho**; nosso enum tem verde,
+amarelo, vermelho e cinza. Adotamos o amarelo e deixamos o laranja como token
+disponível, caso sejam quatro faixas.
+
+**Perguntar — nesta ordem:**
+
+1. O farol é sobre **prazo de medição** (como no mockup) ou sobre a obra
+   inteira (como assumimos)? Esta pergunta vem antes das outras.
+2. Se for sobre a obra: os limites da tabela acima fazem sentido na prática?
+3. Faltou algum critério — garantia vencendo, por exemplo?
+4. São três faixas ou quatro?
+
+**Custo de mudar:** baixo enquanto for número — estão isolados em
+`LIMITES_PROVISORIOS`. Se o farol virar "prazo de medição", o motor fica
+**mais simples** do que é hoje, não mais complexo: é apagar critério.
+**Onde:** `src/modules/farol/regras.ts` e `src/components/ui/badge-farol.tsx`.
 
 ## 2. Upload de arquivos de engenharia (DWG/RVT) 🔴
 
@@ -219,6 +236,10 @@ móveis" e "um único processo Node, sem serviços extras".
 - Quem administra a máquina, e essa pessoa tem experiência com o quê?
 - Existe rotina de backup? O que ela cobre hoje?
 - O servidor reinicia sozinho após queda de energia, e os serviços sobem junto?
+- **O sistema vai atender em HTTP ou HTTPS?** Muda uma variável de ambiente
+  (`COOKIE_SEGURO`) e não é detalhe estético: com a flag `Secure` ligada em
+  servidor HTTP o navegador descarta o cookie de sessão e **ninguém consegue
+  entrar**, sem erro em log nenhum. Fica `false` até haver certificado.
 
 **Por que Docker provavelmente não é a resposta aqui**, apesar de ser o padrão
 de mercado: não há manutenção inclusa após o aceite, então quem estiver no

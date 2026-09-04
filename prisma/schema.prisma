@@ -90,7 +90,8 @@ model Responsavel {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  obras Obra[]
+  obras    Obra[]
+  medicoes Medicao[]
 
   @@index([ativo])
 }
@@ -153,6 +154,15 @@ enum Farol {
   CINZA
 }
 
+/// Ritmo esperado das medições (mockup, aba Contrato). Define quando a
+/// próxima medição vence e alimenta o indicador "medições atrasadas".
+enum PeriodicidadeMedicao {
+  MENSAL
+  QUINZENAL
+  SEMANAL
+  PERSONALIZADA
+}
+
 model Obra {
   id             String  @id @default(uuid())
   codigo         String  @unique // identificador interno
@@ -177,6 +187,10 @@ model Obra {
   dataTerminoReal     DateTime?
 
   status StatusObra @default(PLANEJAMENTO)
+
+  periodicidadeMedicao PeriodicidadeMedicao @default(MENSAL)
+  /// Intervalo em dias — só usado quando a periodicidade é PERSONALIZADA.
+  intervaloMedicaoDias Int?
 
   /// Cache do farol. Fonte da verdade é modules/farol/regras.ts.
   farol            Farol     @default(CINZA)
@@ -224,6 +238,9 @@ model Medicao {
   competencia   DateTime // mês de referência
   periodoInicio DateTime?
   periodoFim    DateTime?
+  /// Data do boletim de medição — o "DATA DA MEDIÇÃO" do mockup. Distinta da
+  /// competência (mês) e do protocolo (quando entrou no órgão).
+  dataMedicao   DateTime?
 
   valorMedido         Decimal @db.Decimal(15, 2)
   /// Avanço físico acumulado da obra, informado pelo usuário (não calculável).
@@ -237,6 +254,10 @@ model Medicao {
   notaFiscalValor  Decimal?  @db.Decimal(15, 2)
   issAliquota      Decimal?  @db.Decimal(5, 2)
   issValor         Decimal?  @db.Decimal(15, 2)
+
+  /// Responsável da AJA por esta medição (mockup: "RESPONSÁVEL AJA").
+  responsavelId String?
+  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
 
   status        StatusMedicao @default(RASCUNHO)
   dataPagamento DateTime?

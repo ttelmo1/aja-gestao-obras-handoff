@@ -138,6 +138,8 @@ describe("resumo da obra", () => {
     valorAditivado: "0",
     dataOrdemInicio: d("2026-03-10"),
     dataPrevistaTermino: d("2026-12-31"),
+    periodicidadeMedicao: "MENSAL" as const,
+    intervaloMedicaoDias: null,
   };
 
   it("sem medição, não inventa avanço físico nem acusa atraso de execução", () => {
@@ -194,6 +196,8 @@ describe("totais do painel", () => {
         valorAditivado: "0",
         dataOrdemInicio: d("2026-01-01"),
         dataPrevistaTermino: d("2026-12-31"),
+        periodicidadeMedicao: "MENSAL" as const,
+        intervaloMedicaoDias: null,
       },
       medido === "0"
         ? []

@@ -26,6 +26,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 10 | Conteúdo dos relatórios | 🔴 | Médio |
 | 11 | Forma de instalação no servidor | 🔴 | Médio |
 | 12 | Recuperação de senha sem servidor de e-mail | 🟡 | Baixo |
+| 13 | Periodicidade da medição e o que conta como atrasada | 🟡 | Baixo |
 
 ---
 
@@ -65,6 +66,13 @@ disponível, caso sejam quatro faixas.
 **Custo de mudar:** baixo enquanto for número — estão isolados em
 `LIMITES_PROVISORIOS`. Se o farol virar "prazo de medição", o motor fica
 **mais simples** do que é hoje, não mais complexo: é apagar critério.
+
+**Atualização (etapa 5):** o dado que a leitura do mockup exige já existe.
+`modules/medicoes/periodicidade.ts` calcula quando a próxima medição vence e
+se ela está atrasada, e o painel já mostra isso em cada cartão e no indicador
+"Medições atrasadas". Se o cliente confirmar que o farol é sobre prazo de
+medição, virar a chave é ligar esse resultado ao motor — trabalho de minutos,
+não de reescrita.
 **Onde:** `src/modules/farol/regras.ts` e `src/components/ui/badge-farol.tsx`.
 
 ## 2. Upload de arquivos de engenharia (DWG/RVT) 🔴
@@ -140,6 +148,11 @@ acumulado (não incremento). O sistema calcula sozinho tudo o que é financeiro:
 medição, cronograma físico-financeiro? Ou o cliente esperava que fosse igual
 ao percentual financeiro?
 
+**Atualização (etapa 5):** o campo está no formulário de medição, obrigatório
+e rotulado "Avanço físico acumulado (%)", com a dica de que é o acumulado da
+obra e não o do mês. É o único número da medição que o sistema não calcula —
+convém confirmar na reunião que quem lança sabe disso.
+
 **Custo de mudar:** médio. Se vier de cronograma físico-financeiro, é
 estrutura nova (itens e cronograma), fora do orçado.
 **Onde:** `src/modules/medicoes/calculos.ts`, `prisma/schema.prisma`.
@@ -171,6 +184,11 @@ banco, atribuída pelo sistema.
 (por exemplo `MED-2026/001`)? Pode haver medição retificadora reaproveitando
 o número, ou medição fora de ordem?
 
+**Decidido na etapa 5:** o número é sugerido pelo sistema (maior já usado
+mais um, não a contagem — número que já circulou em protocolo não se repete)
+mas **continua editável**, porque contrato que começou fora do sistema tem
+medição anterior à instalação.
+
 **Custo de mudar:** médio — a restrição de unicidade está no banco.
 **Onde:** `prisma/schema.prisma`, `@@unique([obraId, numero])`.
 
@@ -180,7 +198,9 @@ o número, ou medição fora de ordem?
 
 - **Documentos:** exclusão lógica (`excluidoEm`). O arquivo some da tela, o
   registro fica para a auditoria.
-- **Obras, medições, etapas:** exclusão física, em cascata.
+- **Obras, medições, etapas:** exclusão física, em cascata. **Refinado na
+  etapa 5:** só medição em *Rascunho* é apagável; a partir de *Protocolada*
+  existe processo no órgão e a saída é marcá-la como *Rejeitada*.
 - **Auditoria:** nunca. Trigger no banco bloqueia UPDATE e DELETE.
 - **Contratantes, responsáveis e setores:** exclusão física só quando ninguém
   os referencia. Em uso, o sistema recusa e oferece desativar — some das
@@ -201,8 +221,14 @@ Os requisitos citam só nota fiscal e ISS.
 **Assumimos** apenas ISS (alíquota e valor por medição). Sem INSS, IRRF,
 retenção de garantia ou glosa.
 
+**Implementado na etapa 5:** alíquota e valor do ISS por medição. O valor
+digitado vence o calculado — a guia de recolhimento tem arredondamento
+próprio, e o que vale é o papel; o cálculo (alíquota sobre o valor da nota)
+só entra quando o campo fica em branco.
+
 **Perguntar:** a medição sofre outras retenções? O cliente precisa do valor
-líquido a receber, ou o bruto medido basta?
+líquido a receber, ou o bruto medido basta? A tela de medição hoje mostra
+só o bruto — se houver retenções, esta é a coluna que falta no histórico.
 
 **Custo de mudar:** médio — campos novos em `Medicao` e ajuste nos cálculos e
 relatórios.
@@ -288,6 +314,46 @@ dela — nem o administrador, nem o desenvolvedor.
 administrador é uma tela; ligar envio de e-mail é uma biblioteca e as
 credenciais do servidor SMTP — mas envio de e-mail não está no orçamento.
 **Onde:** `src/app/(app)/usuarios/acoes.ts` e `src/app/(auth)/acoes.ts`.
+
+---
+
+## 13. Periodicidade da medição e o que conta como atrasada 🟡
+
+O mockup traz, na aba Contrato, um campo **"Periodicidade da medição"** com
+as opções Mensal, Quinzenal, Semanal e Personalizado — e, no painel, o
+indicador **"Medições atrasadas"** e os campos "Última medição" e "Próxima
+medição" em cada cartão. Nenhum dos três é calculável sem essa periodicidade,
+então ela virou campo da obra na etapa 5.
+
+**Assumimos:**
+
+- **Padrão mensal**, porque é a opção que o mockup mostra selecionada e a
+  praxe em medição de contrato público.
+- Mensal = **30 dias corridos**, quinzenal = 15, semanal = 7. Não é "mesmo
+  dia do mês seguinte": 30 dias corridos é mais simples de explicar e não
+  produz o problema do dia 31.
+- O ciclo conta **da data da última medição**; sem nenhuma medição, conta da
+  ordem de início.
+- Obra **finalizada, cancelada, paralisada ou sem ordem de início** não tem
+  medição atrasada — a pendência ali é outra, e o farol já a sinaliza pelo
+  status.
+
+**Perguntar:**
+
+1. A periodicidade é a mesma para todos os contratos, ou varia por órgão?
+   Se for sempre mensal, o campo pode sumir da tela.
+2. O prazo conta da última medição feita, ou de uma data fixa do contrato
+   (por exemplo, todo dia 30)?
+3. Existe carência entre a ordem de início e a primeira medição? Hoje o
+   sistema já cobra a primeira medição um período depois da ordem de início.
+4. "Medição atrasada" é sobre **fazer** a medição, ou sobre o **processo dela
+   estar parado** no órgão? São coisas diferentes, e a segunda depende da
+   tramitação (etapa 6).
+
+**Custo de mudar:** baixo. Tudo está em `modules/medicoes/periodicidade.ts`,
+sem persistir nada calculado — mudar a regra é mudar a função.
+**Onde:** `src/modules/medicoes/periodicidade.ts`, campo
+`periodicidadeMedicao` em `prisma/schema.prisma`.
 
 ---
 

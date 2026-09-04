@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
-import type { StatusObra } from "@/generated/prisma/enums";
+import type { PeriodicidadeMedicao, StatusObra } from "@/generated/prisma/enums";
+import {
+  PERIODICIDADES,
+  ROTULOS_PERIODICIDADE,
+} from "@/modules/medicoes/periodicidade";
 import { ROTULOS_STATUS, STATUS_OBRA } from "@/modules/obras/filtros";
 
 import { excluirObra, salvarObra, type EstadoObra } from "./acoes";
@@ -24,6 +28,8 @@ export type ObraNoFormulario = {
   dataPrevistaTermino: string | null;
   dataTerminoReal: string | null;
   status: StatusObra;
+  periodicidadeMedicao: PeriodicidadeMedicao;
+  intervaloMedicaoDias: number | null;
   observacoes: string | null;
 };
 
@@ -235,6 +241,42 @@ export function FormularioObra({
               type="date"
               defaultValue={padrao?.dataTerminoReal ?? ""}
               className={classeInput}
+            />
+          </Campo>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Campo
+            id="periodicidadeMedicao"
+            rotulo="Periodicidade da medição"
+            dica="Define quando a próxima medição vence e alimenta o indicador de medições atrasadas."
+          >
+            <select
+              id="periodicidadeMedicao"
+              name="periodicidadeMedicao"
+              defaultValue={padrao?.periodicidadeMedicao ?? "MENSAL"}
+              className={classeInput}
+            >
+              {PERIODICIDADES.map((p) => (
+                <option key={p} value={p}>
+                  {ROTULOS_PERIODICIDADE[p]}
+                </option>
+              ))}
+            </select>
+          </Campo>
+
+          <Campo
+            id="intervaloMedicaoDias"
+            rotulo="Intervalo (dias)"
+            dica="Obrigatório apenas quando a periodicidade é personalizada."
+          >
+            <input
+              id="intervaloMedicaoDias"
+              name="intervaloMedicaoDias"
+              type="number"
+              min={1}
+              defaultValue={padrao?.intervaloMedicaoDias ?? ""}
+              className={`${classeInput} tabular`}
             />
           </Campo>
         </div>

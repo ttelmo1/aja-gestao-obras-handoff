@@ -1,13 +1,22 @@
 import { Decimal as DecimalCtor } from "decimal.js";
 import type { Decimal } from "decimal.js";
 
-import type { Farol, StatusObra } from "@/generated/prisma/enums";
+import type {
+  Farol,
+  PeriodicidadeMedicao,
+  StatusObra,
+} from "@/generated/prisma/enums";
 import { calcularFarol } from "@/modules/farol/regras";
 import {
+  dataDeReferencia,
   resumoFinanceiro,
   type MedicaoParaCalculo,
   type ResumoFinanceiro,
 } from "@/modules/medicoes/calculos";
+import {
+  proximaMedicao,
+  type SituacaoMedicao,
+} from "@/modules/medicoes/periodicidade";
 
 import { prazoTranscorrido, type Prazo } from "./prazo";
 
@@ -24,11 +33,15 @@ export type ObraParaResumo = {
   valorAditivado: Decimal | string | number;
   dataOrdemInicio: Date | null;
   dataPrevistaTermino: Date | null;
+  periodicidadeMedicao: PeriodicidadeMedicao;
+  intervaloMedicaoDias: number | null;
 };
 
 export type ResumoObra = {
   financeiro: ResumoFinanceiro;
   prazo: Prazo | null;
+  /** Vencimento da próxima medição; `null` quando não há prazo a cobrar. */
+  medicao: SituacaoMedicao | null;
   farol: Farol;
   motivosFarol: string[];
 };
@@ -51,6 +64,22 @@ export function resumoDaObra(
     agora,
   );
 
+  // A lista chega ordenada por competência, mas não custa não depender disso:
+  // o resumo é chamado de lugares diferentes.
+  const ultimaMedicaoEm = medicoes.reduce<Date | null>((maior, m) => {
+    const d = dataDeReferencia(m);
+    return maior === null || d > maior ? d : maior;
+  }, null);
+
+  const medicao = proximaMedicao({
+    status: obra.status,
+    periodicidadeMedicao: obra.periodicidadeMedicao,
+    intervaloMedicaoDias: obra.intervaloMedicaoDias,
+    dataOrdemInicio: obra.dataOrdemInicio,
+    ultimaMedicaoEm,
+    agora,
+  });
+
   const { farol, motivos } = calcularFarol({
     status: obra.status,
     dataOrdemInicio: obra.dataOrdemInicio,
@@ -65,7 +94,7 @@ export function resumoDaObra(
     agora,
   });
 
-  return { financeiro, prazo, farol, motivosFarol: motivos };
+  return { financeiro, prazo, medicao, farol, motivosFarol: motivos };
 }
 
 export type TotaisPainel = {
@@ -74,6 +103,8 @@ export type TotaisPainel = {
   valorContratado: Decimal;
   valorMedido: Decimal;
   saldoAMedir: Decimal;
+  /** Obras cuja próxima medição já venceu — o KPI do mockup. */
+  medicoesAtrasadas: number;
 };
 
 /**
@@ -98,5 +129,6 @@ export function totaisDoPainel(
       zero,
     ),
     saldoAMedir: obras.reduce((s, o) => s.plus(o.resumo.financeiro.saldoAMedir), zero),
+    medicoesAtrasadas: obras.filter((o) => o.resumo.medicao?.atrasada).length,
   };
 }

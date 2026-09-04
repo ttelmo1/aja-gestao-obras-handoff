@@ -25,14 +25,17 @@ export default async function ResumoObraPage({
   const obra = await carregarObra(id);
   if (!obra) notFound();
 
-  const { financeiro, prazo, farol, motivosFarol } = resumoDaObra(obra, obra.medicoes);
+  const { financeiro, prazo, medicao, farol, motivosFarol } = resumoDaObra(
+    obra,
+    obra.medicoes,
+  );
 
   return (
     <div className="flex flex-col gap-4">
       {criada && <Alerta tipo="sucesso">Obra cadastrada.</Alerta>}
 
       <Card titulo="Indicadores da obra">
-        <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Dado rotulo="Prazo transcorrido">
             {prazo ? `${prazo.percentualTranscorrido}%` : "—"}
           </Dado>
@@ -49,6 +52,19 @@ export default async function ResumoObraPage({
             <span className="tabular">{formatarBRL(financeiro.saldoAMedir)}</span>
           </Dado>
           <Dado rotulo="Medições">{financeiro.quantidadeMedicoes}</Dado>
+          <Dado rotulo="Próxima medição">
+            {medicao ? (
+              <span
+                className={medicao.atrasada ? "text-[var(--danger)]" : undefined}
+              >
+                {formatarData(medicao.proxima)}
+                {medicao.atrasada &&
+                  ` · vencida há ${Math.abs(medicao.diasRestantes)} dia(s)`}
+              </span>
+            ) : (
+              "—"
+            )}
+          </Dado>
         </div>
 
         {prazo && (

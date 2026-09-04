@@ -2,7 +2,12 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { Perfil, Esfera, StatusObra } from "../src/generated/prisma/enums";
+import {
+  Perfil,
+  Esfera,
+  StatusMedicao,
+  StatusObra,
+} from "../src/generated/prisma/enums";
 
 /**
  * Seed de provisionamento inicial.
@@ -158,8 +163,37 @@ async function seedDemo() {
     },
   ];
 
+  // Medições de demonstração. `diasAtras` da última define se o ciclo está
+  // vencido: é o que acende o indicador "medições atrasadas" no painel.
+  const medicoesPorObra: Record<
+    string,
+    Array<{ diasAtras: number; valor: string; executado: string; status: StatusMedicao }>
+  > = {
+    // Em dia: última medição há 10 dias, próxima cai daqui a 20.
+    "OBR-DEMO-001": [
+      { diasAtras: 130, valor: "120000.00", executado: "12.00", status: StatusMedicao.PAGA },
+      { diasAtras: 100, valor: "140000.00", executado: "24.00", status: StatusMedicao.PAGA },
+      { diasAtras: 70, valor: "150000.00", executado: "36.00", status: StatusMedicao.PAGA },
+      { diasAtras: 40, valor: "95000.00", executado: "44.00", status: StatusMedicao.APROVADA },
+      { diasAtras: 10, valor: "95000.00", executado: "52.00", status: StatusMedicao.PROTOCOLADA },
+    ],
+    // Ciclo vencido há 10 dias — aparece em "medições atrasadas".
+    "OBR-DEMO-002": [
+      { diasAtras: 100, valor: "90000.00", executado: "20.00", status: StatusMedicao.PAGA },
+      { diasAtras: 70, valor: "110000.00", executado: "42.00", status: StatusMedicao.PAGA },
+      { diasAtras: 40, valor: "100000.00", executado: "60.00", status: StatusMedicao.PROTOCOLADA },
+    ],
+    // Parada faz tempo: ciclo vencido há 90 dias e execução atrás do prazo.
+    "OBR-DEMO-003": [
+      { diasAtras: 200, valor: "80000.00", executado: "25.00", status: StatusMedicao.PAGA },
+      { diasAtras: 160, valor: "60000.00", executado: "40.00", status: StatusMedicao.PAGA },
+      { diasAtras: 120, valor: "40000.00", executado: "48.00", status: StatusMedicao.REJEITADA },
+    ],
+  };
+
+  let totalMedicoes = 0;
   for (const obra of obras) {
-    await prisma.obra.upsert({
+    const registro = await prisma.obra.upsert({
       where: { codigo: obra.codigo },
       update: {},
       create: {
@@ -168,12 +202,46 @@ async function seedDemo() {
         responsavelId: responsavel.id,
       },
     });
+
+    const lancamentos = medicoesPorObra[obra.codigo] ?? [];
+    for (const [i, m] of lancamentos.entries()) {
+      const data = dias(-m.diasAtras);
+      const numero = i + 1;
+      await prisma.medicao.upsert({
+        where: { obraId_numero: { obraId: registro.id, numero } },
+        update: {},
+        create: {
+          obraId: registro.id,
+          numero,
+          competencia: new Date(data.getFullYear(), data.getMonth(), 1, 12),
+          dataMedicao: data,
+          periodoInicio: dias(-m.diasAtras - 29),
+          periodoFim: data,
+          valorMedido: m.valor,
+          percentualExecutado: m.executado,
+          protocolo:
+            m.status === StatusMedicao.RASCUNHO
+              ? null
+              : `${data.getFullYear()}.${String(100000 + numero * 7).slice(1)}`,
+          dataProtocolo: m.status === StatusMedicao.RASCUNHO ? null : dias(-m.diasAtras + 2),
+          notaFiscalNumero: `NF ${1800 + numero}`,
+          notaFiscalValor: m.valor,
+          issAliquota: "5.00",
+          issValor: (Number(m.valor) * 0.05).toFixed(2),
+          responsavelId: responsavel.id,
+          status: m.status,
+          dataPagamento: m.status === StatusMedicao.PAGA ? dias(-m.diasAtras + 30) : null,
+        },
+      });
+      totalMedicoes += 1;
+    }
   }
 
   console.log(
     `  demo: contratante ${contratante.nome}, responsável ${responsavel.nome}`,
   );
   console.log(`  demo: ${obras.length} obras, com faróis diferentes`);
+  console.log(`  demo: ${totalMedicoes} medições, uma obra com ciclo vencido`);
 }
 
 async function main() {

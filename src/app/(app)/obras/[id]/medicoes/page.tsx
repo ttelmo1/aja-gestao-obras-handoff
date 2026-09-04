@@ -1,15 +1,177 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+
+import { BadgeMedicao } from "@/components/ui/badge-medicao";
 import { Card } from "@/components/ui/card";
+import { Dado } from "@/components/ui/dados";
+import { Alerta } from "@/components/ui/formulario";
+import { Celula, Linha, Tabela } from "@/components/ui/tabela";
 import { Vazio } from "@/components/ui/vazio";
+import { formatarCompetencia, formatarData } from "@/lib/date-br";
 import { exigirPermissao } from "@/lib/guarda";
+import { formatarBRL, formatarPercentual } from "@/lib/money";
+import { pode } from "@/modules/auth/permissoes";
+import { resumoDaObra } from "@/modules/obras/resumo";
+
+import { carregarMedicoes, carregarObra } from "../dados";
 
 export const metadata = { title: "Medições" };
+export const dynamic = "force-dynamic";
 
-/** Aba prevista no mockup; o conteúdo chega na etapa 5. */
-export default async function MedicoesPage() {
-  await exigirPermissao("obra", "ver");
+/**
+ * Aba Medições — a faixa de indicadores e a tabela do mockup.
+ *
+ * Nenhum dos quatro números da faixa é coluna no banco: todos saem de
+ * `resumoDaObra`, a mesma função que alimenta o painel. Guardar total medido
+ * numa coluna criaria a chance de a soma da tela discordar da soma da lista
+ * logo abaixo dela.
+ */
+export default async function MedicoesPage({
+  params,
+  searchParams,
+}: PageProps<"/obras/[id]/medicoes">) {
+  const usuario = await exigirPermissao("medicao", "ver");
+  const { id } = await params;
+  const { salva } = await searchParams;
+
+  const [obra, medicoes] = await Promise.all([
+    carregarObra(id),
+    carregarMedicoes(id),
+  ]);
+  if (!obra) notFound();
+
+  const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes);
+  const estourou = financeiro.saldoAMedir.isNegative();
+  const podeEditar = pode(usuario.perfil, "medicao", "editar");
+
   return (
-    <Card titulo="Medições">
-      <Vazio mensagem="As medições da obra entram na etapa 5." />
-    </Card>
+    <div className="flex flex-col gap-4">
+      {salva && <Alerta tipo="sucesso">Medição salva.</Alerta>}
+
+      {estourou && (
+        <Alerta tipo="erro">
+          O total medido passou o valor contratado em{" "}
+          {formatarBRL(financeiro.saldoAMedir.negated())}. Se houve aditivo,
+          registre-o na aba Rerratificações para o contrato atual refletir o
+          novo valor.
+        </Alerta>
+      )}
+
+      <Card
+        titulo="Medições"
+        acao={
+          pode(usuario.perfil, "medicao", "criar") && (
+            <Link
+              href={`/obras/${obra.id}/medicoes/nova`}
+              className="rounded-lg bg-[var(--accent)] px-3.5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[var(--accent-hover)]"
+            >
+              Nova medição
+            </Link>
+          )
+        }
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Dado rotulo="Valor contratado">
+            <span className="tabular">
+              {formatarBRL(financeiro.valorContratadoAtual)}
+            </span>
+          </Dado>
+          <Dado rotulo="Total medido">
+            <span className="tabular">
+              {formatarBRL(financeiro.valorMedidoTotal)}
+            </span>
+          </Dado>
+          <Dado rotulo="% medido">
+            {formatarPercentual(financeiro.percentualMedido)}
+          </Dado>
+          <Dado rotulo="Saldo a medir">
+            <span className="tabular">{formatarBRL(financeiro.saldoAMedir)}</span>
+          </Dado>
+        </div>
+
+        <div className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-3">
+          <Dado rotulo="Última medição">
+            {formatarData(medicao?.ultima)}
+          </Dado>
+          <Dado rotulo="Próxima medição">
+            {medicao ? formatarData(medicao.proxima) : "—"}
+          </Dado>
+          <Dado rotulo="Situação do ciclo">
+            {medicao ? (
+              medicao.atrasada ? (
+                <span className="text-[var(--danger)]">
+                  Vencida há {Math.abs(medicao.diasRestantes)} dia(s)
+                </span>
+              ) : (
+                `Faltam ${medicao.diasRestantes} dia(s)`
+              )
+            ) : (
+              "—"
+            )}
+          </Dado>
+        </div>
+      </Card>
+
+      <Card titulo={`Histórico (${medicoes.length})`}>
+        {medicoes.length === 0 ? (
+          <Vazio mensagem="Nenhuma medição lançada nesta obra." />
+        ) : (
+          <Tabela
+            colunas={[
+              "Nº",
+              "Competência",
+              "Período",
+              "Data",
+              "Valor",
+              "% exec.",
+              "Protocolo",
+              "NF",
+              "ISS",
+              "Responsável",
+              "Situação",
+              "Docs",
+            ]}
+          >
+            {medicoes.map((m) => (
+              <Linha key={m.id}>
+                <Celula>
+                  {podeEditar ? (
+                    <Link
+                      href={`/obras/${obra.id}/medicoes/${m.id}`}
+                      className="font-bold text-[var(--primary)] underline underline-offset-2"
+                    >
+                      {String(m.numero).padStart(2, "0")}
+                    </Link>
+                  ) : (
+                    <strong>{String(m.numero).padStart(2, "0")}</strong>
+                  )}
+                </Celula>
+                <Celula>{formatarCompetencia(m.competencia)}</Celula>
+                <Celula apagada>
+                  {m.periodoInicio && m.periodoFim
+                    ? `${formatarData(m.periodoInicio)} a ${formatarData(m.periodoFim)}`
+                    : "—"}
+                </Celula>
+                <Celula>{formatarData(m.dataMedicao)}</Celula>
+                <Celula tabular>{formatarBRL(m.valorMedido)}</Celula>
+                <Celula tabular>{formatarPercentual(m.percentualExecutado)}</Celula>
+                <Celula apagada>{m.protocolo ?? "—"}</Celula>
+                <Celula apagada>{m.notaFiscalNumero ?? "—"}</Celula>
+                <Celula tabular apagada>
+                  {m.issValor ? formatarBRL(m.issValor) : "—"}
+                </Celula>
+                <Celula apagada>{m.responsavel?.nome ?? "—"}</Celula>
+                <Celula>
+                  <BadgeMedicao status={m.status} />
+                </Celula>
+                <Celula tabular apagada>
+                  {m._count.documentos}
+                </Celula>
+              </Linha>
+            ))}
+          </Tabela>
+        )}
+      </Card>
+    </div>
   );
 }

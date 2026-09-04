@@ -12,7 +12,14 @@ export type MedicaoParaCalculo = {
   valorMedido: Decimal | string | number;
   percentualExecutado: Decimal | string | number;
   competencia: Date;
+  /** Data do boletim; quando ausente, a competência faz as vezes. */
+  dataMedicao?: Date | null;
 };
+
+/** Data que representa a medição na linha do tempo da obra. */
+export function dataDeReferencia(m: MedicaoParaCalculo): Date {
+  return m.dataMedicao ?? m.competencia;
+}
 
 export type ResumoFinanceiro = {
   /** valorContratado + valorAditivado */
@@ -58,4 +65,15 @@ export function calcularIss(
 ): Decimal {
   if (aliquota === null || aliquota === undefined) return new Decimal(0);
   return money(dec(base).times(dec(aliquota)).dividedBy(100));
+}
+
+/**
+ * Próximo número da sequência de medições da obra.
+ *
+ * É o maior número já usado mais um, não a quantidade: se a medição 3 for
+ * excluída, a próxima ainda é a 5 — repetir um número que já circulou em
+ * protocolo no órgão é confusão garantida na hora de conferir.
+ */
+export function proximoNumero(numerosExistentes: number[]): number {
+  return numerosExistentes.reduce((max, n) => Math.max(max, n), 0) + 1;
 }

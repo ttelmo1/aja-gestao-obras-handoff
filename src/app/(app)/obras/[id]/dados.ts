@@ -18,7 +18,12 @@ export const carregarObra = cache(async (id: string) => {
       criadoPor: { select: { nome: true } },
       medicoes: {
         orderBy: { competencia: "asc" },
-        select: { valorMedido: true, percentualExecutado: true, competencia: true },
+        select: {
+          valorMedido: true,
+          percentualExecutado: true,
+          competencia: true,
+          dataMedicao: true,
+        },
       },
       _count: {
         select: {
@@ -41,3 +46,29 @@ export function paraCampoData(d: Date | null): string | null {
     timeZone: "America/Sao_Paulo",
   }).format(d);
 }
+
+/** Competência do banco vira `yyyy-mm` para o campo `<input type="month">`. */
+export function paraCampoMes(d: Date | null): string | null {
+  const iso = paraCampoData(d);
+  return iso ? iso.slice(0, 7) : null;
+}
+
+/**
+ * Carrega as medições da obra com tudo que a aba mostra. Separado de
+ * `carregarObra` porque só esta aba precisa da lista completa — o painel e o
+ * resumo se viram com os quatro campos do cálculo.
+ */
+export const carregarMedicoes = cache(async (obraId: string) => {
+  return prisma.medicao.findMany({
+    where: { obraId },
+    orderBy: [{ numero: "desc" }],
+    include: {
+      responsavel: { select: { id: true, nome: true } },
+      _count: { select: { documentos: true } },
+    },
+  });
+});
+
+export type MedicaoCarregada = Awaited<
+  ReturnType<typeof carregarMedicoes>
+>[number];

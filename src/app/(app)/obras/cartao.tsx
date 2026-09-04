@@ -27,7 +27,7 @@ export type ObraNoPainel = {
 };
 
 export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
-  const { financeiro, prazo, farol, motivosFarol } = obra.resumo;
+  const { financeiro, prazo, medicao, farol, motivosFarol } = obra.resumo;
 
   return (
     <Link
@@ -60,6 +60,17 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
         <Dado rotulo="Início">{formatarData(obra.dataOrdemInicio) || "—"}</Dado>
         <Dado rotulo="Término previsto">
           {formatarData(obra.dataPrevistaTermino) || "—"}
+        </Dado>
+        <Dado rotulo="Última medição">{formatarData(medicao?.ultima)}</Dado>
+        <Dado rotulo="Próxima medição">
+          {medicao ? (
+            <span className={medicao.atrasada ? "text-[var(--danger)]" : undefined}>
+              {formatarData(medicao.proxima)}
+              {medicao.atrasada && " · vencida"}
+            </span>
+          ) : (
+            "—"
+          )}
         </Dado>
       </Dados>
 

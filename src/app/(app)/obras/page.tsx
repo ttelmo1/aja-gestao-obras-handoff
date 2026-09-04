@@ -48,10 +48,17 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
         valorAditivado: true,
         dataOrdemInicio: true,
         dataPrevistaTermino: true,
+        periodicidadeMedicao: true,
+        intervaloMedicaoDias: true,
         contratante: { select: { nome: true } },
         responsavel: { select: { nome: true } },
         medicoes: {
-          select: { valorMedido: true, percentualExecutado: true, competencia: true },
+          select: {
+            valorMedido: true,
+            percentualExecutado: true,
+            competencia: true,
+            dataMedicao: true,
+          },
         },
       },
     }),
@@ -101,7 +108,7 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
         contratantes={contratantes}
       />
 
-      <div className="mb-5 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="mb-5 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <Indicador
           rotulo="Obras no filtro"
           valor={String(totais.quantidade)}
@@ -113,6 +120,11 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
         />
         <Indicador rotulo="Valor medido" valor={formatarBRL(totais.valorMedido)} />
         <Indicador rotulo="Saldo a medir" valor={formatarBRL(totais.saldoAMedir)} />
+        <Indicador
+          rotulo="Medições atrasadas"
+          valor={String(totais.medicoesAtrasadas)}
+          detalhe="Ciclo de medição vencido"
+        />
         <Indicador
           rotulo="Processos parados"
           valor="—"

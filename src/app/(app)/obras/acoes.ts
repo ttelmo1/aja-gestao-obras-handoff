@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { StatusObra } from "@/generated/prisma/enums";
+import { PeriodicidadeMedicao, StatusObra } from "@/generated/prisma/enums";
+import { dataOpcional, dinheiro, inteiroOpcional, textoOpcional } from "@/lib/campos";
 import { autorizar } from "@/lib/guarda";
 import { dec } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
@@ -14,33 +15,6 @@ import { proximoCodigo } from "@/modules/obras/codigo";
 import { terminoPrevisto } from "@/modules/obras/prazo";
 
 export type EstadoObra = { erro?: string; sucesso?: string } | undefined;
-
-/** Campo de data do formulário: `""` vira `null`, e a data é lida ao meio-dia. */
-const dataOpcional = z
-  .string()
-  .trim()
-  .transform((v) => {
-    if (v === "") return null;
-    // Meio-dia local evita o clássico "a data voltou um dia": `new Date("2026-03-10")`
-    // é meia-noite UTC, que em Brasília ainda é 09/03.
-    const d = new Date(`${v}T12:00:00`);
-    return Number.isNaN(d.getTime()) ? null : d;
-  })
-  .nullable();
-
-/** Valor monetário digitado em pt-BR ("1.200.000,00") ou cru ("1200000.00"). */
-const dinheiro = z
-  .string()
-  .trim()
-  .transform((v) => (v === "" ? "0" : v.replace(/\./g, "").replace(",", ".")))
-  .refine((v) => /^-?\d+(\.\d{1,2})?$/.test(v), "Valor inválido.")
-  .transform((v) => dec(v).toFixed(2));
-
-const textoOpcional = z
-  .string()
-  .trim()
-  .transform((v) => (v === "" ? null : v))
-  .nullable();
 
 const obraSchema = z
   .object({
@@ -53,17 +27,12 @@ const obraSchema = z
     valorContratado: dinheiro,
     dataAssinatura: dataOpcional,
     dataOrdemInicio: dataOpcional,
-    prazoDias: z
-      .string()
-      .trim()
-      .transform((v) => (v === "" ? null : Number(v)))
-      .refine(
-        (v) => v === null || (Number.isInteger(v) && v > 0),
-        "Prazo deve ser um número de dias maior que zero.",
-      ),
+    prazoDias: inteiroOpcional,
     dataPrevistaTermino: dataOpcional,
     dataTerminoReal: dataOpcional,
     status: z.enum(StatusObra),
+    periodicidadeMedicao: z.enum(PeriodicidadeMedicao),
+    intervaloMedicaoDias: inteiroOpcional,
     observacoes: textoOpcional,
   })
   .refine(
@@ -72,7 +41,16 @@ const obraSchema = z
   )
   .refine((o) => dec(o.valorContratado).gt(0), {
     message: "O valor contratado precisa ser maior que zero.",
-  });
+  })
+  .refine(
+    (o) =>
+      o.periodicidadeMedicao !== PeriodicidadeMedicao.PERSONALIZADA ||
+      o.intervaloMedicaoDias !== null,
+    {
+      message:
+        "Periodicidade personalizada exige o intervalo em dias — sem ele o sistema não sabe quando a próxima medição vence.",
+    },
+  );
 
 function lerFormulario(formData: FormData) {
   const campos = [
@@ -89,6 +67,8 @@ function lerFormulario(formData: FormData) {
     "dataPrevistaTermino",
     "dataTerminoReal",
     "status",
+    "periodicidadeMedicao",
+    "intervaloMedicaoDias",
     "observacoes",
   ];
   const bruto: Record<string, unknown> = {};

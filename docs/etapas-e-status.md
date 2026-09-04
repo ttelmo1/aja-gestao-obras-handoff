@@ -22,7 +22,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 2 | Cadastros base (contratante, responsável, setor) | ~3h | ✅ | 1 |
 | 3 | Auditoria — camada de gravação | ~3h | 🔵 | 0 |
 | 4 | CRUD de obras + dashboard/filtros | 15h | ✅ | 2, 3 |
-| 5 | Medições + cálculos financeiros | 18h | ⬜ | 4 |
+| 5 | Medições + cálculos financeiros | 18h | ✅ | 4 |
 | 6 | Tramitação (fluxo fixo) | 30h | ⬜ | 4 |
 | 7 | Gestão documental | 24h | ⬜ | 4, 5, 6 |
 | 8 | Rerratificações | 8h | ⬜ | 7 |
@@ -404,10 +404,91 @@ Concluída em 04/09/2026.
 - `valorAditivado` existe no schema e entra na conta, mas só é alimentado
   pelas rerratificações (etapa 8). Hoje é sempre zero.
 
-## Etapa 5 — Medições ⬜
+## Etapa 5 — Medições ✅
 
-**Escopo:** lançamento de medições com competência, valor, percentual
-executado, nota fiscal e ISS; cálculo de acumulados. Preenche a aba Medições.
+Concluída em 04/09/2026.
 
-**Pré-requisito já resolvido:** `modules/medicoes/calculos.ts` está pronto e
-testado desde a etapa 0, e o painel já consome os agregados.
+**Entregue:**
+
+- **Aba Medições** na estrutura do mockup: faixa com valor contratado, total
+  medido, % medido e saldo a medir, seguida do histórico em tabela com as
+  doze colunas do mockup.
+- Lançamento, edição e exclusão de medição, com competência, período, valor,
+  avanço físico, protocolo, nota fiscal, ISS, responsável e situação.
+- **ISS calculado quando não é digitado**, pela alíquota sobre o valor da
+  nota (ou da medição, se a nota ainda não saiu).
+- **Ciclo de medição**: periodicidade na obra (mensal, quinzenal, semanal ou
+  personalizada) e cálculo de quando a próxima medição vence.
+- Painel ganhou o indicador **"Medições atrasadas"** e os cartões passaram a
+  mostrar última e próxima medição — os dois campos do mockup que faltavam.
+- Seed `--demo` com 11 medições, uma obra com ciclo vencido.
+- Testes: **102 passando** (21 novos).
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **Periodicidade da medição virou campo da obra.** O mockup pede "Última
+   medição", "Próxima medição" e o indicador "Medições atrasadas", e os
+   requisitos (1.9) pedem esse indicador — nenhum dos três é calculável sem
+   saber de quanto em quanto tempo se mede. O padrão é mensal; é suposição,
+   registrada no ponto #13 de `pontos-para-reuniao.md`.
+2. **O ciclo conta da última medição, ou da ordem de início quando não há
+   nenhuma.** Sem ordem de início, e em obra finalizada, cancelada ou
+   paralisada, não há prazo a cobrar e o sistema devolve "sem dado" em vez de
+   uma data inventada. O mesmo vale para periodicidade personalizada sem
+   intervalo preenchido.
+3. **Nenhum agregado virou coluna.** Total medido, % medido e saldo saem de
+   `resumoDaObra`, a mesma função do painel. Guardar o total numa coluna
+   criaria a chance de a soma da faixa discordar da lista logo abaixo dela.
+4. **O ISS digitado vence o calculado.** A guia de recolhimento tem
+   arredondamento próprio, e o que vale é o papel. O cálculo só entra quando
+   o campo fica vazio e há alíquota.
+5. **Número da medição é o maior já usado mais um, não a contagem.** Se a
+   medição 3 for excluída, a próxima ainda é a 5 — repetir um número que já
+   circulou em protocolo no órgão é confusão garantida na conferência.
+6. **Só medição em rascunho pode ser apagada.** Depois de protocolada existe
+   processo no órgão, e o caminho é marcá-la como *Rejeitada*. Mesma lógica
+   já aplicada à obra na etapa 4.
+7. **Situação exige o que ela implica.** A partir de *Protocolada* o número
+   do protocolo passa a ser obrigatório; *Paga* exige a data do pagamento.
+   Impedir o estado incoerente na entrada sai mais barato que descobrir
+   depois, no relatório.
+8. **Total medido acima do contratado não é bloqueado — é avisado.** O
+   aditivo pode não ter sido registrado ainda, e recusar o lançamento
+   impediria o usuário de anotar o que já aconteceu. A tela mostra o excesso
+   e aponta a aba Rerratificações.
+9. **Validadores de campo saíram para `src/lib/campos.ts`.** Data, dinheiro,
+   percentual e competência eram código embutido nas ações de obra. Na
+   segunda tela com os mesmos campos viraram arquivo: o jeito de ler uma data
+   digitada não pode variar de tela para tela.
+
+**Verificado com o servidor de pé, sem JavaScript:**
+
+| Verificação | Resultado |
+|---|---|
+| Faixa financeira da aba (contratado, medido, %, saldo) | ✅ 260.000 / 180.000 / 69,23% / 80.000 |
+| Histórico com as 12 colunas e ISS de cada medição | ✅ |
+| Protocolada sem protocolo | ✅ recusada |
+| Paga sem data de pagamento | ✅ recusada |
+| Percentual acima de 100, valor zerado, período invertido | ✅ recusados |
+| Número de medição repetido na mesma obra | ✅ recusado |
+| ISS deduzido da alíquota (5% sobre a nota) | ✅ R$ 625,00 |
+| Exclusão de medição em rascunho | ✅ permitida |
+| Exclusão de medição já protocolada | ✅ recusada |
+| Periodicidade personalizada sem intervalo | ✅ recusada |
+| Troca para quinzenal move a próxima medição | ✅ 06/06 → 22/05 |
+| Indicador "Medições atrasadas" no painel | ✅ 2 de 4 obras |
+| Trilha de auditoria da medição | ✅ CRIAR e EXCLUIR registrados |
+
+## Etapa 6 — Tramitação ⬜
+
+**Escopo:** registro de entrada e saída por setor no fluxo fixo dos
+requisitos (1.5), com etapas marcáveis como "não se aplica" e cálculo do
+tempo de permanência. Preenche a aba Tramitação e destrava dois pendentes:
+
+- o indicador **"Processos parados"** do painel, hoje exibindo `—`;
+- o critério **dias parado** do farol, que já existe em
+  `modules/farol/regras.ts` mas recebe `null` de todos os chamadores.
+
+**Pré-requisitos já resolvidos:** enum `TipoEtapa` com as onze etapas na
+ordem, modelo `EtapaObra` e os 7 setores criados pelo seed base.
+

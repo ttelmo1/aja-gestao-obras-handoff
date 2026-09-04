@@ -71,6 +71,8 @@ export default async function ContratoPage({
             dataPrevistaTermino: paraCampoData(obra.dataPrevistaTermino),
             dataTerminoReal: paraCampoData(obra.dataTerminoReal),
             status: obra.status,
+            periodicidadeMedicao: obra.periodicidadeMedicao,
+            intervaloMedicaoDias: obra.intervaloMedicaoDias,
             observacoes: obra.observacoes,
           }}
         />

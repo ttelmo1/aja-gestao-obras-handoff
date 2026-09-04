@@ -17,7 +17,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 |---|---|---|---|---|
 | 0 | Fundação (setup, schema, módulos base) | ~4h | ✅ | — |
 | 0.1 | Ambiente de desenvolvimento (PostgreSQL local) | — | ✅ | — |
-| 1 | Auth + RBAC | 12h | ⬜ | 0 |
+| 1 | Auth + RBAC | 12h | ✅ | 0 |
 | 2 | Cadastros base (contratante, responsável, setor) | ~3h | ⬜ | 1 |
 | 3 | Auditoria — camada de gravação | ~3h | 🔵 | 0 |
 | 4 | CRUD de obras + dashboard/filtros | 15h | ⬜ | 2, 3 |
@@ -128,13 +128,86 @@ servidor do cliente é ponto aberto (ver `pontos-para-reuniao.md`, #11) e não
 precisa ser igual à do desenvolvimento — para o projeto, a diferença é só a
 `DATABASE_URL`.
 
-## Etapa 1 — Auth + RBAC ⬜
+## Etapa 1 — Auth + RBAC ✅
 
-**Escopo:** login, logout, recuperação de senha, CRUD de usuários, aplicação
-da matriz de permissões nas rotas e nas Server Actions.
+Concluída em 04/09/2026.
 
-**A decidir na abertura da etapa:** biblioteca de sessão. Inclinação por
-Auth.js v5 com provider de credenciais — código de autenticação não é lugar
-para implementação própria.
+**Entregue:**
 
-**Pré-requisito já resolvido:** banco de pé e migrations aplicadas.
+- Login, logout e bloqueio por tentativas repetidas.
+- Recuperação de senha mediada pelo administrador (não há servidor de e-mail —
+  ver `pontos-para-reuniao.md`, ponto 12).
+- CRUD de usuários: criar, editar, ativar/desativar, gerar link de senha e
+  encerrar sessões abertas de alguém.
+- Matriz de permissões aplicada nas páginas e nas Server Actions.
+- Trilha de auditoria gravando login, logout e alterações de cadastro.
+- Testes: **46 passando**. `typecheck`, `lint` e `build` limpos.
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **Sessão própria em tabela, não Auth.js.** A etapa foi aberta com inclinação
+   por Auth.js v5, e a inclinação não sobreviveu ao caso concreto. Três
+   motivos: a v5 ainda é beta (`next-auth@5.0.0-beta`), e uma instalação
+   on-premise sem manutenção inclusa não é lugar para depender de API instável;
+   com provider de credenciais a biblioteca não usa o adaptador de banco para
+   sessão, força JWT, e **perderíamos a revogação imediata** — desativar um
+   usuário só teria efeito no vencimento do token; e o que sobra para escrever
+   não é criptografia, é `randomBytes` + bcrypt (que já era dependência) + um
+   cookie. Custo: uma tabela e ~120 linhas em `lib/sessao.ts`. Zero dependência
+   nova além de `server-only`.
+2. **Cookie guarda um token opaco; o banco guarda o HMAC dele.** Vazamento do
+   banco não vira sessão ativa, e revogar é apagar uma linha.
+3. **`COOKIE_SEGURO` desligado por padrão.** A flag `Secure` em servidor HTTP
+   de rede local faz o navegador descartar o cookie — ninguém entra e o erro
+   não aparece em log nenhum. Ligar quando houver HTTPS.
+4. **Senha nunca é definida pelo administrador.** Conta nova nasce com hash
+   impossível e um link de definição de senha. O administrador não conhece a
+   senha de ninguém.
+5. **Troca de perfil e desativação derrubam as sessões abertas na hora.** Sem
+   isso, uma sessão já aberta continuaria carregando a permissão antiga até
+   vencer.
+6. **`proxy.ts` só olha se o cookie existe.** O proxy roda em todo prefetch;
+   consulta ao banco ali multiplicaria carga sem ganhar segurança. A
+   autorização real está em `lib/guarda.ts`, junto dos dados — cookie forjado
+   passa pelo proxy e morre lá.
+7. **Freio de tentativas em memória, não em tabela.** Um processo só numa rede
+   local fechada: não há segundo servidor para sincronizar, e reiniciar o
+   serviço zerar o contador é aceitável.
+8. **`forbidden()`/`unauthorized()` do Next não foram usados.** Ainda exigem a
+   flag experimental `authInterrupts`. Ficou `redirect` para `/sem-permissao`,
+   que explica ao usuário qual é o perfil dele e a quem pedir acesso.
+
+**Verificado com o servidor de pé**, não só por leitura de código:
+
+| Verificação | Resultado |
+|---|---|
+| Rota interna sem cookie | ✅ vai para o login, guardando o destino |
+| Cookie forjado | ✅ passa pelo proxy e é barrado na guarda |
+| Login com senha errada | ✅ mensagem genérica, sem dizer se o e-mail existe |
+| Login correto | ✅ cookie `HttpOnly`, `SameSite=lax`, 12h, sem `Secure` |
+| 5 senhas erradas seguidas | ✅ bloqueia por 5 minutos |
+| Logout | ✅ apaga o cookie e a linha; o mesmo token não volta a valer |
+| Visualizador em `/usuarios` | ✅ link some do menu e a URL direta é barrada |
+| Conta desativada | ✅ a sessão aberta para de valer na requisição seguinte |
+| Auditoria | ✅ login registrado com nome e IP |
+
+O login foi exercitado pelo formulário real, sem JavaScript — o mesmo caminho
+que o navegador usa quando o script ainda não carregou.
+
+**Pendências conhecidas:**
+
+- `senhaSchema` exige 8 caracteres com letra e número. Regra deliberadamente
+  modesta: exigência agressiva empurra usuário não técnico para senha anotada
+  em papel, o que num escritório com acesso físico compartilhado piora a
+  segurança. Confirmar com o cliente se há política interna diferente.
+- Não há tela de "minha conta" para a pessoa trocar a própria senha estando
+  logada — hoje passa pelo fluxo de redefinição. Entra na etapa 12 se o
+  cliente sentir falta.
+
+## Etapa 2 — Cadastros base ⬜
+
+**Escopo:** contratante, responsável e setor — CRUD simples, sem regra de
+negócio própria. Servem de dependência para o cadastro de obras.
+
+**Pré-requisito já resolvido:** guarda de permissão pronta em `lib/guarda.ts`;
+as telas de cadastro seguem o mesmo padrão de `usuarios/`.

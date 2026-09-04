@@ -75,6 +75,11 @@ describe("matriz de permissões", () => {
     assert.equal(pode("VISUALIZADOR", "obra", "ver"), true);
   });
 
+  it("operacional lança medições mas não altera o cadastro da obra", () => {
+    assert.equal(pode("OPERACIONAL", "medicao", "criar"), true);
+    assert.equal(pode("OPERACIONAL", "obra", "editar"), false);
+  });
+
   it("ninguém edita ou apaga a auditoria — nem o administrador", () => {
     assert.equal(pode("ADMINISTRADOR", "auditoria", "editar"), false);
     assert.equal(pode("ADMINISTRADOR", "auditoria", "excluir"), false);

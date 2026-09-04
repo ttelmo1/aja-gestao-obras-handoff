@@ -25,6 +25,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 9 | Retenções além do ISS | 🔴 | Médio |
 | 10 | Conteúdo dos relatórios | 🔴 | Médio |
 | 11 | Forma de instalação no servidor | 🔴 | Médio |
+| 12 | Recuperação de senha sem servidor de e-mail | 🟡 | Baixo |
 
 ---
 
@@ -230,6 +231,39 @@ manter sem suporte.
 **Custo de mudar:** médio, e não afeta o código. É retrabalho de instalação,
 não de desenvolvimento. O ambiente de desenvolvimento não precisa ser igual ao
 de produção: para a aplicação, a diferença é só a `DATABASE_URL`.
+
+## 12. Recuperação de senha sem servidor de e-mail 🟡
+
+Os requisitos pedem "recuperação de senha" (1.1), mas o sistema roda em rede
+local sem internet e **não há servidor de e-mail** — o link de redefinição não
+tem como ser enviado. Isso só aparece na hora de implementar.
+
+**Assumimos** um fluxo mediado pelo administrador, que funciona offline:
+
+1. A pessoa abre *Esqueci minha senha* e registra o pedido.
+2. O pedido aparece marcado na lista de usuários, para o administrador.
+3. O administrador gera um link, válido por 24 horas e de uso único, e entrega
+   à pessoa pelo meio que quiser (pessoalmente, telefone, mensagem).
+4. A pessoa escolhe a própria senha.
+
+Pela mesma lógica, **usuário novo nasce sem senha**: o administrador cria o
+cadastro e entrega um link. Ninguém além da própria pessoa conhece a senha
+dela — nem o administrador, nem o desenvolvedor.
+
+**Perguntar:**
+
+- Existe servidor de e-mail interno ou conta de e-mail que o servidor alcance?
+  Se existir, o envio automático é barato de acrescentar.
+- Copiar e colar um link longo é aceitável para quem vai administrar o
+  sistema? A alternativa é o administrador digitar uma senha provisória —
+  mais simples de comunicar por telefone, e pior, porque cria uma senha que
+  duas pessoas conhecem.
+- Quem será o administrador do sistema no dia a dia?
+
+**Custo de mudar:** baixo. Trocar para senha provisória digitada pelo
+administrador é uma tela; ligar envio de e-mail é uma biblioteca e as
+credenciais do servidor SMTP — mas envio de e-mail não está no orçamento.
+**Onde:** `src/app/(app)/usuarios/acoes.ts` e `src/app/(auth)/acoes.ts`.
 
 ---
 

@@ -13,6 +13,10 @@
   --border: #e2e5ea;
   --primary: #0f4c81;
   --primary-hover: #0d3f6b;
+  --danger: #b42318;
+  --danger-bg: #fef3f2;
+  --success: #067647;
+  --success-bg: #ecfdf3;
 }
 
 @theme inline {
@@ -22,6 +26,8 @@
   --color-muted: var(--muted);
   --color-borda: var(--border);
   --color-primary: var(--primary);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
   --font-sans: var(--font-sans);
 }
 

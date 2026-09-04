@@ -10,6 +10,16 @@ const schema = z.object({
     .string()
     .min(32, "SESSION_SECRET precisa de pelo menos 32 caracteres"),
   STORAGE_DIR: z.string().min(1).default("./storage"),
+  /**
+   * Cookie de sessão com a flag `Secure`. Fica em `false` por padrão porque a
+   * instalação é em rede local, provavelmente sobre HTTP puro — com `Secure`
+   * ligado nesse cenário o navegador descarta o cookie e ninguém consegue
+   * entrar. Ligar assim que houver HTTPS no servidor.
+   */
+  COOKIE_SEGURO: z
+    .enum(["true", "false"])
+    .default("false")
+    .transform((v) => v === "true"),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),

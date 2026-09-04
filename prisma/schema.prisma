@@ -33,6 +33,7 @@ model Usuario {
   atualizadoEm DateTime  @updatedAt
 
   tokensSenha  TokenSenha[]
+  sessoes      Sessao[]
   obrasCriadas Obra[]                @relation("ObraCriadaPor")
   documentos   Documento[]
   movimentos   TramitacaoMovimento[]
@@ -51,6 +52,29 @@ model TokenSenha {
   criadoEm  DateTime  @default(now())
 
   @@index([usuarioId])
+}
+
+/// Sessões de login. Guardadas no banco, e não só num cookie assinado, para
+/// que logout, desativação de usuário e troca de senha encerrem o acesso na
+/// hora — um token autocontido continuaria valendo até expirar.
+model Sessao {
+  id        String  @id @default(uuid())
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  /// Só o hash do token. O valor original existe apenas no cookie do
+  /// navegador: vazamento do banco não vira sessão ativa.
+  tokenHash String @unique
+
+  expiraEm    DateTime
+  ultimoUsoEm DateTime @default(now())
+  criadoEm    DateTime @default(now())
+
+  ip        String?
+  userAgent String?
+
+  @@index([usuarioId])
+  @@index([expiraEm])
 }
 
 /// Equipe da obra — cadastro separado dos usuários do sistema (requisitos.md 1.2).

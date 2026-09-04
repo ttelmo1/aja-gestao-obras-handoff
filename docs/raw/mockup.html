@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AJA | Gestão de Obras</title>
+<style>
+:root{
+  --navy:#17324d;--navy2:#244a6b;--gold:#c79a45;--bg:#f3f6f9;--card:#fff;
+  --text:#273444;--muted:#6f7d8c;--line:#dfe6ec;--green:#2e9b65;
+  --yellow:#d9a820;--orange:#e67e22;--red:#cf3f4d;--blue:#3178c6
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{
+  background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:18px 28px;
+  display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 10px rgba(0,0,0,.15)
+}
+.brand{display:flex;align-items:center;gap:12px}.logo{width:44px;height:44px;border-radius:10px;border:2px solid var(--gold);display:grid;place-items:center;font-weight:700;color:var(--gold)}
+.brand h1{font-size:20px;margin:0}.brand small{opacity:.75}.user{font-size:14px}
+main{max-width:1500px;margin:auto;padding:26px}.topbar{display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin-bottom:22px}
+.topbar h2{margin:0;font-size:26px;color:var(--navy)}.actions{display:flex;gap:10px;flex-wrap:wrap}
+button,.btn{border:none;border-radius:8px;padding:10px 14px;cursor:pointer;font-weight:700;font-size:14px}
+.btn-primary{background:var(--navy);color:#fff}.btn-gold{background:var(--gold);color:#fff}.btn-light{background:#fff;border:1px solid var(--line);color:var(--navy)}
+.filters{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.filters input,.filters select{border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff;min-width:170px}
+.kpis{display:grid;grid-template-columns:repeat(5,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:17px;box-shadow:0 2px 8px rgba(18,38,63,.04)}
+.kpi .label{font-size:13px;color:var(--muted);margin-bottom:7px}.kpi .value{font-size:27px;font-weight:700;color:var(--navy)}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(330px,1fr));gap:16px}
+.obra-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px;cursor:pointer;transition:.18s;position:relative;overflow:hidden}
+.obra-card:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(26,52,78,.12)}.obra-card:before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:var(--navy)}
+.obra-title{font-weight:700;color:var(--navy);font-size:18px;margin-bottom:4px}.obra-sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+.card-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.item-label{font-size:11px;text-transform:uppercase;color:var(--muted);letter-spacing:.4px}.item-value{font-size:14px;font-weight:700;margin-top:3px}
+.farol{display:flex;align-items:center;gap:7px;font-weight:700}.dot{width:12px;height:12px;border-radius:50%}.green{background:var(--green)}.yellow{background:var(--yellow)}.orange{background:var(--orange)}.red{background:var(--red)}
+.progress-wrap{margin-top:12px}.progress-label{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:5px}.progress{height:8px;background:#e9edf1;border-radius:999px;overflow:hidden}.progress span{display:block;height:100%;background:var(--navy);border-radius:999px}.progress.gold span{background:var(--gold)}
+.finance-strip{margin-top:14px;padding-top:12px;border-top:1px solid var(--line);display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stopped{margin-top:12px;background:#fff4e8;border:1px solid #ffd6ad;border-radius:9px;padding:10px;font-size:12px}.stopped b{color:var(--orange)}
+.page{display:none}.page.active{display:block}.back{margin-bottom:14px}
+.detail-head{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;display:flex;justify-content:space-between;gap:20px;align-items:flex-start;flex-wrap:wrap}
+.detail-head h2{margin:0 0 6px;color:var(--navy)}.status{display:inline-block;padding:6px 10px;border-radius:999px;background:#e8f5ee;color:var(--green);font-weight:700;font-size:12px}
+.tabs{display:flex;gap:6px;overflow:auto;margin:18px 0 14px}.tab{white-space:nowrap;background:#fff;border:1px solid var(--line);padding:10px 14px;border-radius:8px;color:var(--navy)}.tab.active{background:var(--navy);color:#fff}
+.tab-content{display:none}.tab-content.active{display:block}.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:16px}.panel h3{margin:0 0 16px;color:var(--navy);font-size:18px}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:700}.field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;background:#fbfcfd}.field textarea{min-height:90px;resize:vertical}.full{grid-column:1/-1}
+.upload{border:1px dashed #aebbc7;background:#f8fafc;border-radius:10px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.upload strong{color:var(--navy)}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;min-width:1100px}th,td{padding:11px;border-bottom:1px solid var(--line);text-align:left;font-size:12px;vertical-align:top}th{color:var(--navy);background:#f7f9fb;font-size:11px}
+.badge{display:inline-block;border-radius:999px;padding:5px 8px;font-size:11px;font-weight:700}.badge-ok{background:#e7f5ee;color:var(--green)}.badge-warn{background:#fff6da;color:#9a7415}.badge-danger{background:#fde9ec;color:var(--red)}.badge-blue{background:#e8f1fb;color:var(--blue)}
+.timeline{position:relative;padding-left:25px}.timeline:before{content:"";position:absolute;left:7px;top:5px;bottom:5px;width:2px;background:var(--line)}.event{position:relative;padding:0 0 18px 14px}.event:before{content:"";position:absolute;left:-22px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--gold)}.event .date{font-size:11px;color:var(--muted);margin-bottom:3px}.event strong{color:var(--navy)}
+.indicators{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}.indicator{border:1px solid var(--line);border-radius:10px;padding:14px;background:#fbfcfd}.indicator span{display:block;font-size:12px;color:var(--muted);margin-bottom:7px}.indicator b{font-size:20px;color:var(--navy)}
+.note{border-left:4px solid var(--gold);background:#fff9ed;padding:12px;border-radius:8px;font-size:13px;margin-top:12px}
+.flow{display:flex;gap:10px;align-items:stretch;overflow-x:auto;padding-bottom:6px}.step{min-width:250px;border:1px solid var(--line);border-radius:10px;padding:13px;background:#fbfcfd;position:relative}.step.current{border-color:#f1b66f;background:#fff8ef}.step.done{border-color:#bfe0cf;background:#f4fbf7}.step-title{font-weight:700;color:var(--navy);margin-bottom:6px}.step small{display:block;color:var(--muted);line-height:1.5}.arrow{display:flex;align-items:center;font-size:24px;color:#9da9b4}
+.subhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}.metric{border:1px solid var(--line);border-radius:9px;padding:12px;background:#fff}.metric label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px}.metric strong{font-size:16px;color:var(--navy)}
+.docs-mini{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}.docs-mini b{font-size:11px;color:var(--navy)}.doc-chip{display:inline-block;margin:6px 4px 0 0;padding:5px 7px;border-radius:6px;background:#eef3f7;color:var(--navy);font-size:10px;border:1px solid #dae3ea}
+.attach-box{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:#fbfcfd;padding:14px}
+.attach-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}.attach-item{background:#fff;border:1px solid var(--line);border-radius:9px;padding:11px}.attach-item strong{display:block;color:var(--navy);font-size:12px;margin-bottom:5px}.attach-item small{color:var(--muted)}
+@media(max-width:1150px){.cards{grid-template-columns:repeat(2,1fr)}.kpis{grid-template-columns:repeat(3,1fr)}.indicators{grid-template-columns:repeat(3,1fr)}.attach-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){main{padding:16px}.cards,.kpis,.indicators,.form-grid,.metric-row,.attach-grid{grid-template-columns:1fr}header{padding:14px 16px}.finance-strip,.card-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">AJA</div><div><h1>Gestão de Obras</h1><small>Portal AJA Grupo Empresarial</small></div></div>
+  <div class="user">Henrique Bastos · Administrador</div>
+</header>
+
+<main>
+<section id="dashboard" class="page active">
+  <div class="topbar">
+    <div><h2>Painel de Obras</h2><div style="color:var(--muted);margin-top:4px">Acompanhamento físico, financeiro, documental e da tramitação das medições.</div></div>
+    <div class="actions"><button class="btn-light">Exportar relatório</button><button class="btn-gold">+ Nova obra</button></div>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="label">Obras em andamento</div><div class="value">12</div></div>
+    <div class="kpi"><div class="label">Valor contratado</div><div class="value">R$ 18,4 mi</div></div>
+    <div class="kpi"><div class="label">Valor medido</div><div class="value">R$ 10,7 mi</div></div>
+    <div class="kpi"><div class="label">Processos parados +10 dias</div><div class="value">5</div></div>
+    <div class="kpi"><div class="label">Medições atrasadas</div><div class="value">2</div></div>
+  </div>
+
+  <div class="filters">
+    <input type="search" placeholder="Buscar obra, contrato ou protocolo">
+    <select><option>Todas as situações</option><option>Em andamento</option><option>Atenção</option><option>Atrasadas</option><option>Encerradas</option></select>
+    <select><option>Todos os responsáveis</option><option>João Silva</option><option>Maria Souza</option></select>
+    <select><option>Todos os faróis</option><option>Verde</option><option>Amarelo</option><option>Laranja</option><option>Vermelho</option></select>
+  </div>
+
+  <div class="cards">
+    <div class="obra-card" onclick="openObra()">
+      <div class="obra-title">Reforma da Unidade Centro</div>
+      <div class="obra-sub">Contrato 015/2026 · Prefeitura Municipal</div>
+      <div class="card-grid">
+        <div><div class="item-label">Data de início</div><div class="item-value">10/03/2026</div></div>
+        <div><div class="item-label">Responsável</div><div class="item-value">João Silva</div></div>
+        <div><div class="item-label">Última medição</div><div class="item-value">31/07/2026</div></div>
+        <div><div class="item-label">Próxima medição</div><div class="item-value">31/08/2026</div></div>
+        <div><div class="item-label">% Execução física</div><div class="item-value">58%</div></div>
+        <div><div class="item-label">% Medido</div><div class="item-value">54%</div></div>
+      </div>
+      <div class="progress-wrap"><div class="progress-label"><span>Execução física</span><span>58%</span></div><div class="progress"><span style="width:58%"></span></div></div>
+      <div class="progress-wrap"><div class="progress-label"><span>Financeiro medido</span><span>54%</span></div><div class="progress gold"><span style="width:54%"></span></div></div>
+      <div class="finance-strip">
+        <div><div class="item-label">Medido x Contrato</div><div class="item-value">R$ 999.000 / R$ 1.850.000</div></div>
+        <div><div class="item-label">Saldo a medir</div><div class="item-value">R$ 851.000</div></div>
+      </div>
+      <div style="margin-top:14px" class="farol"><span class="dot green"></span> Próxima medição dentro do prazo</div>
+      <div class="stopped"><b>Processo atual:</b> Controladoria · Protocolo 2026.004581<br>Parado no setor há <b>8 dias</b> · 9 documentos vinculados.</div>
+    </div>
+
+    <div class="obra-card" onclick="openObra()">
+      <div class="obra-title">Adequação Elétrica – Unidade Norte</div>
+      <div class="obra-sub">Contrato 021/2026 · Fundação XYZ</div>
+      <div class="card-grid">
+        <div><div class="item-label">Data de início</div><div class="item-value">08/04/2026</div></div>
+        <div><div class="item-label">Responsável</div><div class="item-value">Maria Souza</div></div>
+        <div><div class="item-label">Última medição</div><div class="item-value">01/08/2026</div></div>
+        <div><div class="item-label">Próxima medição</div><div class="item-value">22/08/2026</div></div>
+        <div><div class="item-label">% Execução física</div><div class="item-value">72%</div></div>
+        <div><div class="item-label">% Medido</div><div class="item-value">67%</div></div>
+      </div>
+      <div class="progress-wrap"><div class="progress-label"><span>Execução física</span><span>72%</span></div><div class="progress"><span style="width:72%"></span></div></div>
+      <div class="progress-wrap"><div class="progress-label"><span>Financeiro medido</span><span>67%</span></div><div class="progress gold"><span style="width:67%"></span></div></div>
+      <div class="finance-strip"><div><div class="item-label">Medido x Contrato</div><div class="item-value">R$ 804.000 / R$ 1.200.000</div></div><div><div class="item-label">Saldo a medir</div><div class="item-value">R$ 396.000</div></div></div>
+      <div style="margin-top:14px" class="farol"><span class="dot orange"></span> Medição próxima</div>
+      <div class="stopped"><b>Processo atual:</b> Secretaria de Fazenda<br>Parado no setor há <b>14 dias</b> · 6 documentos vinculados.</div>
+    </div>
+
+    <div class="obra-card" onclick="openObra()">
+      <div class="obra-title">Manutenção Predial – Bloco B</div>
+      <div class="obra-sub">Contrato 009/2026 · Órgão ABC</div>
+      <div class="card-grid">
+        <div><div class="item-label">Data de início</div><div class="item-value">12/01/2026</div></div>
+        <div><div class="item-label">Responsável</div><div class="item-value">Carlos Lima</div></div>
+        <div><div class="item-label">Última medição</div><div class="item-value">15/07/2026</div></div>
+        <div><div class="item-label">Próxima medição</div><div class="item-value">15/08/2026</div></div>
+        <div><div class="item-label">% Execução física</div><div class="item-value">81%</div></div>
+        <div><div class="item-label">% Medido</div><div class="item-value">74%</div></div>
+      </div>
+      <div class="progress-wrap"><div class="progress-label"><span>Execução física</span><span>81%</span></div><div class="progress"><span style="width:81%"></span></div></div>
+      <div class="progress-wrap"><div class="progress-label"><span>Financeiro medido</span><span>74%</span></div><div class="progress gold"><span style="width:74%"></span></div></div>
+      <div class="finance-strip"><div><div class="item-label">Medido x Contrato</div><div class="item-value">R$ 592.000 / R$ 800.000</div></div><div><div class="item-label">Saldo a medir</div><div class="item-value">R$ 208.000</div></div></div>
+      <div style="margin-top:14px" class="farol"><span class="dot red"></span> Medição vencida</div>
+      <div class="stopped"><b>Processo atual:</b> Tesouraria<br>Parado no setor há <b>23 dias</b> · 11 documentos vinculados.</div>
+    </div>
+  </div>
+</section>
+
+<section id="obra" class="page">
+  <button class="btn-light back" onclick="backDashboard()">← Voltar ao Dashboard</button>
+
+  <div class="detail-head">
+    <div><h2>Reforma da Unidade Centro</h2><div style="color:var(--muted);margin-bottom:9px">Contrato 015/2026 · Prefeitura Municipal</div><span class="status">EM ANDAMENTO</span></div>
+    <div class="actions"><button class="btn-light">Imprimir ficha</button><button class="btn-primary">Editar obra</button></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('resumo',this)">Resumo</button>
+    <button class="tab" onclick="showTab('contrato',this)">Contrato</button>
+    <button class="tab" onclick="showTab('medicoes',this)">Medições</button>
+    <button class="tab" onclick="showTab('rerrat',this)">Rerratificações</button>
+    <button class="tab" onclick="showTab('documentos',this)">Documentos</button>
+    <button class="tab" onclick="showTab('historico',this)">Histórico</button>
+  </div>
+
+  <div id="resumo" class="tab-content active">
+    <div class="panel">
+      <h3>Indicadores da Obra</h3>
+      <div class="indicators">
+        <div class="indicator"><span>Prazo transcorrido</span><b>65%</b></div>
+        <div class="indicator"><span>Execução física</span><b>58%</b></div>
+        <div class="indicator"><span>% medido</span><b>54%</b></div>
+        <div class="indicator"><span>Valor medido</span><b>R$ 999 mil</b></div>
+        <div class="indicator"><span>Saldo a medir</span><b>R$ 851 mil</b></div>
+        <div class="indicator"><span>Maior tempo parado</span><b style="color:var(--orange)">12 dias</b></div>
+      </div>
+      <div class="note">Execução física 58% x medição financeira 54%. O processo da última medição está atualmente na Controladoria há 8 dias.</div>
+    </div>
+
+    <div class="panel">
+      <h3>Informações gerais</h3>
+      <div class="form-grid">
+        <div class="field"><label>NOME DA OBRA</label><input value="Reforma da Unidade Centro"></div>
+        <div class="field"><label>CONTRATANTE</label><input value="Prefeitura Municipal"></div>
+        <div class="field"><label>RESPONSÁVEL AJA</label><input value="João Silva"></div>
+        <div class="field"><label>Nº DO CONTRATO</label><input value="015/2026"></div>
+        <div class="field"><label>Nº DO EMPENHO</label><input value="2026NE000123"></div>
+        <div class="field"><label>ORDEM DE INÍCIO</label><input value="OI-008/2026"></div>
+        <div class="field"><label>INÍCIO EFETIVO</label><input type="date" value="2026-03-10"></div>
+        <div class="field"><label>FIM DO CONTRATO</label><input type="date" value="2026-11-30"></div>
+        <div class="field"><label>PERIODICIDADE DA MEDIÇÃO</label><select><option>Mensal</option><option>Quinzenal</option><option>Semanal</option><option>Personalizado</option></select></div>
+        <div class="field full"><label>OBJETO DA OBRA</label><textarea>Execução de serviços de reforma, adequação das instalações elétricas, recuperação de revestimentos, pintura e demais intervenções previstas no contrato.</textarea></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="contrato" class="tab-content">
+    <div class="panel">
+      <h3>Dados contratuais e documentos</h3>
+      <div class="form-grid">
+        <div class="field"><label>NÚMERO DO CONTRATO</label><input value="015/2026"></div>
+        <div class="field"><label>DATA DO CONTRATO</label><input type="date" value="2026-03-05"></div>
+        <div class="field"><label>VALOR CONTRATADO</label><input value="R$ 1.850.000,00"></div>
+        <div class="field"><label>EMPENHO</label><input value="2026NE000123"></div>
+        <div class="field"><label>ORDEM DE INÍCIO</label><input value="OI-008/2026"></div>
+        <div class="field"><label>DATA DA ORDEM DE INÍCIO</label><input type="date" value="2026-03-10"></div>
+      </div>
+
+      <div class="attach-box">
+        <b>Documentos vinculados ao contrato</b>
+        <div class="attach-grid">
+          <div class="attach-item"><strong>Contrato assinado</strong><small>contrato_015_2026.pdf</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+          <div class="attach-item"><strong>Empenho</strong><small>empenho_2026NE000123.pdf</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+          <div class="attach-item"><strong>Ordem de Início</strong><small>ordem_inicio_008_2026.pdf</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+        </div>
+        <div class="upload" style="margin-top:12px"><div><strong>Adicionar documento do contrato</strong><br><small>PDF, imagem ou planilha.</small></div><button class="btn-primary">Selecionar arquivo</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="medicoes" class="tab-content">
+    <div class="panel">
+      <div class="subhead"><h3 style="margin:0">Medições</h3><button class="btn-gold">+ Nova medição</button></div>
+
+      <div class="metric-row">
+        <div class="metric"><label>VALOR CONTRATADO</label><strong>R$ 1.850.000,00</strong></div>
+        <div class="metric"><label>TOTAL MEDIDO</label><strong>R$ 999.000,00</strong></div>
+        <div class="metric"><label>% MEDIDO</label><strong>54,00%</strong></div>
+        <div class="metric"><label>SALDO A MEDIR</label><strong>R$ 851.000,00</strong></div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:14px">
+        <table>
+          <thead><tr><th>Medição</th><th>Período</th><th>Data</th><th>Valor</th><th>Protocolo</th><th>NF</th><th>ISS</th><th>Responsável</th><th>Status</th><th>Setor atual</th><th>Tempo</th><th>Docs</th></tr></thead>
+          <tbody>
+            <tr onclick="document.getElementById('detalhe-medicao').scrollIntoView({behavior:'smooth'})" style="cursor:pointer">
+              <td><b>05</b></td><td>01/07 a 31/07</td><td>31/07/2026</td><td>R$ 219.000,00</td><td>2026.004581</td><td>NF 1847</td><td>R$ 10.950,00</td><td>João Silva</td><td><span class="badge badge-blue">Em tramitação</span></td><td>Controladoria</td><td><span class="badge badge-warn">8 dias</span></td><td>9</td>
+            </tr>
+            <tr><td><b>04</b></td><td>01/06 a 30/06</td><td>30/06/2026</td><td>R$ 210.000,00</td><td>2026.003914</td><td>NF 1782</td><td>R$ 10.500,00</td><td>João Silva</td><td><span class="badge badge-ok">Aprovada</span></td><td>Concluído</td><td>—</td><td>12</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel" id="detalhe-medicao">
+      <div class="subhead">
+        <div><h3 style="margin:0 0 4px">Medição nº 05 · Protocolo 2026.004581</h3><small style="color:var(--muted)">Cada medição e cada etapa podem ter múltiplos documentos vinculados.</small></div>
+        <button class="btn-primary">+ Adicionar etapa</button>
+      </div>
+
+      <div class="form-grid">
+        <div class="field"><label>DATA DA MEDIÇÃO</label><input type="date" value="2026-07-31"></div>
+        <div class="field"><label>VALOR MEDIDO</label><input value="R$ 219.000,00"></div>
+        <div class="field"><label>Nº DO PROTOCOLO</label><input value="2026.004581"></div>
+        <div class="field"><label>Nº DA NOTA FISCAL</label><input value="NF 1847"></div>
+        <div class="field"><label>VALOR DO ISS</label><input value="R$ 10.950,00"></div>
+        <div class="field"><label>RESPONSÁVEL AJA</label><input value="João Silva"></div>
+        <div class="field full"><label>OBSERVAÇÕES DA MEDIÇÃO</label><textarea>Medição protocolada após aprovação interna. Processo em tramitação para liquidação.</textarea></div>
+      </div>
+
+      <div class="attach-box">
+        <b>Documentos gerais da Medição nº 05</b>
+        <div class="attach-grid">
+          <div class="attach-item"><strong>Medição aprovada internamente</strong><small>medicao_05_assinada.pdf</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+          <div class="attach-item"><strong>Processo / Protocolo</strong><small>protocolo_2026_004581.pdf</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+          <div class="attach-item"><strong>Nota Fiscal</strong><small>nf_1847.pdf</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+          <div class="attach-item"><strong>Guia / Comprovante ISS</strong><small>iss_medicao_05.pdf</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+          <div class="attach-item"><strong>Memória de cálculo</strong><small>memoria_calculo_med05.xlsx</small><br><button class="btn-light" style="margin-top:8px">Abrir</button></div>
+        </div>
+        <div class="upload" style="margin-top:12px"><div><strong>Enviar outro documento da medição</strong><br><small>Permitir múltiplos arquivos: PDF, XLSX, XLS, CSV, JPG e PNG.</small></div><button class="btn-gold">Upload de documento</button></div>
+      </div>
+
+      <h3 style="margin-top:22px">Tramitação do processo</h3>
+      <div class="flow">
+        <div class="step done">
+          <div class="step-title">1. Secretaria de Obras</div>
+          <small>Entrada: 02/08/2026</small><small>Autorizado: 05/08/2026</small><small>Saída: 05/08/2026</small><small><b>Tempo: 3 dias</b></small><small>Status: Autorizado</small>
+          <div class="docs-mini"><b>Documentos da etapa</b><br><span class="doc-chip">protocolo_inicial.pdf</span><span class="doc-chip">despacho_autorizacao.pdf</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step done">
+          <div class="step-title">2. Fiscalização / Engenharia</div>
+          <small>Entrada: 05/08/2026</small><small>Aprovado: 10/08/2026</small><small>Saída: 10/08/2026</small><small><b>Tempo: 5 dias</b></small><small>Status: Aprovado</small>
+          <div class="docs-mini"><b>Documentos da etapa</b><br><span class="doc-chip">parecer_fiscalizacao.pdf</span><span class="doc-chip">medicao_conferida.pdf</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step current">
+          <div class="step-title">3. Controladoria</div>
+          <small>Entrada: 12/08/2026</small><small>Saída: —</small><small><b>Tempo atual: 8 dias</b></small><small>Status: Em análise</small>
+          <div class="docs-mini"><b>Documentos da etapa</b><br><span class="doc-chip">checklist_controladoria.pdf</span></div>
+        </div>
+        <div class="arrow">→</div>
+        <div class="step">
+          <div class="step-title">4. Próxima área</div>
+          <small>A definir conforme o órgão.</small><small>Pode ser Fazenda, Finanças, Tesouraria, Ordenador de Despesas ou outro setor.</small>
+        </div>
+      </div>
+
+      <div class="table-wrap" style="margin-top:18px">
+        <table>
+          <thead><tr><th>Ordem</th><th>Setor / Área</th><th>Entrada</th><th>Decisão</th><th>Saída</th><th>Resultado</th><th>Tempo</th><th>Documentos</th><th>Observações</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>Secretaria de Obras</td><td>02/08/2026</td><td>05/08/2026</td><td>05/08/2026</td><td><span class="badge badge-ok">Autorizado</span></td><td>3 dias</td><td>2 anexos</td><td>Encaminhado à fiscalização.</td></tr>
+            <tr><td>2</td><td>Fiscalização / Engenharia</td><td>05/08/2026</td><td>10/08/2026</td><td>10/08/2026</td><td><span class="badge badge-ok">Aprovado</span></td><td>5 dias</td><td>2 anexos</td><td>Sem ressalvas.</td></tr>
+            <tr><td>3</td><td>Controladoria</td><td>12/08/2026</td><td>—</td><td>—</td><td><span class="badge badge-warn">Em análise</span></td><td><b style="color:var(--orange)">8 dias</b></td><td>1 anexo</td><td>Aguardando análise documental.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="attach-box">
+        <b>Adicionar documento à etapa atual: Controladoria</b>
+        <div class="form-grid" style="margin-top:10px">
+          <div class="field"><label>TIPO DO DOCUMENTO</label><select><option>Despacho</option><option>Parecer</option><option>Autorização</option><option>Liberação</option><option>Exigência / Pendência</option><option>Comprovante</option><option>Outro</option></select></div>
+          <div class="field"><label>DATA DO DOCUMENTO</label><input type="date"></div>
+          <div class="field"><label>DESCRIÇÃO</label><input placeholder="Ex.: Liberação da Controladoria"></div>
+          <div class="field full"><label>OBSERVAÇÃO</label><textarea placeholder="Informações complementares sobre o documento."></textarea></div>
+        </div>
+        <div class="upload"><div><strong>Selecionar arquivo(s)</strong><br><small>É possível anexar mais de um documento à mesma etapa.</small></div><button class="btn-primary">Upload</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="rerrat" class="tab-content">
+    <div class="panel">
+      <div class="subhead"><h3 style="margin:0">Rerratificações</h3><button class="btn-gold">+ Nova rerratificação</button></div>
+      <div class="table-wrap">
+        <table><thead><tr><th>Nº</th><th>Data</th><th>Descrição</th><th>Itens alterados</th><th>Documentos</th><th>Observações</th></tr></thead>
+        <tbody><tr><td>01</td><td>15/05/2026</td><td>Ajuste de quantitativos e serviços</td><td>8 itens</td><td>3 anexos</td><td>Sem alteração do prazo contratual.</td></tr></tbody></table>
+      </div>
+      <div class="upload" style="margin-top:14px"><div><strong>Adicionar documentos da rerratificação</strong><br><small>PDF da rerratificação, planilha dos itens, pareceres e demais anexos.</small></div><button class="btn-primary">Selecionar arquivo</button></div>
+    </div>
+  </div>
+
+  <div id="documentos" class="tab-content">
+    <div class="panel">
+      <div class="subhead"><h3 style="margin:0">Central de Documentos da Obra</h3><button class="btn-gold">+ Novo documento</button></div>
+      <div class="note">Esta área reúne todos os arquivos enviados nas demais telas. O mesmo documento continua vinculado à origem: contrato, medição, etapa de tramitação, rerratificação, aceite, CAT etc.</div>
+      <div class="filters" style="margin-top:14px">
+        <input type="search" placeholder="Buscar documento">
+        <select><option>Todos os tipos</option><option>Contrato</option><option>Medição</option><option>Processo / Protocolo</option><option>NF</option><option>ISS</option><option>Despacho</option><option>Parecer</option><option>Liberação</option><option>Rerratificação</option><option>Aceite</option><option>CAT</option></select>
+        <select><option>Todas as origens</option><option>Medição 05</option><option>Medição 04</option><option>Contrato</option><option>Rerratificação 01</option></select>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Tipo</th><th>Documento</th><th>Vinculado a</th><th>Setor / Etapa</th><th>Data</th><th>Incluído por</th><th>Observação</th><th>Ação</th></tr></thead>
+          <tbody>
+            <tr><td>Contrato</td><td>contrato_015_2026.pdf</td><td>Contrato</td><td>—</td><td>05/03/2026</td><td>Henrique Bastos</td><td>Contrato assinado.</td><td><button class="btn-light">Abrir</button></td></tr>
+            <tr><td>Processo / Protocolo</td><td>protocolo_2026_004581.pdf</td><td>Medição 05</td><td>Secretaria de Obras</td><td>02/08/2026</td><td>João Silva</td><td>Abertura do processo.</td><td><button class="btn-light">Abrir</button></td></tr>
+            <tr><td>Medição</td><td>medicao_05_assinada.pdf</td><td>Medição 05</td><td>—</td><td>02/08/2026</td><td>João Silva</td><td>Medição assinada.</td><td><button class="btn-light">Abrir</button></td></tr>
+            <tr><td>Nota Fiscal</td><td>nf_1847.pdf</td><td>Medição 05</td><td>—</td><td>02/08/2026</td><td>João Silva</td><td>NF vinculada à medição.</td><td><button class="btn-light">Abrir</button></td></tr>
+            <tr><td>ISS</td><td>iss_medicao_05.pdf</td><td>Medição 05</td><td>—</td><td>02/08/2026</td><td>João Silva</td><td>Guia/comprovante.</td><td><button class="btn-light">Abrir</button></td></tr>
+            <tr><td>Autorização</td><td>despacho_autorizacao.pdf</td><td>Medição 05</td><td>Secretaria de Obras</td><td>05/08/2026</td><td>João Silva</td><td>Autorização para prosseguimento.</td><td><button class="btn-light">Abrir</button></td></tr>
+            <tr><td>Parecer</td><td>parecer_fiscalizacao.pdf</td><td>Medição 05</td><td>Fiscalização / Engenharia</td><td>10/08/2026</td><td>Maria Souza</td><td>Parecer favorável.</td><td><button class="btn-light">Abrir</button></td></tr>
+            <tr><td>Checklist</td><td>checklist_controladoria.pdf</td><td>Medição 05</td><td>Controladoria</td><td>12/08/2026</td><td>João Silva</td><td>Documento recebido na etapa.</td><td><button class="btn-light">Abrir</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="historico" class="tab-content">
+    <div class="panel">
+      <h3>Histórico da Obra</h3>
+      <div class="timeline">
+        <div class="event"><div class="date">20/08/2026 · 16:10</div><strong>Sistema</strong> registrou 8 dias de permanência da Medição 05 na Controladoria.</div>
+        <div class="event"><div class="date">12/08/2026 · 09:25</div><strong>João Silva</strong> anexou <em>checklist_controladoria.pdf</em> à etapa Controladoria.</div>
+        <div class="event"><div class="date">12/08/2026 · 09:20</div><strong>João Silva</strong> registrou entrada do processo 2026.004581 na Controladoria.</div>
+        <div class="event"><div class="date">10/08/2026 · 14:35</div><strong>Maria Souza</strong> registrou aprovação da Fiscalização / Engenharia e anexou 2 documentos.</div>
+        <div class="event"><div class="date">05/08/2026 · 11:05</div><strong>João Silva</strong> registrou autorização da Secretaria de Obras e anexou o despacho correspondente.</div>
+        <div class="event"><div class="date">02/08/2026 · 09:05</div><strong>João Silva</strong> cadastrou a Medição nº 05, protocolo 2026.004581, NF 1847, ISS e documentos iniciais.</div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<script>
+function openObra(){
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('obra').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function backDashboard(){
+  document.getElementById('obra').classList.remove('active');
+  document.getElementById('dashboard').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function showTab(id,el){
+  document.querySelectorAll('.tab-content').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

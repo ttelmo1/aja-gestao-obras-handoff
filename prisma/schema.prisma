@@ -1,0 +1,460 @@
+// Sistema de Gestão de Obras — AJA Grupo Empresarial
+// Ver docs/requisitos.md e docs/escopo-e-orcamento.md antes de alterar.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================
+// Autenticação e pessoas
+// ============================================================
+
+enum Perfil {
+  ADMINISTRADOR
+  GESTOR
+  OPERACIONAL
+  VISUALIZADOR
+}
+
+model Usuario {
+  id           String    @id @default(uuid())
+  nome         String
+  email        String    @unique
+  senhaHash    String
+  perfil       Perfil    @default(VISUALIZADOR)
+  ativo        Boolean   @default(true)
+  ultimoLogin  DateTime?
+  criadoEm     DateTime  @default(now())
+  atualizadoEm DateTime  @updatedAt
+
+  tokensSenha  TokenSenha[]
+  obrasCriadas Obra[]                @relation("ObraCriadaPor")
+  documentos   Documento[]
+  movimentos   TramitacaoMovimento[]
+
+  @@index([ativo])
+}
+
+/// Token de recuperação de senha. Guardamos apenas o hash.
+model TokenSenha {
+  id        String    @id @default(uuid())
+  usuarioId String
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiraEm  DateTime
+  usadoEm   DateTime?
+  criadoEm  DateTime  @default(now())
+
+  @@index([usuarioId])
+}
+
+/// Equipe da obra — cadastro separado dos usuários do sistema (requisitos.md 1.2).
+model Responsavel {
+  id       String  @id @default(uuid())
+  nome     String
+  cargo    String?
+  registro String? // CREA / CAU
+  email    String?
+  telefone String?
+  ativo    Boolean @default(true)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  obras Obra[]
+
+  @@index([ativo])
+}
+
+/// Órgão público contratante.
+model Contratante {
+  id       String  @id @default(uuid())
+  nome     String
+  cnpj     String? @unique
+  esfera   Esfera?
+  contato  String?
+  telefone String?
+  email    String?
+  ativo    Boolean @default(true)
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  obras Obra[]
+
+  @@index([ativo])
+}
+
+enum Esfera {
+  MUNICIPAL
+  ESTADUAL
+  FEDERAL
+}
+
+/// Setores por onde o processo tramita (registro de entrada/saída).
+model Setor {
+  id       String   @id @default(uuid())
+  nome     String   @unique
+  sigla    String?
+  ativo    Boolean  @default(true)
+  criadoEm DateTime @default(now())
+
+  entradas TramitacaoMovimento[] @relation("SetorDestino")
+  saidas   TramitacaoMovimento[] @relation("SetorOrigem")
+}
+
+// ============================================================
+// Obras
+// ============================================================
+
+enum StatusObra {
+  PLANEJAMENTO
+  EM_ANDAMENTO
+  PARALISADA
+  FINALIZADA
+  CANCELADA
+}
+
+/// Farol de status — calculado pelo motor de regras (requisitos.md 1.3).
+/// CINZA = sem dados suficientes para classificar.
+enum Farol {
+  VERDE
+  AMARELO
+  VERMELHO
+  CINZA
+}
+
+model Obra {
+  id             String  @id @default(uuid())
+  codigo         String  @unique // identificador interno
+  objeto         String // descrição da obra
+  numeroContrato String
+  numeroProcesso String? // protocolo no órgão
+
+  contratanteId String
+  contratante   Contratante  @relation(fields: [contratanteId], references: [id])
+  responsavelId String?
+  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
+
+  /// Valor original do contrato.
+  valorContratado Decimal @db.Decimal(15, 2)
+  /// Soma do impacto das rerratificações (pode ser negativo).
+  valorAditivado  Decimal @default(0) @db.Decimal(15, 2)
+
+  dataAssinatura      DateTime?
+  dataOrdemInicio     DateTime?
+  prazoDias           Int?
+  dataPrevistaTermino DateTime?
+  dataTerminoReal     DateTime?
+
+  status StatusObra @default(PLANEJAMENTO)
+
+  /// Cache do farol. Fonte da verdade é modules/farol/regras.ts.
+  farol            Farol     @default(CINZA)
+  farolCalculadoEm DateTime?
+
+  observacoes String?
+
+  criadoPorId  String?
+  criadoPor    Usuario? @relation("ObraCriadaPor", fields: [criadoPorId], references: [id])
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  medicoes        Medicao[]
+  etapas          EtapaObra[]
+  rerratificacoes Rerratificacao[]
+  documentos      Documento[]
+
+  @@index([status, farol])
+  @@index([contratanteId])
+  @@index([responsavelId])
+  @@index([dataPrevistaTermino])
+}
+
+// ============================================================
+// Medições e financeiro
+// ============================================================
+
+enum StatusMedicao {
+  RASCUNHO
+  PROTOCOLADA
+  APROVADA
+  PAGA
+  REJEITADA
+}
+
+/// Percentuais agregados (% medido, saldo a medir) NÃO são colunas:
+/// derivam da soma das medições sobre valorContratado + valorAditivado.
+/// Ver modules/medicoes/calculos.ts.
+model Medicao {
+  id     String @id @default(uuid())
+  obraId String
+  obra   Obra   @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  numero        Int // 1ª, 2ª medição...
+  competencia   DateTime // mês de referência
+  periodoInicio DateTime?
+  periodoFim    DateTime?
+
+  valorMedido         Decimal @db.Decimal(15, 2)
+  /// Avanço físico acumulado da obra, informado pelo usuário (não calculável).
+  percentualExecutado Decimal @db.Decimal(5, 2)
+
+  protocolo     String?
+  dataProtocolo DateTime?
+
+  notaFiscalNumero String?
+  notaFiscalData   DateTime?
+  notaFiscalValor  Decimal?  @db.Decimal(15, 2)
+  issAliquota      Decimal?  @db.Decimal(5, 2)
+  issValor         Decimal?  @db.Decimal(15, 2)
+
+  status        StatusMedicao @default(RASCUNHO)
+  dataPagamento DateTime?
+  observacoes   String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  documentos Documento[]
+
+  @@unique([obraId, numero])
+  @@index([obraId, competencia])
+  @@index([status])
+}
+
+// ============================================================
+// Tramitação — fluxo FIXO (requisitos.md 1.5)
+// ============================================================
+
+/// Sequência fixa e não configurável. A ordem canônica vive em
+/// modules/tramitacao/fluxo.ts — não reordenar sem alinhar com o cliente.
+enum TipoEtapa {
+  BUSCA_LICITACAO
+  HABILITACAO_HOMOLOGACAO
+  ASSINATURA_CONTRATO
+  GARANTIA
+  ORDEM_INICIO
+  EXECUCAO_OBRA
+  MEDICOES
+  RERRATIFICACAO
+  FINALIZACAO
+  ACEITE
+  ATESTADO
+}
+
+enum StatusEtapa {
+  PENDENTE
+  EM_ANDAMENTO
+  CONCLUIDA
+  NAO_SE_APLICA
+}
+
+/// Instância da etapa por obra. As 11 são criadas junto com a obra.
+model EtapaObra {
+  id     String @id @default(uuid())
+  obraId String
+  obra   Obra   @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  tipo  TipoEtapa
+  ordem Int // espelha a sequência fixa
+
+  status        StatusEtapa @default(PENDENTE)
+  dataInicio    DateTime?
+  dataConclusao DateTime?
+
+  /// Soma dos dias dos movimentos. Recalculado, não digitado.
+  diasPermanencia Int?
+
+  observacoes String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  movimentos TramitacaoMovimento[]
+  documentos Documento[]
+
+  @@unique([obraId, tipo])
+  @@index([obraId, ordem])
+  @@index([status])
+}
+
+/// Entrada/saída por setor — base do cálculo de tempo de permanência.
+model TramitacaoMovimento {
+  id          String    @id @default(uuid())
+  etapaObraId String
+  etapaObra   EtapaObra @relation(fields: [etapaObraId], references: [id], onDelete: Cascade)
+
+  setorOrigemId  String?
+  setorOrigem    Setor?  @relation("SetorOrigem", fields: [setorOrigemId], references: [id])
+  setorDestinoId String
+  setorDestino   Setor   @relation("SetorDestino", fields: [setorDestinoId], references: [id])
+
+  dataEntrada     DateTime
+  dataSaida       DateTime?
+  /// Preenchido ao registrar a saída.
+  diasPermanencia Int?
+
+  registradoPorId String?
+  registradoPor   Usuario? @relation(fields: [registradoPorId], references: [id])
+  observacoes     String?
+  criadoEm        DateTime @default(now())
+
+  @@index([etapaObraId, dataEntrada])
+  @@index([dataSaida]) // dataSaida IS NULL => processo parado
+  @@index([setorDestinoId])
+}
+
+// ============================================================
+// Rerratificações (requisitos.md 1.7 — só o agregado)
+// ============================================================
+
+enum StatusRerratificacao {
+  EM_ELABORACAO
+  PROTOCOLADA
+  APROVADA
+  REJEITADA
+}
+
+/// Sem detalhamento item a item por decisão de escopo: isso já consta
+/// na planilha apresentada ao órgão, que fica anexada como Documento.
+model Rerratificacao {
+  id     String @id @default(uuid())
+  obraId String
+  obra   Obra   @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  numero    Int
+  data      DateTime?
+  protocolo String?
+
+  /// Impacto agregado.
+  percentualAlcancado Decimal @db.Decimal(5, 2)
+  valorImpactado      Decimal @db.Decimal(15, 2)
+  prazoAdicionalDias  Int?
+
+  status      StatusRerratificacao @default(EM_ELABORACAO)
+  observacoes String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  documentos Documento[]
+
+  @@unique([obraId, numero])
+  @@index([status])
+}
+
+// ============================================================
+// Gestão documental
+// ============================================================
+
+enum TipoDocumento {
+  EDITAL
+  PROPOSTA
+  CONTRATO
+  GARANTIA
+  ORDEM_INICIO
+  MEDICAO
+  NOTA_FISCAL
+  RERRATIFICACAO
+  ACEITE
+  ATESTADO
+  FOTO
+  PLANILHA
+  OUTRO
+}
+
+/// Origem rastreável via FKs explícitas: exatamente uma preenchida.
+/// A restrição é garantida por CHECK constraint (migration manual),
+/// que o Prisma Schema não consegue expressar.
+model Documento {
+  id              String  @id @default(uuid())
+  nomeOriginal    String
+  nomeArmazenado  String  @unique // uuid.ext no disco
+  caminhoRelativo String // relativo a storage/
+  mimeType        String
+  extensao        String
+  tamanhoBytes    BigInt
+  hashSha256      String?
+
+  tipo      TipoDocumento @default(OUTRO)
+  descricao String?
+
+  obraId           String?
+  obra             Obra?           @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  medicaoId        String?
+  medicao          Medicao?        @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+  etapaObraId      String?
+  etapaObra        EtapaObra?      @relation(fields: [etapaObraId], references: [id], onDelete: Cascade)
+  rerratificacaoId String?
+  rerratificacao   Rerratificacao? @relation(fields: [rerratificacaoId], references: [id], onDelete: Cascade)
+
+  enviadoPorId String?
+  enviadoPor   Usuario? @relation(fields: [enviadoPorId], references: [id])
+
+  criadoEm   DateTime  @default(now())
+  /// Soft delete: o registro permanece para a trilha de auditoria.
+  excluidoEm DateTime?
+
+  @@index([tipo])
+  @@index([obraId])
+  @@index([medicaoId])
+  @@index([etapaObraId])
+  @@index([rerratificacaoId])
+  @@index([nomeOriginal])
+  @@index([excluidoEm])
+  @@index([hashSha256])
+}
+
+// ============================================================
+// Auditoria — append-only (requisitos.md 1.8)
+// ============================================================
+
+enum AcaoAuditoria {
+  CRIAR
+  ATUALIZAR
+  EXCLUIR
+  LOGIN
+  LOGOUT
+  UPLOAD
+  DOWNLOAD
+  EXPORTAR
+  TRAMITAR
+}
+
+/// Nunca sofre update ou delete. Sem @updatedAt por isso.
+model Auditoria {
+  id String @id @default(uuid())
+
+  /// IDs guardados SEM foreign key, de propósito: a trilha é append-only e
+  /// uma FK com onDelete geraria UPDATE/DELETE na tabela, que o trigger
+  /// `auditoria_bloqueia_update_delete` proíbe. O log sobrevive à exclusão
+  /// da entidade que ele descreve — que é o ponto de existir.
+  usuarioId   String?
+  /// Snapshot do nome: sobrevive à exclusão/renomeação do usuário.
+  usuarioNome String
+
+  acao       AcaoAuditoria
+  entidade   String // "Obra", "Medicao", ...
+  entidadeId String?
+
+  /// Atalho para a aba "histórico da obra". Sem FK, pelo motivo acima.
+  obraId String?
+
+  descricao   String
+  dadosAntes  Json?
+  dadosDepois Json?
+  ip          String?
+
+  criadoEm DateTime @default(now())
+
+  @@index([obraId, criadoEm])
+  @@index([entidade, entidadeId])
+  @@index([criadoEm])
+  @@index([usuarioId])
+}

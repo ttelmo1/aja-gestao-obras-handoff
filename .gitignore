@@ -39,3 +39,16 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+/src/generated/prisma
+
+# variáveis de ambiente
+.env
+.env*.local
+
+# documentos enviados (ficam no servidor do cliente, nunca no git)
+/storage/**
+!/storage/.gitkeep
+
+# client gerado pelo Prisma
+/src/generated

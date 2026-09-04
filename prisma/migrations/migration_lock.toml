@@ -1,0 +1,2 @@
+# Não edite. Usado pelo Prisma Migrate para travar o provider.
+provider = "postgresql"

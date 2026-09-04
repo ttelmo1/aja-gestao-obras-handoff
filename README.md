@@ -1,36 +1,90 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Sistema de Gestão de Obras — AJA Grupo Empresarial
 
-## Getting Started
+Next.js + Prisma + PostgreSQL. Deploy on-premise, acesso restrito à rede local.
 
-First, run the development server:
+Documentação de escopo em [`docs/`](docs/):
+
+| Arquivo | Conteúdo |
+|---|---|
+| [`docs/requisitos.md`](docs/requisitos.md) | Requisitos validados com o cliente |
+| [`docs/escopo-e-orcamento.md`](docs/escopo-e-orcamento.md) | Horas por módulo e restrições contratuais |
+| [`docs/etapas-e-status.md`](docs/etapas-e-status.md) | Andamento da implementação |
+| [`docs/pontos-para-reuniao.md`](docs/pontos-para-reuniao.md) | Decisões assumidas a validar com o cliente |
+
+Convenções e restrições fixas: [`CLAUDE.md`](CLAUDE.md).
+
+## Requisitos
+
+- Node.js 20+ (desenvolvido em 24)
+- PostgreSQL 16+
+
+## Como rodar
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env          # ajuste DATABASE_URL e SESSION_SECRET
+docker compose up -d          # ou um Postgres local, ver abaixo
+npm install
+npm run db:migrate            # cria o schema
+npm run db:seed               # admin + setores
+npm run dev                   # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Sem Docker, um Postgres local serve igual:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+brew install postgresql@16 && brew services start postgresql@16
+createuser -s aja && createdb -O aja aja_obras
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Para as reuniões de validação, dados fictícios:
 
-## Learn More
+```bash
+npm run db:seed -- --demo
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Scripts
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Script | O que faz |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento |
+| `npm run build` / `start` | Build e execução em produção |
+| `npm test` | Testes das regras de negócio (runner do Node) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run db:migrate` | Cria/aplica migration em desenvolvimento |
+| `npm run db:deploy` | Aplica migrations em produção |
+| `npm run db:seed` | Provisionamento inicial (`-- --demo` para dados fictícios) |
+| `npm run db:studio` | Prisma Studio |
+| `npm run db:reset` | Recria o banco do zero |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Organização
 
-## Deploy on Vercel
+```
+prisma/          schema, migrations e seed
+storage/         documentos enviados — FORA de public/, nunca versionados
+src/app/         rotas (App Router); (app)/ é a área autenticada
+src/modules/     regra de negócio, sem React — é onde ficam as decisões
+src/components/  UI
+src/lib/         prisma, env, dinheiro, datas pt-BR
+tests/           testes das regras de negócio
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+`src/modules/` não importa React de propósito: cálculo financeiro, farol,
+fluxo de tramitação e permissões são funções puras, testáveis sem subir o Next.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Pontos de atenção
+
+- **Dinheiro nunca é `number`.** `Decimal` do Prisma até a formatação final,
+  via helpers em `src/lib/money.ts`.
+- **O fluxo de tramitação é fixo** (`src/modules/tramitacao/fluxo.ts`). Etapas
+  podem ser marcadas "não se aplica"; a ordem não muda e não é configurável.
+- **DWG/RVT estão bloqueados** (`src/modules/documentos/formatos.ts`) até
+  confirmação do cliente. Liberar é trocar uma constante, sem migration.
+- **A auditoria é imutável**: trigger no banco bloqueia UPDATE e DELETE.
+- **Nada depende de internet em runtime** — sem fontes do Google, sem CDN,
+  telemetria do Next desligada. O servidor do cliente pode estar offline.
+
+## Instalação no cliente
+
+Fora do escopo das 140h contratadas, a definir após visita técnica.
+Backup, energia e disponibilidade do servidor são responsabilidade do cliente.

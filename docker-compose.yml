@@ -1,0 +1,24 @@
+# Postgres apenas para DESENVOLVIMENTO local.
+# Em produção o banco roda direto no servidor do cliente (on-premise),
+# sem Docker — ver README, seção "Instalação no cliente".
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: aja-obras-db
+    environment:
+      POSTGRES_USER: aja
+      POSTGRES_PASSWORD: aja
+      POSTGRES_DB: aja_obras
+      TZ: America/Sao_Paulo
+    ports:
+      - "5432:5432"
+    volumes:
+      - aja-obras-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aja -d aja_obras"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  aja-obras-pgdata:

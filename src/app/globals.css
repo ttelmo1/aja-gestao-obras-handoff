@@ -1,22 +1,53 @@
 @import "tailwindcss";
 
 /*
+ * Identidade visual herdada de `docs/raw/mockup.html`, que o cliente já viu e
+ * aprovou: navio com acento dourado. Os valores são os mesmos do mockup — o
+ * que muda aqui é a organização em papéis semânticos (superfície, borda,
+ * texto secundário), para as telas novas não precisarem repetir hex.
+ *
  * Tema claro fixo, de propósito: o sistema é usado em desktop e tablet dentro
  * da empresa, e cor é informação aqui (farol). Modo escuro entraria só depois
  * de validar o contraste das cores do farol.
  */
 :root {
-  --background: #f6f7f9;
+  /* Marca */
+  --navy: #17324d;
+  --navy-claro: #244a6b;
+  --gold: #c79a45;
+  --gold-escuro: #a87f33;
+
+  /* Superfícies e texto */
+  --background: #f3f6f9;
   --surface: #ffffff;
-  --foreground: #16181d;
-  --muted: #646b7a;
-  --border: #e2e5ea;
-  --primary: #0f4c81;
-  --primary-hover: #0d3f6b;
-  --danger: #b42318;
-  --danger-bg: #fef3f2;
-  --success: #067647;
-  --success-bg: #ecfdf3;
+  --surface-sutil: #fbfcfd;
+  --foreground: #273444;
+  --muted: #6f7d8c;
+  --border: #dfe6ec;
+
+  /* Papéis de ação, apontando para a marca */
+  --primary: var(--navy);
+  --primary-hover: var(--navy-claro);
+  --accent: var(--gold);
+  --accent-hover: var(--gold-escuro);
+
+  /* Estados. `--orange` existe no mockup e fica reservado para o farol,
+     caso o cliente confirme quatro faixas em vez de três. */
+  --green: #2e9b65;
+  --yellow: #d9a820;
+  --orange: #e67e22;
+  --red: #cf3f4d;
+  --blue: #3178c6;
+
+  --danger: var(--red);
+  --danger-bg: #fde9ec;
+  --success: var(--green);
+  --success-bg: #e7f5ee;
+  --warning-bg: #fff6da;
+  --warning-fg: #9a7415;
+
+  --sombra-card: 0 2px 8px rgb(18 38 63 / 0.04);
+  --sombra-hover: 0 8px 22px rgb(26 52 78 / 0.12);
 }
 
 @theme inline {
@@ -26,6 +57,7 @@
   --color-muted: var(--muted);
   --color-borda: var(--border);
   --color-primary: var(--primary);
+  --color-accent: var(--accent);
   --color-danger: var(--danger);
   --color-success: var(--success);
   --font-sans: var(--font-sans);
@@ -39,7 +71,9 @@ body {
 body {
   background: var(--background);
   color: var(--foreground);
-  /* Stack de sistema: o build precisa rodar offline no servidor do cliente. */
+  /* Stack de sistema: o build precisa rodar offline no servidor do cliente.
+     O mockup usava Arial por ser um HTML solto; aqui a fonte nativa de cada
+     máquina rende melhor e não custa download. */
   font-family:
     system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
     sans-serif;
@@ -48,4 +82,10 @@ body {
 /* Números tabulares em valores e datas — colunas alinhadas em tabela. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/* Faixa superior da marca, igual à do mockup. */
+.faixa-marca {
+  background: linear-gradient(135deg, var(--navy), var(--navy-claro));
+  box-shadow: 0 2px 10px rgb(0 0 0 / 0.15);
 }

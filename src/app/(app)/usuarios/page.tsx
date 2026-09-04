@@ -38,7 +38,7 @@ export default async function UsuariosPage() {
           pode(atual.perfil, "usuario", "criar") && (
             <Link
               href="/usuarios/novo"
-              className="rounded-md bg-[var(--primary)] px-3 py-1.5 text-sm font-medium text-white hover:bg-[var(--primary-hover)]"
+              className="rounded-lg bg-[var(--accent)] px-3.5 py-2 text-sm font-bold text-white transition-colors hover:bg-[var(--accent-hover)]"
             >
               Novo usuário
             </Link>
@@ -51,12 +51,12 @@ export default async function UsuariosPage() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-[var(--border)] text-left text-xs text-[var(--muted)]">
-                  <th className="py-2 pr-4 font-medium">Nome</th>
-                  <th className="py-2 pr-4 font-medium">E-mail</th>
-                  <th className="py-2 pr-4 font-medium">Perfil</th>
-                  <th className="py-2 pr-4 font-medium">Situação</th>
-                  <th className="py-2 font-medium">Último acesso</th>
+                <tr className="border-b border-[var(--border)] bg-[#f7f9fb] text-left text-[11px] text-[var(--primary)]">
+                  <th className="px-3 py-2.5 font-bold">Nome</th>
+                  <th className="px-3 py-2.5 font-bold">E-mail</th>
+                  <th className="px-3 py-2.5 font-bold">Perfil</th>
+                  <th className="px-3 py-2.5 font-bold">Situação</th>
+                  <th className="px-3 py-2.5 font-bold">Último acesso</th>
                 </tr>
               </thead>
               <tbody>
@@ -65,7 +65,7 @@ export default async function UsuariosPage() {
                     key={u.id}
                     className="border-b border-[var(--border)] last:border-0"
                   >
-                    <td className="py-2.5 pr-4">
+                    <td className="px-3 py-3">
                       <Link
                         href={`/usuarios/${u.id}`}
                         className="font-medium text-[var(--primary)] underline-offset-2 hover:underline"
@@ -76,21 +76,21 @@ export default async function UsuariosPage() {
                         <span className="ml-2 text-xs text-[var(--muted)]">(você)</span>
                       )}
                       {u._count.tokensSenha > 0 && (
-                        <span className="ml-2 rounded bg-[var(--background)] px-1.5 py-0.5 text-xs text-[var(--muted)]">
+                        <span className="ml-2 rounded-full bg-[var(--warning-bg)] px-2 py-0.5 text-[11px] font-bold text-[var(--warning-fg)]">
                           redefinição pendente
                         </span>
                       )}
                     </td>
-                    <td className="py-2.5 pr-4 text-[var(--muted)]">{u.email}</td>
-                    <td className="py-2.5 pr-4">{ROTULOS_PERFIL[u.perfil]}</td>
-                    <td className="py-2.5 pr-4">
+                    <td className="px-3 py-3 text-[var(--muted)]">{u.email}</td>
+                    <td className="px-3 py-3">{ROTULOS_PERFIL[u.perfil]}</td>
+                    <td className="px-3 py-3">
                       {u.ativo ? (
                         "Ativo"
                       ) : (
                         <span className="text-[var(--muted)]">Inativo</span>
                       )}
                     </td>
-                    <td className="tabular py-2.5 text-[var(--muted)]">
+                    <td className="tabular px-3 py-3 text-[var(--muted)]">
                       {u.ultimoLogin ? formatarDataHora(u.ultimoLogin) : "nunca entrou"}
                     </td>
                   </tr>

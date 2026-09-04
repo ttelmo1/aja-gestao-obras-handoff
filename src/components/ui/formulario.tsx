@@ -18,7 +18,7 @@ export function Campo({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium">
+      <label htmlFor={id} className="text-xs font-bold text-[var(--muted)]">
         {rotulo}
       </label>
       {children}
@@ -28,27 +28,33 @@ export function Campo({
 }
 
 export const classeInput =
-  "w-full rounded-md border border-[var(--border)] bg-[var(--surface)] px-3 py-2 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/20 disabled:opacity-60";
+  "w-full rounded-lg border border-[var(--border)] bg-[var(--surface-sutil)] px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:bg-[var(--surface)] focus:ring-2 focus:ring-[var(--primary)]/15 disabled:opacity-60";
 
+/**
+ * Botões do mockup: navio para a ação principal, dourado para a ação de
+ * destaque (a que o cliente quer que salte na tela), branco com borda para o
+ * resto. O dourado é acento, não alerta — perigo continua vermelho.
+ */
 export function Botao({
   children,
   variante = "primario",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variante?: "primario" | "secundario" | "perigo";
+  variante?: "primario" | "destaque" | "secundario" | "perigo";
 }) {
   const estilos = {
-    primario:
-      "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]",
+    primario: "bg-[var(--primary)] text-white hover:bg-[var(--primary-hover)]",
+    destaque: "bg-[var(--accent)] text-white hover:bg-[var(--accent-hover)]",
     secundario:
-      "border border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--background)]",
-    perigo: "border border-[var(--danger)] text-[var(--danger)] hover:bg-[var(--danger-bg)]",
+      "border border-[var(--border)] bg-[var(--surface)] text-[var(--primary)] hover:bg-[var(--background)]",
+    perigo:
+      "border border-[var(--danger)] text-[var(--danger)] hover:bg-[var(--danger-bg)]",
   }[variante];
 
   return (
     <button
       {...props}
-      className={`inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${estilos} ${props.className ?? ""}`}
+      className={`inline-flex items-center justify-center rounded-lg px-3.5 py-2.5 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${estilos} ${props.className ?? ""}`}
     >
       {children}
     </button>
@@ -71,7 +77,7 @@ export function Alerta({
       ? "border-[var(--danger)]/30 bg-[var(--danger-bg)] text-[var(--danger)]"
       : "border-[var(--success)]/30 bg-[var(--success-bg)] text-[var(--success)]";
   return (
-    <p role="alert" className={`rounded-md border px-3 py-2 text-sm ${estilo}`}>
+    <p role="alert" className={`rounded-lg border px-3 py-2.5 text-sm ${estilo}`}>
       {children}
     </p>
   );

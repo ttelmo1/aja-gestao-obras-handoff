@@ -17,6 +17,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 |---|---|---|---|---|
 | 0 | Fundação (setup, schema, módulos base) | ~4h | ✅ | — |
 | 0.1 | Ambiente de desenvolvimento (PostgreSQL local) | — | ✅ | — |
+| 0.2 | Identidade visual herdada do mockup | — | ✅ | — |
 | 1 | Auth + RBAC | 12h | ✅ | 0 |
 | 2 | Cadastros base (contratante, responsável, setor) | ~3h | ⬜ | 1 |
 | 3 | Auditoria — camada de gravação | ~3h | 🔵 | 0 |
@@ -127,6 +128,40 @@ Decisão sobre Docker: **não usado no desenvolvimento**. A forma de instalar no
 servidor do cliente é ponto aberto (ver `pontos-para-reuniao.md`, #11) e não
 precisa ser igual à do desenvolvimento — para o projeto, a diferença é só a
 `DATABASE_URL`.
+
+## Identidade visual ✅
+
+Definida em 04/09/2026, antes da etapa 2 — de propósito: quanto mais telas
+existirem, mais caro fica trocar paleta.
+
+O cliente espera uma versão **evoluída** do `docs/raw/mockup.html`, não uma
+tela desconhecida. Então a identidade vem de lá:
+
+- Paleta: navio `#17324d` → `#244a6b` em degradê na faixa superior, acento
+  dourado `#c79a45`, fundo `#f3f6f9`, linhas `#dfe6ec`.
+- Marca: quadrado com a sigla contornada em dourado (`components/ui/marca.tsx`).
+- Cantos arredondados de 12–14px nos painéis, sombra discreta.
+- Botões: navio para ação principal, dourado para ação de destaque, branco com
+  borda para o resto.
+- Estados: verde `#2e9b65`, amarelo `#d9a820`, vermelho `#cf3f4d`, azul
+  `#3178c6` — os mesmos hex do mockup.
+
+**O que foi deliberadamente mudado:**
+
+1. **Fonte.** O mockup usa Arial por ser um HTML solto. Ficou a stack nativa
+   do sistema: renderiza melhor em cada máquina e não baixa nada — o servidor
+   é offline.
+2. **Estrutura da navegação.** O mockup troca de tela por JavaScript numa
+   página só. Aqui são rotas de verdade, com faixa da marca em cima e barra de
+   navegação abaixo.
+3. **Laranja do farol reservado.** O mockup pinta o farol com verde, laranja e
+   vermelho; o enum tem verde, amarelo, vermelho e cinza. Ficou o amarelo, e o
+   laranja segue disponível como token caso o cliente confirme quatro faixas
+   (ver `pontos-para-reuniao.md`, ponto 1).
+
+**Estrutura de telas a seguir a partir da etapa 4** — a obra abre em abas, na
+ordem do mockup: Resumo · Contrato · Medições · Rerratificações · Documentos ·
+Histórico.
 
 ## Etapa 1 — Auth + RBAC ✅
 

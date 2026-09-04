@@ -9,7 +9,7 @@ export function BotaoSair() {
     <form action={sair}>
       <button
         type="submit"
-        className="rounded-md border border-[var(--border)] px-3 py-1.5 text-sm transition-colors hover:bg-[var(--background)]"
+        className="rounded-lg border border-white/30 px-3 py-1.5 text-sm font-bold text-white transition-colors hover:bg-white/10"
       >
         Sair
       </button>

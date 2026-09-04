@@ -47,6 +47,9 @@ contratuais.
 - Decisões assumidas a validar com o cliente: **`docs/pontos-para-reuniao.md`** —
   ao assumir algo por falta de resposta do cliente, registrar lá em vez de
   decidir em silêncio.
+- Identidade visual: paleta e componentes herdados de `docs/raw/mockup.html`
+  (navio + dourado). Tokens em `src/app/globals.css`; não introduzir cor nova
+  fora deles. A obra abre em abas na ordem do mockup.
 - Regra de negócio mora em `src/modules/`, sem React, com teste. As rotas em
   `src/app/` só orquestram.
 - Dinheiro e percentual nunca são `number` — `Decimal` até a formatação final

@@ -1,13 +1,17 @@
 import Link from "next/link";
 
+import { Marca } from "@/components/ui/marca";
 import { exigirUsuario } from "@/lib/guarda";
 import { pode, ROTULOS_PERFIL, type Recurso } from "@/modules/auth/permissoes";
 
 import { BotaoSair } from "./sair";
 
 /**
- * Shell da área autenticada. `exigirUsuario` roda antes de qualquer página
- * filha: é aqui que a sessão vira barreira de verdade, não no `proxy.ts`.
+ * Shell da área autenticada, no formato do mockup: faixa navio com a marca em
+ * cima, barra de navegação branca logo abaixo.
+ *
+ * `exigirUsuario` roda antes de qualquer página filha: é aqui que a sessão
+ * vira barreira de verdade, não no `proxy.ts`.
  */
 const NAVEGACAO: Array<{ href: string; rotulo: string; recurso: Recurso }> = [
   { href: "/dashboard", rotulo: "Painel", recurso: "obra" },
@@ -26,42 +30,39 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-full flex-col">
-      <header className="border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4">
-          <Link
-            href="/dashboard"
-            className="shrink-0 font-semibold tracking-tight text-[var(--primary)]"
-          >
-            AJA · Gestão de Obras
+      <header className="faixa-marca text-white">
+        <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-6 py-4">
+          <Link href="/dashboard" className="text-white">
+            <Marca />
           </Link>
-          <nav className="flex items-center gap-1 overflow-x-auto">
-            {itens.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="rounded-md px-3 py-1.5 text-sm whitespace-nowrap text-[var(--muted)] transition-colors hover:bg-[var(--background)] hover:text-[var(--foreground)]"
-              >
-                {item.rotulo}
-              </Link>
-            ))}
-          </nav>
-          <div className="ml-auto flex shrink-0 items-center gap-3">
-            <span className="hidden text-right text-xs leading-tight sm:block">
-              <span className="block font-medium">{usuario.nome}</span>
-              <span className="block text-[var(--muted)]">
-                {ROTULOS_PERFIL[usuario.perfil]}
-              </span>
+          <div className="flex items-center gap-4">
+            <span className="text-sm">
+              {usuario.nome} · {ROTULOS_PERFIL[usuario.perfil]}
             </span>
             <BotaoSair />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-6">
+      <nav className="border-b border-[var(--border)] bg-[var(--surface)]">
+        <div className="mx-auto flex max-w-[1500px] gap-1 overflow-x-auto px-6">
+          {itens.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="border-b-2 border-transparent px-3 py-3 text-sm font-bold whitespace-nowrap text-[var(--muted)] transition-colors hover:border-[var(--gold)] hover:text-[var(--primary)]"
+            >
+              {item.rotulo}
+            </Link>
+          ))}
+        </div>
+      </nav>
+
+      <main className="mx-auto w-full max-w-[1500px] flex-1 px-6 py-7">
         {children}
       </main>
 
-      <footer className="border-t border-[var(--border)] px-4 py-3 text-center text-xs text-[var(--muted)]">
+      <footer className="border-t border-[var(--border)] px-6 py-3 text-center text-xs text-[var(--muted)]">
         AJA Grupo Empresarial — uso interno, rede local
       </footer>
     </div>

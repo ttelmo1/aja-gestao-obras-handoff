@@ -1,4 +1,4 @@
-import { Card, Indicador } from "@/components/ui/card";
+import { Card, Indicador, TituloPagina } from "@/components/ui/card";
 import { Vazio } from "@/components/ui/vazio";
 import { formatarBRL } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
@@ -24,13 +24,11 @@ export default async function DashboardPage() {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold">Painel</h1>
-        <p className="text-sm text-[var(--muted)]">
-          Visão geral das obras e processos.
-        </p>
-      </div>
+    <div className="space-y-5">
+      <TituloPagina
+        titulo="Painel de Obras"
+        descricao="Visão geral das obras e processos."
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Indicador rotulo="Obras cadastradas" valor={String(totalObras)} />

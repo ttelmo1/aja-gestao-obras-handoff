@@ -21,12 +21,12 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 1 | Auth + RBAC | 12h | ✅ | 0 |
 | 2 | Cadastros base (contratante, responsável, setor) | ~3h | ✅ | 1 |
 | 3 | Auditoria — camada de gravação | ~3h | 🔵 | 0 |
-| 4 | CRUD de obras + dashboard/filtros | 15h | ⬜ | 2, 3 |
+| 4 | CRUD de obras + dashboard/filtros | 15h | ✅ | 2, 3 |
 | 5 | Medições + cálculos financeiros | 18h | ⬜ | 4 |
 | 6 | Tramitação (fluxo fixo) | 30h | ⬜ | 4 |
 | 7 | Gestão documental | 24h | ⬜ | 4, 5, 6 |
 | 8 | Rerratificações | 8h | ⬜ | 7 |
-| 9 | Motor do farol | 6h | ⬜ | 5, 6 |
+| 9 | Motor do farol | 6h | 🔵 | 5, 6 |
 | 10 | Auditoria — telas de histórico | 5h | ⬜ | 3, 4 |
 | 11 | Relatórios XLS/PDF | 12h | ⬜ | 5, 6, 8 |
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
@@ -319,7 +319,95 @@ Concluída em 04/09/2026.
 
 ## Etapa 3 — Auditoria (gravação) 🔵
 
-A camada existe desde a etapa 0 e já grava em login, logout, usuários e
-cadastros. Segue 🔵 porque cada módulo novo precisa chamá-la; fecha quando a
-tramitação e as medições estiverem instrumentadas. As telas de consulta são a
-etapa 10.
+A camada existe desde a etapa 0 e já grava em login, logout, usuários,
+cadastros e obras. Segue 🔵 porque cada módulo novo precisa chamá-la; fecha
+quando a tramitação e as medições estiverem instrumentadas. As telas de
+consulta são a etapa 10.
+
+## Etapa 4 — CRUD de obras + painel ✅
+
+Concluída em 04/09/2026.
+
+**Entregue:**
+
+- **Painel de Obras** na estrutura do mockup: filtros, indicadores e cartões
+  com farol, barras de progresso e faixa financeira.
+- Busca por código, objeto, contrato, protocolo, contratante e responsável;
+  filtros por situação, farol, responsável e contratante.
+- Cadastro e edição de obra, com código gerado automaticamente e término
+  previsto derivado da ordem de início mais o prazo.
+- Tela da obra com as **6 abas do mockup**; Resumo e Contrato prontos, as
+  outras quatro com o lugar reservado e a etapa dona anunciada.
+- Exclusão com trava de dependentes.
+- Seed `--demo` com 4 obras que acendem faróis diferentes.
+- Testes: **81 passando** (23 novos).
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **O farol é calculado na leitura, não lido da coluna.** A coluna `farol`
+   envelhece sozinha: nada acontece no banco quando o prazo vira, e um painel
+   que existe para avisar de atraso não pode mostrar luz vencida. Por isso o
+   **filtro de farol também é aplicado depois da consulta**, em memória — o
+   banco filtra fato registrado, o farol filtra situação calculada. Custo:
+   a consulta traz todas as obras que passaram nos outros filtros. Aceitável
+   para as dezenas de obras desta instalação; se o volume crescer, a etapa 9
+   revisita com recálculo agendado.
+2. **Painel e dashboard viraram uma tela só.** No mockup são a mesma coisa —
+   filtros, indicadores e cartões juntos. Duas telas de visão geral criariam
+   dois lugares para o mesmo número aparecer, com a chance de divergirem.
+   `/dashboard` continua existindo, redirecionando para `/obras`.
+3. **Abas da obra são rotas de verdade**, não troca de `display` como no
+   mockup: cada aba tem URL própria, abre em outra janela e o botão voltar
+   funciona. Cada etapa futura preenche a sua sem tocar nas demais.
+4. **Término previsto é derivado, mas o digitado vence.** O padrão é ordem de
+   início + prazo em dias; se o usuário escreveu uma data, ela manda. Há
+   suspensão de prazo que o sistema ainda não modela e que só existe na
+   cabeça do fiscal — recalcular por cima seria apagar informação.
+5. **Datas lidas ao meio-dia.** `new Date("2026-03-10")` é meia-noite UTC, que
+   em Brasília ainda é dia 9 — o clássico "a data voltou um dia". Todo campo
+   de data do formulário entra como `T12:00:00` local.
+6. **Valor aceita o formato que o usuário digita.** "1.200.000,00" e
+   "1200000.00" chegam ao mesmo `Decimal`. Exigir formato certo num campo de
+   dinheiro é transferir trabalho de máquina para pessoa.
+7. **Sem medição, o avanço físico é `null`, não zero.** Zero acenderia alerta
+   de execução atrasada em obra recém-iniciada, que é exatamente a obra sobre
+   a qual não se sabe nada ainda.
+8. **Obra com medição, documento ou rerratificação não é apagada.** A saída é
+   a situação *Cancelada*, que preserva o histórico do contrato.
+
+**Verificado com o servidor de pé:**
+
+| Verificação | Resultado |
+|---|---|
+| Painel com as 4 obras de demonstração | ✅ faróis Em dia, Atenção, Crítico e Sem dados |
+| Motivo do farol | ✅ "Prazo vencido há 80 dia(s)", "Faltam 20 dia(s)" |
+| Prazo transcorrido | ✅ 50%, 88% e 127% (vencido passa de 100) |
+| Busca por contrato, protocolo e texto do objeto | ✅ |
+| Filtro por situação e por farol | ✅ |
+| Farol inválido na URL (`?farol=ROXO`) | ✅ ignorado, sem erro de tela |
+| Código em branco | ✅ gerou `OBR-2026-001` |
+| Valor "100.000,00" | ✅ gravado como 100000 |
+| Término em branco com prazo de 90 dias | ✅ derivou 30/08 a partir de 01/06 |
+| Valor zero | ✅ recusado |
+| Ordem de início antes da assinatura | ✅ recusada |
+| Obra inexistente | ✅ 404 |
+| As 6 abas | ✅ todas respondem |
+| Operacional (obra = leitura) | ✅ botão some, `/obras/nova` barrada, aba Contrato em modo leitura |
+| Auditoria | ✅ criação e exclusão registradas com `obraId` |
+
+**Pendências conhecidas:**
+
+- Indicador "Processos parados" mostra `—` até a tramitação existir (etapa 6).
+  Preferi o traço a um zero que pareceria informação.
+- Sem paginação no painel. Mesmo raciocínio dos cadastros; se o volume
+  crescer, entra na etapa 12 junto com o recálculo de farol.
+- `valorAditivado` existe no schema e entra na conta, mas só é alimentado
+  pelas rerratificações (etapa 8). Hoje é sempre zero.
+
+## Etapa 5 — Medições ⬜
+
+**Escopo:** lançamento de medições com competência, valor, percentual
+executado, nota fiscal e ISS; cálculo de acumulados. Preenche a aba Medições.
+
+**Pré-requisito já resolvido:** `modules/medicoes/calculos.ts` está pronto e
+testado desde a etapa 0, e o painel já consome os agregados.

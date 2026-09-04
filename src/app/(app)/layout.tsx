@@ -14,8 +14,7 @@ import { BotaoSair } from "./sair";
  * vira barreira de verdade, não no `proxy.ts`.
  */
 const NAVEGACAO: Array<{ href: string; rotulo: string; recurso: Recurso }> = [
-  { href: "/dashboard", rotulo: "Painel", recurso: "obra" },
-  { href: "/obras", rotulo: "Obras", recurso: "obra" },
+  { href: "/obras", rotulo: "Painel de Obras", recurso: "obra" },
   { href: "/documentos", rotulo: "Documentos", recurso: "documento" },
   { href: "/relatorios", rotulo: "Relatórios", recurso: "relatorio" },
   { href: "/cadastros", rotulo: "Cadastros", recurso: "cadastro" },
@@ -32,7 +31,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-full flex-col">
       <header className="faixa-marca text-white">
         <div className="mx-auto flex max-w-[1500px] flex-wrap items-center justify-between gap-4 px-6 py-4">
-          <Link href="/dashboard" className="text-white">
+          <Link href="/obras" className="text-white">
             <Marca />
           </Link>
           <div className="flex items-center gap-4">

@@ -20,7 +20,7 @@ export default async function SemPermissaoPage({
         precisar deste acesso, fale com o administrador do sistema.
       </p>
       <Link
-        href="/dashboard"
+        href="/obras"
         className="mt-4 inline-block text-sm text-[var(--primary)] underline underline-offset-2"
       >
         Voltar ao painel

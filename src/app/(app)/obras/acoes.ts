@@ -1,0 +1,262 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { z } from "zod";
+
+import { StatusObra } from "@/generated/prisma/enums";
+import { autorizar } from "@/lib/guarda";
+import { dec } from "@/lib/money";
+import { prisma } from "@/lib/prisma";
+import { origemDaRequisicao } from "@/lib/sessao";
+import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
+import { proximoCodigo } from "@/modules/obras/codigo";
+import { terminoPrevisto } from "@/modules/obras/prazo";
+
+export type EstadoObra = { erro?: string; sucesso?: string } | undefined;
+
+/** Campo de data do formulário: `""` vira `null`, e a data é lida ao meio-dia. */
+const dataOpcional = z
+  .string()
+  .trim()
+  .transform((v) => {
+    if (v === "") return null;
+    // Meio-dia local evita o clássico "a data voltou um dia": `new Date("2026-03-10")`
+    // é meia-noite UTC, que em Brasília ainda é 09/03.
+    const d = new Date(`${v}T12:00:00`);
+    return Number.isNaN(d.getTime()) ? null : d;
+  })
+  .nullable();
+
+/** Valor monetário digitado em pt-BR ("1.200.000,00") ou cru ("1200000.00"). */
+const dinheiro = z
+  .string()
+  .trim()
+  .transform((v) => (v === "" ? "0" : v.replace(/\./g, "").replace(",", ".")))
+  .refine((v) => /^-?\d+(\.\d{1,2})?$/.test(v), "Valor inválido.")
+  .transform((v) => dec(v).toFixed(2));
+
+const textoOpcional = z
+  .string()
+  .trim()
+  .transform((v) => (v === "" ? null : v))
+  .nullable();
+
+const obraSchema = z
+  .object({
+    codigo: z.string().trim(),
+    objeto: z.string().trim().min(5, "Descreva o objeto da obra."),
+    numeroContrato: z.string().trim().min(1, "Informe o número do contrato."),
+    numeroProcesso: textoOpcional,
+    contratanteId: z.string().min(1, "Selecione o contratante."),
+    responsavelId: textoOpcional,
+    valorContratado: dinheiro,
+    dataAssinatura: dataOpcional,
+    dataOrdemInicio: dataOpcional,
+    prazoDias: z
+      .string()
+      .trim()
+      .transform((v) => (v === "" ? null : Number(v)))
+      .refine(
+        (v) => v === null || (Number.isInteger(v) && v > 0),
+        "Prazo deve ser um número de dias maior que zero.",
+      ),
+    dataPrevistaTermino: dataOpcional,
+    dataTerminoReal: dataOpcional,
+    status: z.enum(StatusObra),
+    observacoes: textoOpcional,
+  })
+  .refine(
+    (o) => !o.dataOrdemInicio || !o.dataAssinatura || o.dataOrdemInicio >= o.dataAssinatura,
+    { message: "A ordem de início não pode ser anterior à assinatura do contrato." },
+  )
+  .refine((o) => dec(o.valorContratado).gt(0), {
+    message: "O valor contratado precisa ser maior que zero.",
+  });
+
+function lerFormulario(formData: FormData) {
+  const campos = [
+    "codigo",
+    "objeto",
+    "numeroContrato",
+    "numeroProcesso",
+    "contratanteId",
+    "responsavelId",
+    "valorContratado",
+    "dataAssinatura",
+    "dataOrdemInicio",
+    "prazoDias",
+    "dataPrevistaTermino",
+    "dataTerminoReal",
+    "status",
+    "observacoes",
+  ];
+  const bruto: Record<string, unknown> = {};
+  for (const c of campos) bruto[c] = String(formData.get(c) ?? "");
+  return obraSchema.safeParse(bruto);
+}
+
+/**
+ * O término previsto é derivado da ordem de início mais o prazo em dias.
+ * Se o usuário digitou uma data à mão, ela vence — há casos de suspensão de
+ * prazo que o sistema ainda não modela e que só existem na cabeça do fiscal.
+ */
+function resolverTermino(dados: {
+  dataPrevistaTermino: Date | null;
+  dataOrdemInicio: Date | null;
+  prazoDias: number | null;
+}): Date | null {
+  return (
+    dados.dataPrevistaTermino ??
+    terminoPrevisto(dados.dataOrdemInicio, dados.prazoDias)
+  );
+}
+
+export async function salvarObra(
+  _estado: EstadoObra,
+  formData: FormData,
+): Promise<EstadoObra> {
+  const id = String(formData.get("id") ?? "");
+  const permissao = await autorizar("obra", id ? "editar" : "criar");
+  if (!permissao.ok) return { erro: permissao.erro };
+
+  const analise = lerFormulario(formData);
+  if (!analise.success) {
+    return { erro: analise.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+
+  const { codigo, ...dados } = analise.data;
+  const dataPrevistaTermino = resolverTermino(dados);
+  const { ip } = await origemDaRequisicao();
+
+  try {
+    if (id) {
+      const antes = await prisma.obra.findUnique({ where: { id } });
+      if (!antes) return { erro: "Obra não encontrada." };
+
+      const novo = {
+        ...dados,
+        dataPrevistaTermino,
+        codigo: codigo || antes.codigo,
+      };
+      const mudancas = diff(antes as unknown as Record<string, unknown>, novo);
+      if (Object.keys(mudancas.depois).length === 0) return { sucesso: "Nada mudou." };
+
+      await prisma.$transaction(async (tx) => {
+        await tx.obra.update({ where: { id }, data: novo });
+        await registrar(
+          {
+            ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
+            acao: AcaoAuditoria.ATUALIZAR,
+            entidade: "Obra",
+            entidadeId: id,
+            obraId: id,
+            descricao: `Obra ${antes.codigo} alterada.`,
+            dadosAntes: mudancas.antes,
+            dadosDepois: mudancas.depois,
+          },
+          tx,
+        );
+      });
+
+      revalidatePath("/obras");
+      revalidatePath(`/obras/${id}`);
+      return { sucesso: "Alterações salvas." };
+    }
+
+    const criada = await prisma.$transaction(async (tx) => {
+      const obra = await tx.obra.create({
+        data: {
+          ...dados,
+          dataPrevistaTermino,
+          codigo: codigo || (await gerarCodigo(tx)),
+          criadoPorId: permissao.usuario.id,
+        },
+      });
+      await registrar(
+        {
+          ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
+          acao: AcaoAuditoria.CRIAR,
+          entidade: "Obra",
+          entidadeId: obra.id,
+          obraId: obra.id,
+          descricao: `Obra ${obra.codigo} cadastrada: ${obra.objeto}.`,
+          dadosDepois: { codigo: obra.codigo, objeto: obra.objeto, status: obra.status },
+        },
+        tx,
+      );
+      return obra;
+    });
+
+    revalidatePath("/obras");
+    redirect(`/obras/${criada.id}?criada=1`);
+  } catch (erro) {
+    if ((erro as { code?: string }).code === "P2002") {
+      return { erro: "Já existe uma obra com esse código." };
+    }
+    throw erro;
+  }
+}
+
+type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Sugere o próximo código do ano corrente a partir do que já existe. */
+async function gerarCodigo(tx: Tx): Promise<string> {
+  const ano = new Date().getFullYear();
+  const existentes = await tx.obra.findMany({
+    where: { codigo: { startsWith: `OBR-${ano}-` } },
+    select: { codigo: true },
+  });
+  return proximoCodigo(
+    ano,
+    existentes.map((o: { codigo: string }) => o.codigo),
+  );
+}
+
+export async function excluirObra(
+  _estado: EstadoObra,
+  formData: FormData,
+): Promise<EstadoObra> {
+  const permissao = await autorizar("obra", "excluir");
+  if (!permissao.ok) return { erro: permissao.erro };
+
+  const id = String(formData.get("id") ?? "");
+  const obra = await prisma.obra.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      codigo: true,
+      objeto: true,
+      _count: { select: { medicoes: true, documentos: true, rerratificacoes: true } },
+    },
+  });
+  if (!obra) return { erro: "Obra não encontrada." };
+
+  const dependentes =
+    obra._count.medicoes + obra._count.documentos + obra._count.rerratificacoes;
+  if (dependentes > 0) {
+    return {
+      erro: `Esta obra tem ${dependentes} registro(s) vinculados (medições, documentos ou rerratificações). Cancele-a pelo campo de situação em vez de apagar — o histórico do contrato precisa continuar existindo.`,
+    };
+  }
+
+  const { ip } = await origemDaRequisicao();
+  await prisma.$transaction(async (tx) => {
+    await tx.obra.delete({ where: { id } });
+    await registrar(
+      {
+        ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
+        acao: AcaoAuditoria.EXCLUIR,
+        entidade: "Obra",
+        entidadeId: id,
+        obraId: id,
+        descricao: `Obra ${obra.codigo} excluída: ${obra.objeto}.`,
+        dadosAntes: { codigo: obra.codigo, objeto: obra.objeto },
+      },
+      tx,
+    );
+  });
+
+  revalidatePath("/obras");
+  redirect("/obras");
+}

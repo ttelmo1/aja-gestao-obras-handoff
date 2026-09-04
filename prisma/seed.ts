@@ -2,7 +2,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
-import { Perfil, Esfera } from "../src/generated/prisma/enums";
+import { Perfil, Esfera, StatusObra } from "../src/generated/prisma/enums";
 
 /**
  * Seed de provisionamento inicial.
@@ -60,31 +60,120 @@ async function seedBase() {
   console.log(`  setores: ${SETORES.length}`);
 }
 
-/** Dados fictícios para as 2 reuniões de validação previstas em contrato. */
+/**
+ * Dados fictícios para as 2 reuniões de validação previstas em contrato.
+ *
+ * As obras reproduzem os exemplos do mockup e são escolhidas para acender
+ * faróis diferentes — verde, atenção, crítico e sem dados — porque é isso que
+ * o cliente precisa ver funcionando na reunião. As datas são relativas a hoje,
+ * então a demonstração não envelhece.
+ */
 async function seedDemo() {
   const contratante = await prisma.contratante.upsert({
-    where: { cnpj: "12.345.678/0001-90" },
+    // CNPJ válido de verdade: o cadastro valida dígito verificador, e um
+    // número inventado seria recusado pela própria tela na demonstração.
+    where: { cnpj: "11222333000181" },
     update: {},
     create: {
       nome: "Prefeitura Municipal de Exemplo",
-      cnpj: "12.345.678/0001-90",
+      cnpj: "11222333000181",
       esfera: Esfera.MUNICIPAL,
       contato: "Secretaria de Obras",
+      telefone: "(00) 0000-0000",
     },
   });
 
-  const responsavel = await prisma.responsavel.create({
-    data: {
-      nome: "Eng. Responsável Exemplo",
-      cargo: "Engenheiro Civil",
-      registro: "CREA-XX 000000",
+  // `Responsavel` não tem coluna única para servir de chave de upsert, então
+  // a idempotência é por busca — rodar o seed duas vezes não duplica ninguém.
+  const responsavel =
+    (await prisma.responsavel.findFirst({ where: { nome: "João Silva" } })) ??
+    (await prisma.responsavel.create({
+      data: {
+        nome: "João Silva",
+        cargo: "Engenheiro civil",
+        registro: "CREA-BA 000000",
+        email: "joao.silva@exemplo.local",
+      },
+    }));
+
+  const hoje = new Date();
+  const dias = (n: number) => {
+    const d = new Date(hoje);
+    d.setDate(d.getDate() + n);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  };
+
+  const obras = [
+    {
+      codigo: "OBR-DEMO-001",
+      objeto: "Reforma da Unidade Centro",
+      numeroContrato: "015/2026",
+      numeroProcesso: "2026.004581",
+      valorContratado: "1200000.00",
+      dataAssinatura: dias(-200),
+      dataOrdemInicio: dias(-180),
+      prazoDias: 360,
+      dataPrevistaTermino: dias(180),
+      status: StatusObra.EM_ANDAMENTO,
+      observacoes: "Obra de demonstração — prazo folgado, farol verde.",
     },
-  });
+    {
+      codigo: "OBR-DEMO-002",
+      objeto: "Adequação Elétrica – Unidade Norte",
+      numeroContrato: "021/2026",
+      numeroProcesso: "2026.005112",
+      valorContratado: "480000.00",
+      dataAssinatura: dias(-150),
+      dataOrdemInicio: dias(-140),
+      prazoDias: 160,
+      dataPrevistaTermino: dias(20),
+      status: StatusObra.EM_ANDAMENTO,
+      observacoes: "Obra de demonstração — término próximo, farol de atenção.",
+    },
+    {
+      codigo: "OBR-DEMO-003",
+      objeto: "Manutenção Predial – Bloco B",
+      numeroContrato: "008/2025",
+      numeroProcesso: "2025.009003",
+      valorContratado: "260000.00",
+      dataAssinatura: dias(-400),
+      dataOrdemInicio: dias(-380),
+      prazoDias: 300,
+      dataPrevistaTermino: dias(-80),
+      status: StatusObra.EM_ANDAMENTO,
+      observacoes: "Obra de demonstração — prazo vencido, farol crítico.",
+    },
+    {
+      codigo: "OBR-DEMO-004",
+      objeto: "Ampliação do Almoxarifado Central",
+      numeroContrato: "030/2026",
+      valorContratado: "150000.00",
+      dataAssinatura: dias(-10),
+      dataOrdemInicio: null,
+      prazoDias: 120,
+      dataPrevistaTermino: null,
+      status: StatusObra.PLANEJAMENTO,
+      observacoes: "Obra de demonstração — sem ordem de início, farol cinza.",
+    },
+  ];
+
+  for (const obra of obras) {
+    await prisma.obra.upsert({
+      where: { codigo: obra.codigo },
+      update: {},
+      create: {
+        ...obra,
+        contratanteId: contratante.id,
+        responsavelId: responsavel.id,
+      },
+    });
+  }
 
   console.log(
     `  demo: contratante ${contratante.nome}, responsável ${responsavel.nome}`,
   );
-  console.log("  (obras de demonstração entram junto com o CRUD de obras)");
+  console.log(`  demo: ${obras.length} obras, com faróis diferentes`);
 }
 
 async function main() {

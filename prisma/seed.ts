@@ -5,9 +5,12 @@ import { PrismaClient } from "../src/generated/prisma/client";
 import {
   Perfil,
   Esfera,
+  StatusEtapa,
   StatusMedicao,
   StatusObra,
+  TipoEtapa,
 } from "../src/generated/prisma/enums";
+import { etapasIniciais } from "../src/modules/tramitacao/fluxo";
 
 /**
  * Seed de provisionamento inicial.
@@ -237,11 +240,128 @@ async function seedDemo() {
     }
   }
 
+  // --- Tramitação -------------------------------------------------------
+  // As 11 etapas nascem com a obra desde a etapa 6; as obras de demonstração
+  // criadas antes disso recebem as suas aqui.
+  const setores = await prisma.setor.findMany({ select: { id: true, nome: true } });
+  const setorPorNome = new Map(setores.map((s) => [s.nome, s.id]));
+
+  /** Etapas já vencidas antes da execução — deixam a faixa do fluxo realista. */
+  const CONCLUIDAS: TipoEtapa[] = [
+    TipoEtapa.BUSCA_LICITACAO,
+    TipoEtapa.HABILITACAO_HOMOLOGACAO,
+    TipoEtapa.ASSINATURA_CONTRATO,
+    TipoEtapa.GARANTIA,
+    TipoEtapa.ORDEM_INICIO,
+  ];
+
+  /**
+   * Percurso da última medição de cada obra pelos setores. O último trecho
+   * fica sem saída de propósito: é o que alimenta "processo parado há N dias"
+   * no painel e o critério do farol.
+   */
+  const PERCURSOS: Record<
+    string,
+    Array<{ setor: string; entrada: number; saida: number | null }>
+  > = {
+    // Anda bem: 4 dias na Controladoria, abaixo do limite de 10.
+    "OBR-DEMO-001": [
+      { setor: "Protocolo", entrada: -12, saida: -9 },
+      { setor: "Engenharia", entrada: -9, saida: -4 },
+      { setor: "Controladoria", entrada: -4, saida: null },
+    ],
+    // Travada: 25 dias na Controladoria — entra em "processos parados".
+    "OBR-DEMO-002": [
+      { setor: "Protocolo", entrada: -38, saida: -33 },
+      { setor: "Fiscalização", entrada: -33, saida: -25 },
+      { setor: "Controladoria", entrada: -25, saida: null },
+    ],
+    // Parada faz tempo: 60 dias no Financeiro, farol vermelho por isso também.
+    "OBR-DEMO-003": [
+      { setor: "Protocolo", entrada: -110, saida: -104 },
+      { setor: "Engenharia", entrada: -104, saida: -95 },
+      { setor: "Jurídico", entrada: -95, saida: -60 },
+      { setor: "Financeiro", entrada: -60, saida: null },
+    ],
+  };
+
+  let totalMovimentos = 0;
+  for (const obra of obras) {
+    const registro = await prisma.obra.findUniqueOrThrow({
+      where: { codigo: obra.codigo },
+      select: { id: true, status: true },
+    });
+
+    await prisma.etapaObra.createMany({
+      data: etapasIniciais().map((e) => ({ ...e, obraId: registro.id })),
+      skipDuplicates: true,
+    });
+
+    // Obra ainda em planejamento não teve nada concluído.
+    if (registro.status !== StatusObra.PLANEJAMENTO) {
+      await prisma.etapaObra.updateMany({
+        where: { obraId: registro.id, tipo: { in: CONCLUIDAS } },
+        data: { status: StatusEtapa.CONCLUIDA },
+      });
+      await prisma.etapaObra.updateMany({
+        where: {
+          obraId: registro.id,
+          tipo: { in: [TipoEtapa.EXECUCAO_OBRA, TipoEtapa.MEDICOES] },
+        },
+        data: { status: StatusEtapa.EM_ANDAMENTO },
+      });
+      // Nenhuma obra de demonstração tem aditivo.
+      await prisma.etapaObra.updateMany({
+        where: { obraId: registro.id, tipo: TipoEtapa.RERRATIFICACAO },
+        data: { status: StatusEtapa.NAO_SE_APLICA },
+      });
+    }
+
+    const percurso = PERCURSOS[obra.codigo];
+    if (!percurso) continue;
+
+    const etapaMedicoes = await prisma.etapaObra.findUniqueOrThrow({
+      where: { obraId_tipo: { obraId: registro.id, tipo: TipoEtapa.MEDICOES } },
+      select: { id: true, _count: { select: { movimentos: true } } },
+    });
+    if (etapaMedicoes._count.movimentos > 0) continue; // idempotência
+
+    const ultima = await prisma.medicao.findFirst({
+      where: { obraId: registro.id },
+      orderBy: { numero: "desc" },
+      select: { id: true },
+    });
+
+    let anterior: string | null = null;
+    for (const trecho of percurso) {
+      const destino = setorPorNome.get(trecho.setor);
+      if (!destino) continue;
+      await prisma.tramitacaoMovimento.create({
+        data: {
+          etapaObraId: etapaMedicoes.id,
+          medicaoId: ultima?.id ?? null,
+          setorOrigemId: anterior,
+          setorDestinoId: destino,
+          dataEntrada: dias(trecho.entrada),
+          dataSaida: trecho.saida === null ? null : dias(trecho.saida),
+          diasPermanencia:
+            trecho.saida === null ? null : trecho.saida - trecho.entrada,
+          observacoes: `Movimento de demonstração — ${trecho.setor}.`,
+        },
+      });
+      anterior = destino;
+      totalMovimentos += 1;
+    }
+  }
+
   console.log(
     `  demo: contratante ${contratante.nome}, responsável ${responsavel.nome}`,
   );
   console.log(`  demo: ${obras.length} obras, com faróis diferentes`);
   console.log(`  demo: ${totalMedicoes} medições, uma obra com ciclo vencido`);
+  console.log(
+    `  demo: ${totalMovimentos} movimentos de tramitação, 3 processos em aberto`,
+  );
 }
 
 async function main() {

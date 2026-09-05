@@ -7,7 +7,7 @@ import { resumoDaObra } from "@/modules/obras/resumo";
 import { ROTULOS_STATUS } from "@/modules/obras/filtros";
 
 import { AbasDaObra } from "./abas";
-import { carregarObra } from "./dados";
+import { carregarObra, diasParadoDe } from "./dados";
 
 /**
  * Cabeçalho e abas da obra — a estrutura que o cliente viu no mockup. O
@@ -23,7 +23,13 @@ export default async function ObraLayout({
   const obra = await carregarObra(id);
   if (!obra) notFound();
 
-  const { farol, motivosFarol } = resumoDaObra(obra, obra.medicoes);
+  const agora = new Date();
+  const { farol, motivosFarol } = resumoDaObra(
+    obra,
+    obra.medicoes,
+    diasParadoDe(obra, agora),
+    agora,
+  );
 
   return (
     <div>

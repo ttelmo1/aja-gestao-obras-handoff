@@ -5,8 +5,8 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 - **Contrato:** R$ 10.000,00 / 140h (R$70/h), 4 parcelas.
 - **Orçado por módulo:** 143h (folga negativa de 3h — ver
   [`escopo-e-orcamento.md`](escopo-e-orcamento.md)).
-- **Última atualização:** 04/09/2026 — etapa 5 concluída; obra ↔ contrato
-  confirmado 1:1 pelo engenheiro do cliente (ponto #4 fechado).
+- **Última atualização:** 05/09/2026 — etapa 6 concluída; o núcleo previsto
+  para a 1ª reunião de validação está de pé.
 
 ## Legenda
 
@@ -24,7 +24,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 3 | Auditoria — camada de gravação | ~3h | 🔵 | 0 |
 | 4 | CRUD de obras + dashboard/filtros | 15h | ✅ | 2, 3 |
 | 5 | Medições + cálculos financeiros | 18h | ✅ | 4 |
-| 6 | Tramitação (fluxo fixo) | 30h | ⬜ | 4 |
+| 6 | Tramitação (fluxo fixo) | 30h | ✅ | 4 |
 | 7 | Gestão documental | 24h | ⬜ | 4, 5, 6 |
 | 8 | Rerratificações | 8h | ⬜ | 7 |
 | 9 | Motor do farol | 6h | 🔵 | 5, 6 |
@@ -480,16 +480,109 @@ Concluída em 04/09/2026.
 | Indicador "Medições atrasadas" no painel | ✅ 2 de 4 obras |
 | Trilha de auditoria da medição | ✅ CRIAR e EXCLUIR registrados |
 
-## Etapa 6 — Tramitação ⬜
+## Etapa 6 — Tramitação ✅
 
-**Escopo:** registro de entrada e saída por setor no fluxo fixo dos
-requisitos (1.5), com etapas marcáveis como "não se aplica" e cálculo do
-tempo de permanência. Preenche a aba Tramitação e destrava dois pendentes:
+Concluída em 05/09/2026.
 
-- o indicador **"Processos parados"** do painel, hoje exibindo `—`;
-- o critério **dias parado** do farol, que já existe em
-  `modules/farol/regras.ts` mas recebe `null` de todos os chamadores.
+**Entregue:**
 
-**Pré-requisitos já resolvidos:** enum `TipoEtapa` com as onze etapas na
-ordem, modelo `EtapaObra` e os 7 setores criados pelo seed base.
+- **Aba Tramitação** com o fluxo fixo das 11 etapas na faixa de passos do
+  mockup, cada uma abrindo embaixo com seu percurso pelos setores.
+- Registro de **entrada e saída por setor**, com cálculo automático do tempo
+  de permanência e da cadeia "veio de".
+- Etapa marcável como **"não se aplica"** — a única flexibilidade que o fluxo
+  admite (requisitos 1.5).
+- **Tramitação por medição**: cada medição caminha sozinha pelos setores, com
+  o bloco "Tramitação do processo" dentro dela, como no mockup. A tabela de
+  medições ganhou as colunas **Setor atual** e **Tempo**, que faltavam.
+- Painel: o indicador **"Processos parados"** saiu do traço e conta obras
+  paradas há 10 dias ou mais.
+- **O critério `diasParado` do farol entrou em operação.** Existia desde a
+  etapa 0 recebendo `null` de todos os chamadores; agora acende de verdade.
+- Aba Resumo ganhou o indicador **"Maior tempo parado"** do mockup.
+- Seed `--demo` com 10 movimentos e 3 processos em aberto, um deles parado há
+  60 dias.
+- Testes: **124 passando** (22 novos).
 
+**Decisões técnicas tomadas na etapa:**
+
+1. **Movimento sem data de saída é processo parado.** É a regra central do
+   módulo, e dela saem o "há N dias na Controladoria", o indicador do painel
+   e o critério do farol. O índice `@@index([dataSaida])` do schema existe
+   para essa consulta.
+2. **Tempo parado é calculado na leitura, nunca lido da coluna.**
+   `diasPermanencia` só é gravado quando a saída acontece. Um processo parado
+   há 8 dias precisa dizer 9 amanhã sem ninguém tocar em nada — mesmo
+   raciocínio do farol na etapa 4.
+3. **Cada medição tramita sozinha.** O mockup mostra tramitação dentro da
+   medição, com protocolo próprio, e a tabela de medições tem "Setor atual"
+   por linha. Com os movimentos presos só à etapa, isso seria impossível:
+   todas as medições da obra cairiam no mesmo percurso. Resolvido com
+   `TramitacaoMovimento.medicaoId` — uma coluna anulável, sem tocar no fluxo
+   fixo. Registrado como ponto #16 da reunião.
+4. **Na etapa MEDICOES, movimento sem medição é recusado.** Descoberto
+   testando: um movimento solto ali criaria um percurso paralelo sem dono, e
+   a etapa passaria a ter dois "setor atual" ao mesmo tempo. A aba não oferece
+   o formulário, e a ação recusa mesmo se o POST vier na mão.
+5. **Com vários processos abertos, o "atual" é o parado há mais tempo**, não o
+   mais recente. Quem olha a faixa do fluxo quer ver o pior caso, que é o que
+   o painel vai cobrar. A tela diz quantos outros estão em aberto.
+6. **"Dias parado" da obra é o maior, não a soma nem a média.** Se um processo
+   está há 40 dias na Controladoria e outro entrou ontem, a obra tem um
+   problema de 40 dias — a média esconderia exatamente o caso que o painel
+   existe para mostrar.
+7. **Entrada e saída são atos separados.** No mundo real o processo sai de um
+   setor num dia e chega no outro dias depois; colapsar os dois esconderia o
+   tempo perdido no caminho, que é o que o cliente quer medir.
+8. **Um processo está num setor de cada vez.** Nova entrada exige que a
+   anterior tenha saída, e não pode ser anterior a ela.
+9. **Etapa com movimentos não vira "não se aplica".** O histórico diria que o
+   processo passou por uma etapa que nunca existiu. É preciso apagar os
+   movimentos antes.
+10. **As 11 etapas nascem com a obra**, e `carregarEtapas` cria as que
+    faltarem. Obras cadastradas antes desta etapa não têm nenhuma, e uma
+    etapa nova no enum precisaria aparecer nas obras existentes sem script de
+    migração de dados.
+11. **Uma etapa aberta por vez, escolhida por `?etapa=`.** Onze formulários
+    empilhados seriam ilegíveis, e a seleção por link mantém a tela
+    funcionando sem JavaScript, como o resto do sistema.
+12. **A aba Tramitação é um desvio consciente do mockup.** O mockup tem seis
+    abas e nenhuma de tramitação — ele é anterior ao requisito 1.5
+    `[AJUSTADO]`, que o engenheiro confirmou na chamada de validação. O fluxo
+    fixo das 11 etapas não tinha onde morar, e enfiá-lo no Resumo esconderia
+    o módulo de 30h. Registrado no ponto #16.
+
+**Verificado com o servidor de pé, sem JavaScript:**
+
+| Verificação | Resultado |
+|---|---|
+| Faixa do fluxo com as 11 etapas e seus status | ✅ |
+| Percurso somando o tempo por setor | ✅ 6+9+35+60 = 110 dias |
+| Cadeia "veio de" entre setores | ✅ |
+| Segunda entrada com a anterior em aberto | ✅ recusada |
+| Entrada anterior à saída do setor anterior | ✅ recusada |
+| Saída anterior à entrada | ✅ recusada |
+| Movimento solto na etapa de medições | ✅ recusado |
+| Etapa concluída sem data de conclusão | ✅ recusada |
+| Conclusão anterior ao início | ✅ recusada |
+| "Não se aplica" em etapa com movimentos | ✅ recusada |
+| "Não se aplica" em etapa vazia, e reativação | ✅ |
+| Colunas "Setor atual" e "Tempo" na tabela de medições | ✅ Financeiro, 60 dias |
+| Bloco de tramitação dentro da medição | ✅ 4 setores, 110 dias |
+| Indicador "Processos parados" no painel | ✅ 2 de 4 obras |
+| Farol acendendo por processo parado | ✅ "Processo parado há 60 dias." |
+| Trilha de auditoria dos movimentos e das etapas | ✅ |
+
+## Etapa 7 — Gestão documental ⬜
+
+**Escopo:** upload múltiplo por contexto (obra, contrato, medição, etapa,
+rerratificação), central de documentos com rastreabilidade de origem, busca e
+filtros por tipo e origem (requisitos 1.6).
+
+**Pré-requisitos já resolvidos:** modelo `Documento` com vínculo polimórfico
+por entidade, `modules/documentos/formatos.ts` com a allowlist testada, e
+`STORAGE_DIR` fora de `public/` para que todo download passe por checagem de
+permissão.
+
+**Atenção:** DWG e RVT seguem **bloqueados** até o cliente confirmar — ponto
+#2 da reunião, e restrição explícita no `CLAUDE.md`.

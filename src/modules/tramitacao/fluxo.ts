@@ -1,4 +1,4 @@
-import { TipoEtapa } from "@/generated/prisma/enums";
+import { StatusEtapa, TipoEtapa } from "@/generated/prisma/enums";
 
 /**
  * Sequência FIXA do fluxo de tramitação (requisitos.md 1.5).
@@ -51,4 +51,39 @@ export function ordemDaEtapa(tipo: TipoEtapa): number {
  */
 export function etapasIniciais(): Array<{ tipo: TipoEtapa; ordem: number }> {
   return FLUXO_FIXO.map((tipo, i) => ({ tipo, ordem: i + 1 }));
+}
+
+export const STATUS_ETAPA = [
+  StatusEtapa.PENDENTE,
+  StatusEtapa.EM_ANDAMENTO,
+  StatusEtapa.CONCLUIDA,
+  StatusEtapa.NAO_SE_APLICA,
+] as const;
+
+export const ROTULOS_STATUS_ETAPA: Record<StatusEtapa, string> = {
+  PENDENTE: "Pendente",
+  EM_ANDAMENTO: "Em andamento",
+  CONCLUIDA: "Concluída",
+  NAO_SE_APLICA: "Não se aplica",
+};
+
+/**
+ * Cores do passo no fluxo, nos tokens do mockup: concluído em verde, atual em
+ * navio, pendente apagado. "Não se aplica" fica riscado e cinza — precisa
+ * continuar visível para o usuário saber que a etapa foi considerada e
+ * dispensada, não esquecida.
+ */
+export const CORES_STATUS_ETAPA: Record<
+  StatusEtapa,
+  { fundo: string; texto: string; borda: string }
+> = {
+  PENDENTE: { fundo: "var(--surface)", texto: "var(--muted)", borda: "var(--border)" },
+  EM_ANDAMENTO: { fundo: "#eef4fb", texto: "var(--primary)", borda: "var(--primary)" },
+  CONCLUIDA: { fundo: "var(--success-bg)", texto: "var(--success)", borda: "var(--success)" },
+  NAO_SE_APLICA: { fundo: "#f2f4f6", texto: "var(--muted)", borda: "var(--border)" },
+};
+
+/** Etapa que ainda espera alguém. Usada para achar "a etapa atual" da obra. */
+export function estaAberta(status: StatusEtapa): boolean {
+  return status === StatusEtapa.PENDENTE || status === StatusEtapa.EM_ANDAMENTO;
 }

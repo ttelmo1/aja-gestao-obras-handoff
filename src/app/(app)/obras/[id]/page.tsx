@@ -9,7 +9,7 @@ import { formatarBRL, formatarPercentual } from "@/lib/money";
 import { ROTULOS_ESFERA } from "@/modules/cadastros/rotulos";
 import { resumoDaObra } from "@/modules/obras/resumo";
 
-import { carregarObra } from "./dados";
+import { carregarObra, diasParadoDe } from "./dados";
 
 export const metadata = { title: "Resumo da obra" };
 export const dynamic = "force-dynamic";
@@ -25,10 +25,9 @@ export default async function ResumoObraPage({
   const obra = await carregarObra(id);
   if (!obra) notFound();
 
-  const { financeiro, prazo, medicao, farol, motivosFarol } = resumoDaObra(
-    obra,
-    obra.medicoes,
-  );
+  const agora = new Date();
+  const { financeiro, prazo, medicao, diasParado, farol, motivosFarol } =
+    resumoDaObra(obra, obra.medicoes, diasParadoDe(obra, agora), agora);
 
   return (
     <div className="flex flex-col gap-4">
@@ -52,6 +51,15 @@ export default async function ResumoObraPage({
             <span className="tabular">{formatarBRL(financeiro.saldoAMedir)}</span>
           </Dado>
           <Dado rotulo="Medições">{financeiro.quantidadeMedicoes}</Dado>
+          <Dado rotulo="Maior tempo parado">
+            {diasParado === null ? (
+              "—"
+            ) : (
+              <span className={diasParado >= 10 ? "text-[var(--danger)]" : undefined}>
+                {diasParado} dia(s)
+              </span>
+            )}
+          </Dado>
           <Dado rotulo="Próxima medição">
             {medicao ? (
               <span

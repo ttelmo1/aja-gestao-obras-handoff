@@ -40,6 +40,8 @@ export type ObraParaResumo = {
 export type ResumoObra = {
   financeiro: ResumoFinanceiro;
   prazo: Prazo | null;
+  /** Maior tempo parado num setor, entre os processos em aberto. */
+  diasParado: number | null;
   /** Vencimento da próxima medição; `null` quando não há prazo a cobrar. */
   medicao: SituacaoMedicao | null;
   farol: Farol;
@@ -49,7 +51,7 @@ export type ResumoObra = {
 export function resumoDaObra(
   obra: ObraParaResumo,
   medicoes: MedicaoParaCalculo[] = [],
-  /** Dias parada no setor atual. `null` até a tramitação existir (etapa 6). */
+  /** Maior tempo parado num setor, entre os processos em aberto. */
   diasParado: number | null = null,
   agora: Date = new Date(),
 ): ResumoObra {
@@ -94,7 +96,7 @@ export function resumoDaObra(
     agora,
   });
 
-  return { financeiro, prazo, medicao, farol, motivosFarol: motivos };
+  return { financeiro, prazo, medicao, diasParado, farol, motivosFarol: motivos };
 }
 
 export type TotaisPainel = {
@@ -105,6 +107,8 @@ export type TotaisPainel = {
   saldoAMedir: Decimal;
   /** Obras cuja próxima medição já venceu — o KPI do mockup. */
   medicoesAtrasadas: number;
+  /** Obras com processo parado em algum setor há 10 dias ou mais. */
+  processosParados: number;
 };
 
 /**
@@ -113,6 +117,12 @@ export type TotaisPainel = {
  * exatamente do mesmo jeito — indicador que diverge entre a tela e o PDF é
  * problema que só aparece na frente do cliente.
  */
+/**
+ * Dias de parada a partir dos quais o painel conta a obra como "processo
+ * parado". Vem do mockup, que rotula o indicador "Processos parados +10 dias".
+ */
+export const DIAS_PARA_CONTAR_PARADO = 10;
+
 export function totaisDoPainel(
   obras: Array<{ status: StatusObra; resumo: ResumoObra }>,
 ): TotaisPainel {
@@ -130,5 +140,8 @@ export function totaisDoPainel(
     ),
     saldoAMedir: obras.reduce((s, o) => s.plus(o.resumo.financeiro.saldoAMedir), zero),
     medicoesAtrasadas: obras.filter((o) => o.resumo.medicao?.atrasada).length,
+    processosParados: obras.filter(
+      (o) => (o.resumo.diasParado ?? 0) >= DIAS_PARA_CONTAR_PARADO,
+    ).length,
   };
 }

@@ -13,6 +13,7 @@ import { origemDaRequisicao } from "@/lib/sessao";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { proximoCodigo } from "@/modules/obras/codigo";
 import { terminoPrevisto } from "@/modules/obras/prazo";
+import { etapasIniciais } from "@/modules/tramitacao/fluxo";
 
 export type EstadoObra = { erro?: string; sucesso?: string } | undefined;
 
@@ -151,6 +152,11 @@ export async function salvarObra(
           dataPrevistaTermino,
           codigo: codigo || (await gerarCodigo(tx)),
           criadoPorId: permissao.usuario.id,
+          // As 11 etapas do fluxo fixo nascem com a obra. Criar sob demanda
+          // faria a aba Tramitação abrir vazia na primeira visita, como se o
+          // fluxo fosse opcional — ele não é; o que varia é uma etapa ser
+          // marcada "não se aplica".
+          etapas: { create: etapasIniciais() },
         },
       });
       await registrar(

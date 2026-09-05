@@ -29,6 +29,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 13 | Periodicidade da medição e o que conta como atrasada | 🟡 | Baixo |
 | 14 | Consórcio: contrato com duas empresas | 🟡 | Baixo |
 | 15 | Contratos de manutenção não são obras | 🟡 | Baixo a médio |
+| 16 | Onde a tramitação mora: por medição ou por etapa | 🟡 | Médio |
 
 ---
 
@@ -68,6 +69,11 @@ disponível, caso sejam quatro faixas.
 **Custo de mudar:** baixo enquanto for número — estão isolados em
 `LIMITES_PROVISORIOS`. Se o farol virar "prazo de medição", o motor fica
 **mais simples** do que é hoje, não mais complexo: é apagar critério.
+
+**Atualização (etapa 6):** o critério **dias parado** entrou em operação. Ele
+existia desde a etapa 0 mas recebia `null` de todos os chamadores, porque não
+havia tramitação para alimentá-lo. Agora acende de verdade — e é o primeiro
+critério do farol que se pode discutir com número real na tela.
 
 **Atualização (etapa 5):** o dado que a leitura do mockup exige já existe.
 `modules/medicoes/periodicidade.ts` calcula quando a próxima medição vence e
@@ -420,6 +426,43 @@ sistema **conclui** a partir disso:
 coluna e um `if` no motor. Vira médio se o cliente quiser telas e relatórios
 próprios para manutenção, o que não está no orçado.
 **Onde:** `prisma/schema.prisma` e `src/modules/farol/regras.ts`.
+
+## 16. Onde a tramitação mora: por medição ou por etapa 🟡
+
+O requisito 1.5 `[AJUSTADO]` descreve um fluxo fixo de **11 etapas do
+contrato** (busca em licitação → … → atestado), com registro de entrada e
+saída por setor. O mockup mostra outra coisa: **não tem aba de tramitação**, e
+o percurso pelos setores aparece dentro de cada **medição**, que tem protocolo
+próprio e caminha sozinha.
+
+**Assumimos que os dois convivem**, porque são camadas diferentes:
+
+- As **11 etapas** são o ciclo de vida do contrato. Ganharam aba própria — o
+  mockup é anterior ao requisito ajustado, e o fluxo não tinha onde morar.
+- Os **movimentos entre setores** pertencem a uma etapa; na etapa de medições,
+  cada movimento pertence também a uma medição específica
+  (`TramitacaoMovimento.medicaoId`). É o que faz "Setor atual" e "Tempo"
+  funcionarem por linha na tabela de medições, como no mockup.
+
+**Perguntar:**
+
+1. As outras etapas do fluxo (garantia, aceite, atestado) também tramitam
+   entre setores, ou só as medições? Se só as medições, a aba Tramitação pode
+   virar um acompanhamento de situação, sem percurso.
+2. Rerratificação tem protocolo próprio que caminha sozinho, como a medição?
+   Hoje ela é uma etapa só, sem tramitação individual.
+3. Quem registra entrada e saída: alguém da AJA acompanhando o processo no
+   órgão, ou existe consulta ao sistema do órgão? Isso muda a frequência com
+   que os dados chegam — e, se o registro for manual e atrasado, o "há N dias
+   parado" mede o atraso do registro, não o do processo.
+4. A aba Tramitação faz sentido para o cliente, ou ele esperava ver tudo
+   dentro da medição como no mockup?
+
+**Custo de mudar:** médio. Tirar a aba é apagar tela. Estender a tramitação
+individual a outras entidades (rerratificação, por exemplo) é repetir o que
+já existe para medição — a coluna e a lógica estão prontas.
+**Onde:** `src/modules/tramitacao/`, `src/app/(app)/obras/[id]/tramitacao/`,
+`TramitacaoMovimento.medicaoId` em `prisma/schema.prisma`.
 
 ---
 

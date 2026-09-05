@@ -12,6 +12,7 @@ const ABAS = [
   { sufixo: "", rotulo: "Resumo" },
   { sufixo: "/contrato", rotulo: "Contrato" },
   { sufixo: "/medicoes", rotulo: "Medições" },
+  { sufixo: "/tramitacao", rotulo: "Tramitação" },
   { sufixo: "/rerratificacoes", rotulo: "Rerratificações" },
   { sufixo: "/documentos", rotulo: "Documentos" },
   { sufixo: "/historico", rotulo: "Histórico" },

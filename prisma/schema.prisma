@@ -267,6 +267,7 @@ model Medicao {
   atualizadoEm DateTime @updatedAt
 
   documentos Documento[]
+  movimentos TramitacaoMovimento[]
 
   @@unique([obraId, numero])
   @@index([obraId, competencia])
@@ -340,6 +341,13 @@ model TramitacaoMovimento {
   setorDestinoId String
   setorDestino   Setor   @relation("SetorDestino", fields: [setorDestinoId], references: [id])
 
+  /// Medição a que este movimento pertence, quando a etapa é MEDICOES.
+  /// No mockup cada medição tem protocolo próprio e caminha sozinha pelos
+  /// setores; sem esta coluna, os movimentos de todas as medições da obra
+  /// cairiam na mesma etapa e "setor atual da medição 5" seria impossível.
+  medicaoId String?
+  medicao   Medicao? @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+
   dataEntrada     DateTime
   dataSaida       DateTime?
   /// Preenchido ao registrar a saída.
@@ -351,6 +359,7 @@ model TramitacaoMovimento {
   criadoEm        DateTime @default(now())
 
   @@index([etapaObraId, dataEntrada])
+  @@index([medicaoId, dataEntrada])
   @@index([dataSaida]) // dataSaida IS NULL => processo parado
   @@index([setorDestinoId])
 }

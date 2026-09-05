@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { exigirPermissao } from "@/lib/guarda";
+import { paraCampoDinheiro } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
 
@@ -64,7 +65,7 @@ export default async function ContratoPage({
             numeroProcesso: obra.numeroProcesso,
             contratanteId: obra.contratanteId,
             responsavelId: obra.responsavelId,
-            valorContratado: obra.valorContratado.toFixed(2),
+            valorContratado: paraCampoDinheiro(obra.valorContratado) ?? "",
             dataAssinatura: paraCampoData(obra.dataAssinatura),
             dataOrdemInicio: paraCampoData(obra.dataOrdemInicio),
             prazoDias: obra.prazoDias,

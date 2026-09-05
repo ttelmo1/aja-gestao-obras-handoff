@@ -3,10 +3,13 @@ import { describe, it } from "node:test";
 
 import {
   competencia,
+  dinheiro,
   dinheiroOpcional,
+  normalizarDinheiro,
   percentualObrigatorio,
   percentualOpcional,
 } from "@/lib/campos";
+import { paraCampoDinheiro } from "@/lib/money";
 import { dataDeReferencia, proximoNumero } from "@/modules/medicoes/calculos";
 import {
   intervaloEmDias,
@@ -215,5 +218,47 @@ describe("campos do formulário de medição", () => {
     assert.equal(percentualObrigatorio.safeParse("101").success, false);
     assert.equal(percentualObrigatorio.safeParse("").success, false);
     assert.equal(percentualOpcional.parse(""), null);
+  });
+});
+
+describe("leitura de dinheiro digitado", () => {
+  it("aceita o formato pt-BR completo", () => {
+    assert.equal(normalizarDinheiro("1.200.000,00"), "1200000.00");
+    assert.equal(normalizarDinheiro("1.200,50"), "1200.50");
+    assert.equal(normalizarDinheiro("0,99"), "0.99");
+  });
+
+  it("aceita o valor cru que o próprio formulário devolve", () => {
+    // O bug que isto tranca: "260000.00" lido como milhar virava 26.000.000 —
+    // bastava abrir a aba Contrato e salvar sem tocar em nada.
+    assert.equal(normalizarDinheiro("260000.00"), "260000.00");
+    assert.equal(normalizarDinheiro("1200.5"), "1200.50");
+  });
+
+  it("ponto seguido de 3 dígitos é milhar, não centavo", () => {
+    assert.equal(normalizarDinheiro("1.200"), "1200.00");
+    assert.equal(normalizarDinheiro("1.200.000"), "1200000.00");
+  });
+
+  it("mistura de milhar e decimal com ponto", () => {
+    assert.equal(normalizarDinheiro("1.200.000.00"), "1200000.00");
+  });
+
+  it("sobrevive ao ida e volta pelo campo do formulário", () => {
+    for (const valor of ["260000.00", "1200000.00", "0.99", "1200.50"]) {
+      const noCampo = paraCampoDinheiro(valor)!;
+      assert.equal(normalizarDinheiro(noCampo), valor, `${valor} -> ${noCampo}`);
+    }
+  });
+
+  it("recusa o que não é número", () => {
+    assert.equal(normalizarDinheiro("abc"), null);
+    assert.equal(normalizarDinheiro(""), null);
+    assert.equal(dinheiroOpcional.safeParse("R$ 10").success, false);
+  });
+
+  it("valor em branco é zero no campo obrigatório e null no opcional", () => {
+    assert.equal(dinheiro.parse(""), "0.00");
+    assert.equal(dinheiroOpcional.parse(""), null);
   });
 });

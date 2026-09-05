@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { diff } from "@/modules/auditoria/diff";
 import { estaAberta, ordemDaEtapa } from "@/modules/tramitacao/fluxo";
 import {
   diasNoSetor,
@@ -194,5 +195,24 @@ describe("fluxo fixo", () => {
     assert.equal(ordemDaEtapa("BUSCA_LICITACAO"), 1);
     assert.equal(ordemDaEtapa("MEDICOES"), 7);
     assert.equal(ordemDaEtapa("ATESTADO"), 11);
+  });
+});
+
+describe("diferença para a auditoria", () => {
+  it("dinheiro com casas diferentes não conta como mudança", () => {
+    // "260000" (Decimal do banco) e "260000.00" (formulário) são o mesmo
+    // valor: sem isto, abrir o formulário e salvar já gerava registro.
+    const r = diff({ valor: "260000" }, { valor: "260000.00" });
+    assert.deepEqual(r.depois, {});
+  });
+
+  it("mudança real continua sendo registrada", () => {
+    const r = diff({ valor: "260000" }, { valor: "270000.00" });
+    assert.deepEqual(r.depois, { valor: "270000.00" });
+  });
+
+  it("texto diferente continua sendo mudança", () => {
+    assert.deepEqual(diff({ nome: "a" }, { nome: "b" }).depois, { nome: "b" });
+    assert.deepEqual(diff({ nome: "a" }, { nome: "a" }).depois, {});
   });
 });

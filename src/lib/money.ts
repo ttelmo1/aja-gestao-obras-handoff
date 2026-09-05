@@ -51,3 +51,17 @@ const FORMATADOR_PCT = new Intl.NumberFormat("pt-BR", {
 export function formatarPercentual(valor: Decimal.Value | null | undefined): string {
   return `${FORMATADOR_PCT.format(dec(valor).toNumber())}%`;
 }
+
+/**
+ * Valor para dentro de um campo de formulário, em pt-BR: "260000,00".
+ *
+ * Não usa `toFixed(2)` porque "260000.00" volta ambíguo na leitura — o ponto
+ * pode ser milhar ou centavo. Com vírgula não há dúvida, e o campo passa a
+ * mostrar o mesmo formato que o usuário digita.
+ */
+export function paraCampoDinheiro(
+  valor: Decimal.Value | null | undefined,
+): string | null {
+  if (valor === null || valor === undefined) return null;
+  return dec(valor).toFixed(2).replace(".", ",");
+}

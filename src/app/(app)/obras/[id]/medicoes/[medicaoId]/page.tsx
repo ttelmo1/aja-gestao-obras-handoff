@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Dado } from "@/components/ui/dados";
 import { TipoEtapa } from "@/generated/prisma/enums";
 import { exigirPermissao } from "@/lib/guarda";
+import { paraCampoDinheiro } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
 import { situacaoDaTramitacao } from "@/modules/tramitacao/movimentos";
@@ -75,15 +76,15 @@ export default async function EditarMedicaoPage({
             dataMedicao: paraCampoData(medicao.dataMedicao),
             periodoInicio: paraCampoData(medicao.periodoInicio),
             periodoFim: paraCampoData(medicao.periodoFim),
-            valorMedido: medicao.valorMedido.toFixed(2),
-            percentualExecutado: medicao.percentualExecutado.toFixed(2),
+            valorMedido: paraCampoDinheiro(medicao.valorMedido) ?? "",
+            percentualExecutado: medicao.percentualExecutado.toFixed(2).replace(".", ","),
             protocolo: medicao.protocolo,
             dataProtocolo: paraCampoData(medicao.dataProtocolo),
             notaFiscalNumero: medicao.notaFiscalNumero,
             notaFiscalData: paraCampoData(medicao.notaFiscalData),
-            notaFiscalValor: medicao.notaFiscalValor?.toFixed(2) ?? null,
-            issAliquota: medicao.issAliquota?.toFixed(2) ?? null,
-            issValor: medicao.issValor?.toFixed(2) ?? null,
+            notaFiscalValor: paraCampoDinheiro(medicao.notaFiscalValor),
+            issAliquota: medicao.issAliquota?.toFixed(2).replace(".", ",") ?? null,
+            issValor: paraCampoDinheiro(medicao.issValor),
             responsavelId: medicao.responsavelId,
             status: medicao.status,
             dataPagamento: paraCampoData(medicao.dataPagamento),

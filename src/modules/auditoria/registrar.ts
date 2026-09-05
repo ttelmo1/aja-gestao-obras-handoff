@@ -76,23 +76,6 @@ function sanitizar(valor: unknown): Prisma.InputJsonValue | undefined {
   );
 }
 
-/**
- * Diferença entre dois estados, só com os campos que mudaram — mantém o log
- * legível e a tabela enxuta em entidades largas como Obra.
- */
-export function diff<T extends Record<string, unknown>>(
-  antes: T,
-  depois: Partial<T>,
-): { antes: Partial<T>; depois: Partial<T> } {
-  const a: Partial<T> = {};
-  const d: Partial<T> = {};
-  for (const chave of Object.keys(depois) as Array<keyof T>) {
-    if (String(antes[chave]) !== String(depois[chave])) {
-      a[chave] = antes[chave];
-      d[chave] = depois[chave];
-    }
-  }
-  return { antes: a, depois: d };
-}
+export { diff } from "./diff";
 
 export { AcaoAuditoria };

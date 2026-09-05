@@ -5,7 +5,8 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 - **Contrato:** R$ 10.000,00 / 140h (R$70/h), 4 parcelas.
 - **Orçado por módulo:** 143h (folga negativa de 3h — ver
   [`escopo-e-orcamento.md`](escopo-e-orcamento.md)).
-- **Última atualização:** 04/09/2026
+- **Última atualização:** 04/09/2026 — etapa 5 concluída; obra ↔ contrato
+  confirmado 1:1 pelo engenheiro do cliente (ponto #4 fechado).
 
 ## Legenda
 

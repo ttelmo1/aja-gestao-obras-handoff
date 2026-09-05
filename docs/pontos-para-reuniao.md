@@ -17,7 +17,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 1 | Critérios de cor do farol | 🟡 | Baixo |
 | 2 | Upload de DWG/RVT | 🔴 | Baixo a alto |
 | 3 | Permissões por perfil | 🟡 | Baixo |
-| 4 | Obra ↔ contrato é 1:1 | 🟡 | **Alto** |
+| 4 | Obra ↔ contrato é 1:1 | 🟢 | ~~Alto~~ — resolvido |
 | 5 | Percentual executado é digitado | 🟡 | Médio |
 | 6 | Setores de tramitação | 🟡 | Baixo |
 | 7 | Numeração de medições e rerratificações | 🟡 | Médio |
@@ -27,6 +27,8 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 11 | Forma de instalação no servidor | 🔴 | Médio |
 | 12 | Recuperação de senha sem servidor de e-mail | 🟡 | Baixo |
 | 13 | Periodicidade da medição e o que conta como atrasada | 🟡 | Baixo |
+| 14 | Consórcio: contrato com duas empresas | 🟡 | Baixo |
+| 15 | Contratos de manutenção não são obras | 🟡 | Baixo a médio |
 
 ---
 
@@ -117,21 +119,22 @@ cliente quiser montar perfis pela interface: isso é tabela no banco, tela de
 administração e não está orçado.
 **Onde:** `src/modules/auth/permissoes.ts`.
 
-## 4. Uma obra tem exatamente um contrato 🟡
+## 4. Uma obra tem exatamente um contrato 🟢 RESOLVIDO
 
-**O ponto mais caro da lista.** Os requisitos tratam obra e contrato como a
-mesma coisa ("CRUD de obras: contratante, contrato, datas, responsável").
+**Confirmado pelo engenheiro do cliente em 04/09/2026.** Era o ponto mais
+caro da lista; deixa de ser risco.
 
-**Assumimos** 1:1: os campos de contrato (`numeroContrato`, `valorContratado`,
-datas) são colunas da obra.
+**Resposta:** para cada contrato, uma obra. Não há contratos complementares,
+não há lotes, e **não existe contrato guarda-chuva** cobrindo várias obras.
 
-**Perguntar:** existe obra com mais de um contrato — lotes, contratos
-complementares, consórcio? Existe contrato guarda-chuva cobrindo várias obras?
+**Consequência:** a modelagem 1:1 está certa e passa a ser definitiva. Os
+campos de contrato (`numeroContrato`, `valorContratado`, datas) continuam
+colunas de `Obra`, e as medições apontam direto para a obra. Nada a mudar.
 
-**Custo de mudar: alto.** Separar `Contrato` em tabela própria mexe em obras,
-medições, rerratificações, relatórios e em todos os cálculos financeiros.
-Barato agora, caro depois da etapa 5. **É a primeira pergunta a fazer na
-reunião.**
+Dois assuntos novos saíram desta mesma conversa e viraram os pontos
+[#14](#14-consórcio-contrato-com-duas-empresas-) e
+[#15](#15-contratos-de-manutenção-não-são-obras-).
+
 **Onde:** `prisma/schema.prisma`, model `Obra`.
 
 ## 5. O percentual executado é digitado pelo usuário 🟡
@@ -355,6 +358,69 @@ sem persistir nada calculado — mudar a regra é mudar a função.
 **Onde:** `src/modules/medicoes/periodicidade.ts`, campo
 `periodicidadeMedicao` em `prisma/schema.prisma`.
 
+## 14. Consórcio: contrato com duas empresas 🟡
+
+Levantado pelo engenheiro em 04/09/2026, ao responder o ponto #4.
+
+**O que ele disse:** existe **um** contrato firmado em consórcio por duas
+empresas, mas **só uma delas administra** — e é essa que a AJA usa no
+controle. Ele disse que explica pessoalmente.
+
+**Hoje o sistema não modela isso.** `Obra` guarda quem *contrata* (o órgão),
+não quem *executa* — a empresa executora é implícita, porque o sistema é da
+AJA. Num contrato em consórcio, o instrumento nomeia duas empresas e a
+distinção pode aparecer em nota fiscal, protocolo e atestado.
+
+**Perguntar:**
+
+1. O consórcio precisa **aparecer** em algum lugar do sistema (relatório,
+   atestado, capa de processo), ou é informação de bastidor?
+2. A nota fiscal da medição sai pela empresa administradora sempre, ou
+   alterna?
+3. É um caso único ou tende a se repetir em contratos futuros?
+
+**Custo de mudar:** baixo se for só exibição — um campo de texto opcional na
+obra ("consórcio / empresa executora") resolve. Sobe se o sistema precisar
+**repartir valores** entre as consorciadas, o que seria estrutura nova e está
+fora do orçado.
+**Onde:** `prisma/schema.prisma`, model `Obra`.
+
+## 15. Contratos de manutenção não são obras 🟡
+
+Levantado pelo engenheiro em 04/09/2026, na mesma conversa. Ele mencionou
+**dois contratos de manutenção** e disse que "precisa ver como vai fazer",
+mas que não influencia o resto.
+
+**Concordo que não muda a modelagem — e discordo que não influencia.** Um
+contrato de manutenção cabe em `Obra` sem violência: tem contratante, número,
+valor, prazo e medições mensais. O problema não é onde guardar, é o que o
+sistema **conclui** a partir disso:
+
+- **"Avanço físico acumulado"** não significa a mesma coisa. Numa obra é
+  quanto da construção ficou pronta; numa manutenção sob demanda é, no
+  máximo, quanto do teto contratual foi consumido — e pode ser legitimamente
+  baixo no meio do contrato.
+- **O farol vai acusar atraso falso.** O critério "avanço físico atrás do
+  tempo decorrido" (ponto #1) espera 50% de execução na metade do prazo. Um
+  contrato de manutenção com pouca demanda no semestre acenderia 🔴 sem ter
+  problema nenhum.
+- **"Medições atrasadas"** (ponto #13) provavelmente se aplica bem, porque a
+  medição de manutenção costuma ser mensal e fixa.
+
+**Perguntar:**
+
+1. Os contratos de manutenção devem entrar no mesmo painel das obras, ou em
+   uma lista à parte?
+2. Faz sentido o farol deles ignorar o avanço físico e olhar só prazo do
+   contrato e medição em dia?
+3. A manutenção tem medição mensal fixa ou por demanda/chamado?
+
+**Custo de mudar:** baixo a médio. A saída provável é um campo
+`tipoContrato` (obra / manutenção) que desliga um critério do farol — uma
+coluna e um `if` no motor. Vira médio se o cliente quiser telas e relatórios
+próprios para manutenção, o que não está no orçado.
+**Onde:** `prisma/schema.prisma` e `src/modules/farol/regras.ts`.
+
 ---
 
 ## Pontos já resolvidos 🟢
@@ -368,6 +434,8 @@ Registrados para não voltarem à mesa:
   apresentada ao órgão, que fica anexada.
 - **Armazenamento 100% local**, sem nuvem. Arquivos grandes (~300MB) não são
   problema porque residem no servidor da empresa.
+- **Uma obra tem exatamente um contrato** (ponto #4, confirmado em
+  04/09/2026): sem lotes, sem contratos complementares, sem guarda-chuva.
 - **Banco novo**, sem migração de dados legados.
 - **Exportação em XLS e PDF.**
 

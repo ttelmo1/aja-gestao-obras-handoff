@@ -39,8 +39,10 @@ type Opcao = { id: string; nome: string };
  * Formulário de obra, usado tanto para cadastrar quanto para editar.
  *
  * Os campos de contrato ficam junto dos da obra porque, nesta modelagem, obra
- * e contrato são a mesma entidade — suposição registrada no ponto 4 de
- * `docs/pontos-para-reuniao.md`, e a mais cara de reverter.
+ * e contrato são a mesma entidade. Era suposição; o engenheiro do cliente
+ * confirmou em 04/09/2026 que é um contrato por obra, sem lotes, contratos
+ * complementares nem guarda-chuva — ponto 4 de `docs/pontos-para-reuniao.md`,
+ * agora fechado.
  */
 export function FormularioObra({
   padrao,

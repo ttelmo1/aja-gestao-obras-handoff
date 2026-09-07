@@ -25,7 +25,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 4 | CRUD de obras + dashboard/filtros | 15h | ✅ | 2, 3 |
 | 5 | Medições + cálculos financeiros | 18h | ✅ | 4 |
 | 6 | Tramitação (fluxo fixo) | 30h | ✅ | 4 |
-| 7 | Gestão documental | 24h | ⬜ | 4, 5, 6 |
+| 7 | Gestão documental | 24h | ✅ | 4, 5, 6 |
 | 8 | Rerratificações | 8h | ⬜ | 7 |
 | 9 | Motor do farol | 6h | 🔵 | 5, 6 |
 | 10 | Auditoria — telas de histórico | 5h | ⬜ | 3, 4 |
@@ -573,16 +573,91 @@ Concluída em 05/09/2026.
 | Farol acendendo por processo parado | ✅ "Processo parado há 60 dias." |
 | Trilha de auditoria dos movimentos e das etapas | ✅ |
 
-## Etapa 7 — Gestão documental ⬜
+## Etapa 7 — Gestão documental ✅
 
-**Escopo:** upload múltiplo por contexto (obra, contrato, medição, etapa,
-rerratificação), central de documentos com rastreabilidade de origem, busca e
-filtros por tipo e origem (requisitos 1.6).
+Concluída em 07/09/2026.
 
-**Pré-requisitos já resolvidos:** modelo `Documento` com vínculo polimórfico
-por entidade, `modules/documentos/formatos.ts` com a allowlist testada, e
-`STORAGE_DIR` fora de `public/` para que todo download passe por checagem de
-permissão.
+**Entregue:**
 
-**Atenção:** DWG e RVT seguem **bloqueados** até o cliente confirmar — ponto
-#2 da reunião, e restrição explícita no `CLAUDE.md`.
+- **Central de Documentos da Obra** como no mockup: busca por nome e
+  descrição, filtro por tipo e por origem, e as colunas Tipo, Documento,
+  Vinculado a, Setor / Etapa, Data, Incluído por, Observação, Ação.
+- **Upload múltiplo por contexto** (requisitos.md 1.6): contrato, medição,
+  etapa de tramitação e passagem por setor. Vários arquivos de uma vez.
+- **Download autenticado** em `/documentos/[id]`, com o nome original de volta.
+- Anexos aparecem onde o mockup os coloca: chips por setor na tabela de
+  tramitação, bloco próprio dentro da medição, contagem na coluna "Docs".
+- Exclusão lógica: some da tela e do download, permanece para a auditoria.
+- Seed `--demo` com 23 documentos e arquivos de verdade no disco.
+- Testes: **161 passando** (27 novos).
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **O arquivo mora fora de `public/`.** Qualquer coisa em `public/` é servida
+   sem passar por autenticação — bastaria adivinhar o nome para baixar o
+   contrato de qualquer obra. Todo download passa pela rota que confere
+   sessão e permissão.
+2. **O nome no disco é gerado por nós, nunca o do navegador.** Nome de upload
+   é entrada de usuário: pode trazer `../`, barra, caractere que o sistema de
+   arquivos interpreta. No disco fica `obras/<obraId>/<uuid>.<ext>`; o nome
+   original vive no banco, para exibir e para nomear o download.
+3. **A defesa de travessia de caminho resolve e compara, não procura `..`.**
+   `resolverDentroDe` está em `modules/documentos/caminho.ts`, fora do
+   `server-only`, justamente para ter teste — é a regra mais crítica do
+   módulo. Cobre `..`, caminho absoluto e o prefixo parecido com a raiz, que
+   um `startsWith` ingênuo deixaria passar.
+4. **Uma pasta por obra.** O servidor é do cliente e um dia alguém vai abrir
+   essa pasta para fazer backup ou buscar um arquivo sem o sistema.
+5. **O CHECK de origem da etapa 0 foi reescrito.** Ele exigia exatamente um
+   vínculo entre obra, medição, etapa e rerratificação. Isso não descreve o
+   sistema: a central precisa listar o acervo de uma obra numa consulta só, e
+   só consegue com `obraId` sempre preenchido. A regra nova separa as três
+   perguntas — de que obra é, sobre o que é (no máximo um entre medição e
+   rerratificação), e onde entrou no fluxo.
+6. **Documento pode apontar para a passagem de setor, não só para a etapa.**
+   No mockup cada passo do fluxo tem seus próprios anexos, e a central mostra
+   em que setor o arquivo entrou. Custou uma coluna (`movimentoId`).
+7. **DWG e RVT seguem bloqueados**, com mensagem que diz o porquê em vez de
+   "formato não aceito" — o cliente ainda não decidiu (ponto #2).
+8. **Validação do lote inteiro antes de gravar qualquer arquivo.** Melhor
+   recusar tudo do que deixar metade no disco e reclamar da outra metade.
+9. **Exclusão é lógica, e o arquivo permanece no disco.** Auditoria que aponta
+   para arquivo inexistente não serve para nada (ponto #8).
+10. **`bodySizeLimit` subiu para 320MB.** O padrão do Next é 1MB e os
+    requisitos falam em ~300MB. Vale para toda Server Action, o que é
+    aceitável numa instalação em rede local atrás de login. Custo conhecido:
+    a ação carrega o corpo em memória — se algum dia entrarem arquivos
+    realmente grandes, o caminho é uma rota de upload com streaming.
+
+**Verificado com o servidor de pé, sem JavaScript:**
+
+| Verificação | Resultado |
+|---|---|
+| Upload de PDF no contrato | ✅ |
+| Upload de vários arquivos de uma vez | ✅ "2 documentos enviados" |
+| DWG | ✅ recusado, citando pendência do cliente |
+| Executável, arquivo vazio, nenhum arquivo | ✅ recusados |
+| Upload dentro da medição | ✅ origem "Medição 03" |
+| Upload no setor atual da tramitação | ✅ origem "Medições / Financeiro" |
+| Download autenticado | ✅ nome original, `inline`, `private, no-store` |
+| Download sem sessão | ✅ redireciona ao login |
+| Download de id inexistente | ✅ 404 |
+| Filtro por tipo, por origem e busca textual | ✅ |
+| Seletor de origem montado do acervo inteiro | ✅ Contrato, Medição 03, Medições |
+| Chips de anexo por setor na tramitação | ✅ |
+| Coluna "Docs" na tabela de medições | ✅ |
+| Exclusão lógica | ✅ acervo 5→4, download 404, arquivo no disco |
+| Trigger append-only da auditoria | ✅ recusou DELETE |
+| Travessia de caminho | ✅ 6 casos cobertos por teste |
+
+## Etapa 8 — Rerratificações ⬜
+
+**Escopo:** aditivos contratuais com **resumo agregado** — percentual
+alcançado e valor impactado —, sem detalhamento item a item (requisitos 1.7
+`[AJUSTADO]`: isso já consta na planilha apresentada ao órgão, que fica
+anexada). Preenche a aba Rerratificações.
+
+**Pré-requisitos já resolvidos:** modelo `Rerratificacao`, a coluna
+`Obra.valorAditivado` que já entra em todos os cálculos financeiros (hoje
+sempre zero), a etapa `RERRATIFICACAO` do fluxo fixo, e o upload de
+documentos da etapa 7, que a aba vai reusar para anexar a planilha.

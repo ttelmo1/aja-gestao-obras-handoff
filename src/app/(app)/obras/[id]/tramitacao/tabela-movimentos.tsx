@@ -3,7 +3,7 @@ import { Vazio } from "@/components/ui/vazio";
 import { formatarData } from "@/lib/date-br";
 import { diasNoSetor } from "@/modules/tramitacao/movimentos";
 
-import type { MovimentoCarregado } from "../dados";
+import type { DocumentoCarregado, MovimentoCarregado } from "../dados";
 import { BotaoExcluirMovimento, FormSaida } from "./formularios";
 
 /**
@@ -16,6 +16,7 @@ import { BotaoExcluirMovimento, FormSaida } from "./formularios";
  */
 export function TabelaMovimentos({
   movimentos,
+  documentos = [],
   agora,
   hoje,
   podeEditar,
@@ -23,6 +24,8 @@ export function TabelaMovimentos({
   mostrarMedicao = false,
 }: {
   movimentos: MovimentoCarregado[];
+  /** Documentos da obra; cada linha mostra os anexos do seu setor. */
+  documentos?: DocumentoCarregado[];
   agora: Date;
   /** `yyyy-mm-dd` de hoje, para o campo de data vir preenchido. */
   hoje: string;
@@ -42,6 +45,7 @@ export function TabelaMovimentos({
     "Entrada",
     "Saída",
     "Tempo",
+    "Documentos",
     "Registrado por",
     "Observações",
     ...(podeExcluir ? [""] : []),
@@ -92,6 +96,29 @@ export function TabelaMovimentos({
                   ainda no setor
                 </span>
               )}
+            </Celula>
+            <Celula>
+              {(() => {
+                const anexos = documentos.filter((d) => d.movimentoId === m.id);
+                if (anexos.length === 0)
+                  return <span className="text-[var(--muted)]">—</span>;
+                return (
+                  <span className="flex flex-wrap gap-1">
+                    {anexos.map((d) => (
+                      <a
+                        key={d.id}
+                        href={`/documentos/${d.id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        title={d.nomeOriginal}
+                        className="max-w-[140px] truncate rounded-full bg-[var(--background)] px-2 py-0.5 text-[11px] font-bold text-[var(--primary)] underline underline-offset-2"
+                      >
+                        {d.nomeOriginal}
+                      </a>
+                    ))}
+                  </span>
+                );
+              })()}
             </Celula>
             <Celula apagada>{m.registradoPor?.nome ?? "—"}</Celula>
             <Celula apagada>{m.observacoes ?? "—"}</Celula>

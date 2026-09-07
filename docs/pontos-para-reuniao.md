@@ -85,6 +85,13 @@ não de reescrita.
 
 ## 2. Upload de arquivos de engenharia (DWG/RVT) 🔴
 
+> **Atualização (etapa 7, 07/09/2026):** o módulo documental está pronto e a
+> trava continua de pé. Quem tenta enviar um `.dwg` recebe *"Formato .dwg
+> ainda não liberado pelo cliente (arquivos de engenharia)"* — a mensagem diz
+> o motivo em vez de fingir que o formato não existe. Liberar é trocar
+> `ENGENHARIA_HABILITADA` para `true` em
+> `src/modules/documentos/formatos.ts`: uma constante, sem migration.
+
 Pendência do próprio cliente: ele ainda não decidiu se os arquivos de projeto
 moram no sistema ou em outro lugar. **Não implementado**, conforme instrução.
 

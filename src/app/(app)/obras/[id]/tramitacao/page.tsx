@@ -13,7 +13,9 @@ import { pode } from "@/modules/auth/permissoes";
 import { FLUXO_FIXO, ROTULOS_ETAPA, estaAberta } from "@/modules/tramitacao/fluxo";
 import { situacaoDaTramitacao } from "@/modules/tramitacao/movimentos";
 
-import { carregarEtapas, carregarObra, paraCampoData } from "../dados";
+import { carregarDocumentos, carregarEtapas, carregarObra, paraCampoData } from "../dados";
+import { EnviarDocumentos } from "../documentos/enviar";
+import { ListaDocumentos } from "../documentos/lista";
 import { FormEntrada, FormEtapa } from "./formularios";
 import { TabelaMovimentos } from "./tabela-movimentos";
 
@@ -38,9 +40,10 @@ export default async function TramitacaoPage({
   const { id } = await params;
   const { etapa: etapaQuery } = await searchParams;
 
-  const [obra, etapas, setores] = await Promise.all([
+  const [obra, etapas, documentos, setores] = await Promise.all([
     carregarObra(id),
     carregarEtapas(id),
+    carregarDocumentos(id),
     prisma.setor.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
@@ -83,6 +86,15 @@ export default async function TramitacaoPage({
   const podeEditar = pode(usuario.perfil, "tramitacao", "editar");
   const podeCriar = pode(usuario.perfil, "tramitacao", "criar");
   const dispensada = etapa.status === "NAO_SE_APLICA";
+
+  // Documentos presos à etapa em si, mais os presos a qualquer setor por onde
+  // ela passou — é o acervo da etapa como o usuário a enxerga.
+  const idsDosMovimentos = new Set(etapa.movimentos.map((m) => m.id));
+  const documentosDaEtapa = documentos.filter(
+    (d) =>
+      d.etapaObraId === etapa.id ||
+      (d.movimentoId !== null && idsDosMovimentos.has(d.movimentoId)),
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -141,6 +153,7 @@ export default async function TramitacaoPage({
         ) : (
           <TabelaMovimentos
             movimentos={etapa.movimentos}
+            documentos={documentos}
             agora={agora}
             hoje={hoje}
             podeEditar={podeEditar}
@@ -172,6 +185,39 @@ export default async function TramitacaoPage({
             <FormEntrada etapaObraId={etapa.id} setores={setores} hoje={hoje} />
           </Card>
         ))}
+
+      {!dispensada && (
+        <Card
+          titulo={
+            situacao.atual
+              ? `Documentos da etapa · ${situacao.atual.setorDestino.nome}`
+              : "Documentos da etapa"
+          }
+        >
+          <ListaDocumentos
+            documentos={documentosDaEtapa}
+            podeExcluir={pode(usuario.perfil, "documento", "excluir")}
+            mostrarOrigem={false}
+            vazio="Nenhum documento anexado a esta etapa."
+          />
+
+          {pode(usuario.perfil, "documento", "criar") && (
+            <div className="mt-5 border-t border-[var(--border)] pt-5">
+              <EnviarDocumentos
+                obraId={obra.id}
+                contexto="etapa"
+                etapaObraId={etapa.id}
+                movimentoId={situacao.atual?.id}
+                titulo={
+                  situacao.atual
+                    ? `Adicionar documento ao setor atual: ${situacao.atual.setorDestino.nome}`
+                    : "Adicionar documento à etapa"
+                }
+              />
+            </div>
+          )}
+        </Card>
+      )}
 
       {podeEditar && (
         <Card titulo="Situação da etapa">

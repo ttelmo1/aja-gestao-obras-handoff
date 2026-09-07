@@ -1,4 +1,7 @@
 import "dotenv/config";
+import { createHash, randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join, resolve } from "node:path";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -11,6 +14,7 @@ import {
   TipoEtapa,
 } from "../src/generated/prisma/enums";
 import { etapasIniciais } from "../src/modules/tramitacao/fluxo";
+import { TipoDocumento } from "../src/generated/prisma/enums";
 
 /**
  * Seed de provisionamento inicial.
@@ -354,6 +358,96 @@ async function seedDemo() {
     }
   }
 
+  // --- Documentos ---------------------------------------------------------
+  // Arquivos de verdade no disco: a central de documentos só faz sentido na
+  // demonstração se o botão "Abrir" abrir alguma coisa.
+  const raizStorage = resolve(process.cwd(), process.env.STORAGE_DIR ?? "./storage");
+
+  // Quem "enviou" os documentos de demonstração é o admin criado no seed base.
+  const admin = await prisma.usuario.findFirstOrThrow({
+    where: { perfil: Perfil.ADMINISTRADOR },
+    select: { id: true },
+  });
+
+  async function anexar(
+    obraId: string,
+    nome: string,
+    tipo: TipoDocumento,
+    descricao: string,
+    vinculo: { medicaoId?: string; etapaObraId?: string; movimentoId?: string } = {},
+  ) {
+    const jaExiste = await prisma.documento.findFirst({
+      where: { obraId, nomeOriginal: nome, ...vinculo },
+      select: { id: true },
+    });
+    if (jaExiste) return false;
+
+    const conteudo = Buffer.from(
+      `%PDF-1.4\n% ${nome} — documento de demonstração do sistema AJA\n` +
+        `% ${descricao}\n%%EOF\n`,
+      "utf8",
+    );
+    const nomeArmazenado = `${randomUUID()}.pdf`;
+    const caminhoRelativo = join("obras", obraId, nomeArmazenado);
+    const destino = join(raizStorage, caminhoRelativo);
+    await mkdir(dirname(destino), { recursive: true });
+    await writeFile(destino, conteudo);
+
+    await prisma.documento.create({
+      data: {
+        nomeOriginal: nome,
+        nomeArmazenado,
+        caminhoRelativo,
+        mimeType: "application/pdf",
+        extensao: "pdf",
+        tamanhoBytes: BigInt(conteudo.byteLength),
+        hashSha256: createHash("sha256").update(conteudo).digest("hex"),
+        tipo,
+        descricao,
+        obraId,
+        ...vinculo,
+        enviadoPorId: admin.id,
+      },
+    });
+    return true;
+  }
+
+  let totalDocumentos = 0;
+  for (const obra of obras) {
+    const registro = await prisma.obra.findUniqueOrThrow({
+      where: { codigo: obra.codigo },
+      select: { id: true, numeroContrato: true },
+    });
+    const num = registro.numeroContrato.replace("/", "_");
+
+    // Documentos do contrato, presentes em toda obra.
+    if (await anexar(registro.id, `contrato_${num}.pdf`, TipoDocumento.CONTRATO, "Contrato assinado.")) totalDocumentos++;
+    if (await anexar(registro.id, `edital_${num}.pdf`, TipoDocumento.EDITAL, "Edital da licitação.")) totalDocumentos++;
+
+    // Documentos da última medição e do setor onde ela está parada.
+    const ultima = await prisma.medicao.findFirst({
+      where: { obraId: registro.id },
+      orderBy: { numero: "desc" },
+      select: { id: true, numero: true },
+    });
+    if (!ultima) continue;
+
+    const dois = String(ultima.numero).padStart(2, "0");
+    if (await anexar(registro.id, `medicao_${dois}_assinada.pdf`, TipoDocumento.MEDICAO, "Medição aprovada internamente.", { medicaoId: ultima.id })) totalDocumentos++;
+    if (await anexar(registro.id, `nf_medicao_${dois}.pdf`, TipoDocumento.NOTA_FISCAL, "Nota fiscal da medição.", { medicaoId: ultima.id })) totalDocumentos++;
+    if (await anexar(registro.id, `iss_medicao_${dois}.pdf`, TipoDocumento.ISS, "Guia de recolhimento do ISS.", { medicaoId: ultima.id })) totalDocumentos++;
+
+    const aberto = await prisma.tramitacaoMovimento.findFirst({
+      where: { etapaObra: { obraId: registro.id }, dataSaida: null },
+      select: { id: true, etapaObraId: true, setorDestino: { select: { nome: true } } },
+    });
+    if (aberto) {
+      const vinculo = { etapaObraId: aberto.etapaObraId, movimentoId: aberto.id };
+      if (await anexar(registro.id, `protocolo_${num}.pdf`, TipoDocumento.PROTOCOLO, "Abertura do processo.", vinculo)) totalDocumentos++;
+      if (await anexar(registro.id, `parecer_${aberto.setorDestino.nome.toLowerCase()}.pdf`, TipoDocumento.PARECER, `Parecer da ${aberto.setorDestino.nome}.`, vinculo)) totalDocumentos++;
+    }
+  }
+
   console.log(
     `  demo: contratante ${contratante.nome}, responsável ${responsavel.nome}`,
   );
@@ -362,6 +456,7 @@ async function seedDemo() {
   console.log(
     `  demo: ${totalMovimentos} movimentos de tramitação, 3 processos em aberto`,
   );
+  console.log(`  demo: ${totalDocumentos} documentos com arquivo no disco`);
 }
 
 async function main() {

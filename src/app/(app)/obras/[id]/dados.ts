@@ -87,7 +87,9 @@ export const carregarMedicoes = cache(async (obraId: string) => {
           medicao: { select: { id: true, numero: true } },
         },
       },
-      _count: { select: { documentos: true } },
+      // Contagem só do que está vivo: documento excluído não aparece na tela,
+      // então não pode aparecer no contador dela.
+      _count: { select: { documentos: { where: { excluidoEm: null } } } },
     },
   });
 });
@@ -147,3 +149,29 @@ export function diasParadoDe(obra: ObraCarregada, agora: Date = new Date()) {
     agora,
   );
 }
+
+/**
+ * Todos os documentos vivos da obra, com o que a central precisa mostrar.
+ *
+ * Traz os quatro vínculos possíveis porque é deles que sai a origem — a
+ * rastreabilidade que o requisito 1.6 pede.
+ */
+export const carregarDocumentos = cache(async (obraId: string) => {
+  return prisma.documento.findMany({
+    where: { obraId, excluidoEm: null },
+    orderBy: { criadoEm: "desc" },
+    include: {
+      enviadoPor: { select: { nome: true } },
+      medicao: { select: { id: true, numero: true } },
+      etapaObra: { select: { id: true, tipo: true } },
+      movimento: {
+        select: { id: true, setorDestino: { select: { nome: true } } },
+      },
+      rerratificacao: { select: { id: true, numero: true } },
+    },
+  });
+});
+
+export type DocumentoCarregado = Awaited<
+  ReturnType<typeof carregarDocumentos>
+>[number];

@@ -10,12 +10,15 @@ import { pode } from "@/modules/auth/permissoes";
 import { situacaoDaTramitacao } from "@/modules/tramitacao/movimentos";
 
 import {
+  carregarDocumentos,
   carregarEtapas,
   carregarMedicoes,
   carregarObra,
   paraCampoData,
   paraCampoMes,
 } from "../../dados";
+import { EnviarDocumentos } from "../../documentos/enviar";
+import { ListaDocumentos } from "../../documentos/lista";
 import { FormEntrada } from "../../tramitacao/formularios";
 import { TabelaMovimentos } from "../../tramitacao/tabela-movimentos";
 import { BotaoExcluirMedicao, FormularioMedicao } from "../formulario";
@@ -29,10 +32,11 @@ export default async function EditarMedicaoPage({
   const usuario = await exigirPermissao("medicao", "editar");
   const { id, medicaoId } = await params;
 
-  const [obra, medicoes, etapas, responsaveis, setores] = await Promise.all([
+  const [obra, medicoes, etapas, documentos, responsaveis, setores] = await Promise.all([
     carregarObra(id),
     carregarMedicoes(id),
     carregarEtapas(id),
+    carregarDocumentos(id),
     prisma.responsavel.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
@@ -56,6 +60,7 @@ export default async function EditarMedicaoPage({
   const hoje = paraCampoData(agora) ?? "";
   const tramitacao = situacaoDaTramitacao(medicao.movimentos, agora);
   const dispensada = etapaMedicoes?.status === "NAO_SE_APLICA";
+  const documentosDaMedicao = documentos.filter((d) => d.medicaoId === medicao.id);
 
   return (
     <div className="flex flex-col gap-4">
@@ -91,6 +96,31 @@ export default async function EditarMedicaoPage({
             observacoes: medicao.observacoes,
           }}
         />
+      </Card>
+
+      <Card titulo={`Documentos da medição (${documentosDaMedicao.length})`}>
+        <p className="mb-4 text-sm text-[var(--muted)]">
+          Medição assinada, protocolo, nota fiscal, guia do ISS, memória de
+          cálculo — cada medição pode ter quantos documentos precisar.
+        </p>
+
+        <ListaDocumentos
+          documentos={documentosDaMedicao}
+          podeExcluir={pode(usuario.perfil, "documento", "excluir")}
+          mostrarOrigem={false}
+          vazio="Nenhum documento anexado a esta medição."
+        />
+
+        {pode(usuario.perfil, "documento", "criar") && (
+          <div className="mt-5 border-t border-[var(--border)] pt-5">
+            <EnviarDocumentos
+              obraId={obra.id}
+              contexto="medicao"
+              medicaoId={medicao.id}
+              titulo="Enviar outro documento da medição"
+            />
+          </div>
+        )}
       </Card>
 
       <Card

@@ -358,6 +358,8 @@ model TramitacaoMovimento {
   observacoes     String?
   criadoEm        DateTime @default(now())
 
+  documentos Documento[]
+
   @@index([etapaObraId, dataEntrada])
   @@index([medicaoId, dataEntrada])
   @@index([dataSaida]) // dataSaida IS NULL => processo parado
@@ -407,14 +409,23 @@ model Rerratificacao {
 // Gestão documental
 // ============================================================
 
+/// Vocabulário do cliente, tirado do mockup: a central de documentos e o
+/// seletor de documento da etapa listam estes tipos por nome.
 enum TipoDocumento {
   EDITAL
   PROPOSTA
   CONTRATO
   GARANTIA
   ORDEM_INICIO
+  PROTOCOLO
   MEDICAO
   NOTA_FISCAL
+  ISS
+  DESPACHO
+  PARECER
+  AUTORIZACAO
+  EXIGENCIA
+  COMPROVANTE
   RERRATIFICACAO
   ACEITE
   ATESTADO
@@ -445,6 +456,11 @@ model Documento {
   medicao          Medicao?        @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
   etapaObraId      String?
   etapaObra        EtapaObra?      @relation(fields: [etapaObraId], references: [id], onDelete: Cascade)
+  /// Passagem por um setor específico. No mockup cada passo do fluxo tem seus
+  /// próprios anexos ("Documentos da etapa": despacho, parecer, checklist), e
+  /// a central de documentos mostra em que setor o arquivo entrou.
+  movimentoId      String?
+  movimento        TramitacaoMovimento? @relation(fields: [movimentoId], references: [id], onDelete: Cascade)
   rerratificacaoId String?
   rerratificacao   Rerratificacao? @relation(fields: [rerratificacaoId], references: [id], onDelete: Cascade)
 
@@ -459,6 +475,7 @@ model Documento {
   @@index([obraId])
   @@index([medicaoId])
   @@index([etapaObraId])
+  @@index([movimentoId])
   @@index([rerratificacaoId])
   @@index([nomeOriginal])
   @@index([excluidoEm])

@@ -926,3 +926,46 @@ nenhuma: seja qual for o relatório que o cliente pedir, ele sai por aqui.
   "Relatórios" ao menu principal.
 - Botão de exportar nas telas que já listam dados (obras, medições, auditoria).
 
+
+## Etapa 12 — Ajustes, integração e testes ⬜
+
+Não iniciada. É a etapa-colchão de fechamento: roda depois que a 11 fechar,
+antes da 2ª reunião de validação e da instalação. Depende de todas as
+anteriores, e é onde caem os itens que cada etapa adiou por não valer o custo
+naquele momento.
+
+**Nota de horas:** o quadro geral lança ~3h; o orçamento por módulo lança 7h
+("Ajustes, integração e testes gerais"). A diferença é folga que só se resolve
+quando a lista abaixo parar de ser condicional — a maior parte dela depende de
+resposta do cliente ou de volume real de dados.
+
+**Itens firmes:**
+
+1. **Calibrar `LIMITES_PROVISORIOS`.** O cliente confirmou o desenho do farol
+   (obra inteira, três faixas mais o cinza) mas não os números. Calibrar é
+   editar constante, com a tela aberta na apresentação — por isso ficou aqui e
+   não travou a etapa 9.
+2. **Testes de integração ponta a ponta.** Os módulos têm teste próprio desde a
+   etapa 0; falta o percurso completo — obra → medição → tramitação →
+   documento → relatório — atravessando as etapas que foram escritas em
+   momentos diferentes.
+3. **Varredura de consistência entre telas.** Rótulo, formato de data e dinheiro
+   e vocabulário de situação nasceram etapa a etapa; a passada final é para
+   eles não discordarem entre si.
+
+**Itens condicionais** (só entram se a condição se confirmar):
+
+4. **Troca de senha pelo próprio usuário logado.** Hoje só existe o fluxo de
+   redefinição (etapa 1). Entra se o cliente sentir falta — ver ponto #12 de
+   [`pontos-para-reuniao.md`](pontos-para-reuniao.md), que decide o mecanismo
+   sem servidor de e-mail.
+5. **Paginação e busca nos cadastros base.** As listas de contratante,
+   responsável técnico e setor trazem tudo (etapa 2). Entra se o cliente
+   trouxer volume maior que as dezenas previstas.
+6. **Desempenho do painel de obras.** O filtro de farol é aplicado em memória,
+   depois da consulta, porque o farol é calculado na leitura (etapa 4). Se o
+   volume crescer, entra aqui junto com o recálculo agendado de farol.
+
+**Encerramento:** com a etapa 12 fechada o sistema vai para a 2ª reunião de
+validação e, aceito, para a instalação — que é serviço fora das 140h
+contratadas (ver [`escopo-e-orcamento.md`](escopo-e-orcamento.md) e o ponto #11).

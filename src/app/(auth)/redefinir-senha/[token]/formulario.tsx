@@ -2,7 +2,8 @@
 
 import { useActionState } from "react";
 
-import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
+import { CampoSenha } from "@/components/ui/campo-senha";
+import { Alerta, Botao, Campo } from "@/components/ui/formulario";
 import { MINIMO_CARACTERES } from "@/modules/auth/senha";
 
 import { redefinirSenha, type EstadoFormulario } from "../../acoes";
@@ -22,25 +23,21 @@ export function FormularioRedefinir({ token }: { token: string }) {
         rotulo="Nova senha"
         dica={`Mínimo de ${MINIMO_CARACTERES} caracteres, com pelo menos uma letra e um número.`}
       >
-        <input
+        <CampoSenha
           id="senha"
           name="senha"
-          type="password"
           autoComplete="new-password"
           required
           autoFocus
-          className={classeInput}
         />
       </Campo>
 
       <Campo id="confirmacao" rotulo="Repita a nova senha">
-        <input
+        <CampoSenha
           id="confirmacao"
           name="confirmacao"
-          type="password"
           autoComplete="new-password"
           required
-          className={classeInput}
         />
       </Campo>
 

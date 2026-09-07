@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { CampoSenha } from "@/components/ui/campo-senha";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 
 import { entrar, type EstadoFormulario } from "../acoes";
@@ -29,13 +30,11 @@ export function FormularioLogin({ destino }: { destino?: string }) {
       </Campo>
 
       <Campo id="senha" rotulo="Senha">
-        <input
+        <CampoSenha
           id="senha"
           name="senha"
-          type="password"
           autoComplete="current-password"
           required
-          className={classeInput}
         />
       </Campo>
 

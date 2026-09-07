@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { criarSessao, encerrarSessao, encerrarSessoesDoUsuario, limparSessoesVencidas, origemDaRequisicao } from "@/lib/sessao";
-import { bloqueadoPor, limparFalhas, registrarFalha } from "@/lib/throttle";
+import { bloqueadoPor, limparFalhas, registrarFalha } from "@/modules/auth/throttle";
 import { AcaoAuditoria, registrar } from "@/modules/auditoria/registrar";
 import { conferirSenha, hashSenha, HASH_FALSO, senhaSchema } from "@/modules/auth/senha";
 import { DURACAO_TOKEN_SENHA_MS, expiraEm, expirou, gerarToken, hashToken } from "@/modules/auth/token";
@@ -41,7 +41,13 @@ export async function entrar(
   const { email, senha } = dados.data;
 
   const { ip } = await origemDaRequisicao();
-  const chave = `${email}|${ip ?? "sem-ip"}`;
+
+  // Freio por e-mail, sem IP na chave: o IP não é confiável (ver
+  // `origemDaRequisicao`), e incluí-lo dava tentativas infinitas a quem
+  // rotacionasse o header. O preço é que dá para travar o login de alguém por
+  // alguns minutos errando a senha de propósito — bloqueio temporário e
+  // registrado, contra uma força bruta que antes passava direto.
+  const chave = email;
   const segundos = bloqueadoPor(chave);
   if (segundos > 0) {
     const minutos = Math.ceil(segundos / 60);

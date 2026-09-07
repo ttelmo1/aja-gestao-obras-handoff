@@ -342,9 +342,9 @@ móveis" e "um único processo Node, sem serviços extras".
 - **Vai haver proxy reverso (nginx, IIS) na frente do Node?** Interessa por
   causa do IP: hoje o sistema lê `x-forwarded-for`, que sem proxy é escolhido
   pelo próprio cliente — IP de auditoria autodeclarado e freio de login
-  contornável (revisão de código, achado 2). **Decidido:** parar de ler o
-  header e passar o freio de login a ser por e-mail, aceitando que o IP fique
-  vazio. Se a resposta aqui for "sim, vai ter proxy", aí se reabre — com a
+  contornável (revisão de código, achado 2). **Decidido e já feito:** o sistema
+  parou de ler o header e o freio de login passou a ser por e-mail; o IP fica
+  vazio e a tela de sessões mostra "origem desconhecida". Se a resposta aqui for "sim, vai ter proxy", aí se reabre — com a
   informação de que o app router do Next não expõe o IP da conexão, então a
   alternativa seria custom server, que muda este procedimento de instalação.
 

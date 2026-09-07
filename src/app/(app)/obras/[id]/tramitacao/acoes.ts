@@ -381,9 +381,20 @@ export async function excluirMovimento(
       etapaObra: {
         select: { id: true, tipo: true, obraId: true, obra: { select: { codigo: true } } },
       },
+      _count: { select: { documentos: { where: { excluidoEm: null } } } },
     },
   });
   if (!movimento) return { erro: "Movimento não encontrado." };
+
+  // `Documento.movimento` é `onDelete: Cascade` no schema, então apagar o
+  // movimento apagaria de verdade os anexos daquele passo — contra o desenho
+  // de exclusão lógica do documento, e deixando o arquivo órfão em disco.
+  // Mesma trava de `excluirMedicao` e `excluirObra`: barra antes de chegar lá.
+  if (movimento._count.documentos > 0) {
+    return {
+      erro: `Este movimento tem ${movimento._count.documentos} documento(s) anexado(s). Remova-os antes de apagá-lo.`,
+    };
+  }
 
   const { ip } = await origemDaRequisicao();
   await prisma.$transaction(async (tx) => {

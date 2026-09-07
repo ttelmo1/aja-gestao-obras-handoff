@@ -1,5 +1,3 @@
-import "server-only";
-
 /**
  * Freio de tentativas de login, em memória.
  *
@@ -8,6 +6,10 @@ import "server-only";
  * sincronizar, e reiniciar o serviço zerar o contador é aceitável. Uma tabela
  * aqui custaria migration e escrita a cada senha errada para resolver um
  * problema que esta instalação não tem.
+ *
+ * Mora em `modules/` e não em `lib/` porque é lógica pura e precisa de teste:
+ * com a chave do freio passando a ser só o e-mail, ele virou a única barreira
+ * contra força bruta, e barreira sem teste não é barreira.
  */
 
 type Registro = { tentativas: number; bloqueadoAte: number };

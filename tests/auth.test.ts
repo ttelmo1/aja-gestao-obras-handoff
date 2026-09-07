@@ -15,6 +15,13 @@ import {
   gerarToken,
   hashToken,
 } from "@/modules/auth/token";
+import {
+  BLOQUEIO_MS,
+  bloqueadoPor,
+  limparFalhas,
+  registrarFalha,
+  TENTATIVAS_ATE_BLOQUEIO,
+} from "@/modules/auth/throttle";
 
 describe("política de senha", () => {
   it("aceita senha com letra, número e tamanho mínimo", () => {
@@ -84,5 +91,41 @@ describe("tokens", () => {
     assert.equal(expirou(fim, agora), false);
     assert.equal(expirou(fim, new Date(fim.getTime())), true);
     assert.equal(expirou(fim, new Date(fim.getTime() + 1)), true);
+  });
+});
+
+describe("freio de tentativas de login", () => {
+  // A chave é o e-mail, não `email|ip`: o IP vinha de um header que o próprio
+  // cliente escolhe, então rotacioná-lo dava tentativas infinitas.
+  it("libera enquanto está abaixo do limite", () => {
+    const chave = "abaixo@exemplo.com";
+    limparFalhas(chave);
+    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO - 1; i++) registrarFalha(chave);
+    assert.equal(bloqueadoPor(chave), 0);
+  });
+
+  it("bloqueia ao atingir o limite e solta quando o prazo vence", () => {
+    const chave = "limite@exemplo.com";
+    limparFalhas(chave);
+    const agora = Date.now();
+    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha(chave, agora);
+    assert.ok(bloqueadoPor(chave, agora) > 0);
+    assert.equal(bloqueadoPor(chave, agora + BLOQUEIO_MS + 1), 0);
+  });
+
+  it("o acerto zera o contador", () => {
+    const chave = "acerto@exemplo.com";
+    limparFalhas(chave);
+    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha(chave);
+    limparFalhas(chave);
+    assert.equal(bloqueadoPor(chave), 0);
+  });
+
+  it("uma conta travada não trava as outras", () => {
+    limparFalhas("alvo@exemplo.com");
+    limparFalhas("vizinho@exemplo.com");
+    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha("alvo@exemplo.com");
+    assert.ok(bloqueadoPor("alvo@exemplo.com") > 0);
+    assert.equal(bloqueadoPor("vizinho@exemplo.com"), 0);
   });
 });

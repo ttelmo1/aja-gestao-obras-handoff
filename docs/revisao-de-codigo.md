@@ -34,7 +34,7 @@ npm test            ✅ 236 testes, 55 suítes, 0 falhas
 
 ### Alta
 
-#### 1. Excluir movimento de tramitação apaga documentos em cascata
+#### 1. Excluir movimento de tramitação apaga documentos em cascata ✅
 
 `src/app/(app)/obras/[id]/tramitacao/acoes.ts:369-390`
 
@@ -53,16 +53,20 @@ bloqueiam com `_count.documentos > 0`. Só a tramitação ficou sem a trava.
 > `excluidoEm`. Os três guards foram corrigidos em 07/09/2026, então replicar
 > o padrão na tramitação agora é seguro.
 >
-> **Decidido (07/09/2026):** a correção aqui é *bloquear* a exclusão do
-> movimento enquanto houver documento vivo anexado, espelhando
+> **Decidido (07/09/2026) e implementado.** A correção é *bloquear* a exclusão
+> do movimento enquanto houver documento vivo anexado, espelhando
 > `excluirMedicao`/`excluirObra` — não apagar os documentos em cascata. Mantém
-> um só modelo de exclusão no sistema. Pendente de implementação.
+> um só modelo de exclusão no sistema. O `onDelete: Cascade` do schema fica
+> como está: agora ninguém chega nele. Conferido que a trava não vira beco sem
+> saída — o card "Documentos da etapa" da aba Tramitação lista os anexos dos
+> movimentos com botão de excluir, e todo perfil que pode apagar movimento
+> (`tramitacao:excluir`) também pode apagar documento.
 
 **Como reproduzir:** anexar um documento a um movimento de tramitação, excluir
 o movimento, conferir que a linha em `Documento` sumiu e o arquivo continua em
 disco.
 
-#### 2. `x-forwarded-for` é confiado sem proxy reverso na frente
+#### 2. `x-forwarded-for` é confiado sem proxy reverso na frente ✅
 
 `src/lib/sessao.ts:41-42`, `src/app/(auth)/acoes.ts:44`
 
@@ -78,7 +82,7 @@ Duas consequências:
 O comentário no código reconhece que numa rede local não há CDN, mas tira a
 conclusão invertida: se não há proxy reverso, o header não deveria ser lido.
 
-> **Decidido (07/09/2026), pendente de implementação.** Ignorar o header e
+> **Decidido (07/09/2026) e implementado.** Ignorar o header e
 > passar a chave do freio a ser só o e-mail; o `ip` fica nulo. Verificado que
 > não há alternativa melhor: o projeto roda `next start`, sem custom server nem
 > middleware, e o app router do Next 16 não expõe o IP da conexão — `headers()`
@@ -88,6 +92,12 @@ conclusão invertida: se não há proxy reverso, o header não deveria ser lido.
 > (`usuarios/[id]/page.tsx:72`). Efeito colateral aceito: com a chave só por
 > e-mail, dá para travar o login de um colega por 5 minutos errando a senha.
 > Reabrir se a visita técnica disser que haverá proxy reverso — ver ponto #11.
+>
+> Efeito colateral da implementação: `throttle.ts` saiu de `lib/` para
+> `modules/auth/`. Tinha `import "server-only"`, que estoura no runner, e por
+> isso o freio nunca teve teste — agora tem quatro, incluindo o de que travar
+> uma conta não trava as outras. É a observação estrutural desta revisão
+> resolvida num ponto: o que não dá para testar onde está, muda de lugar.
 
 ### Média
 
@@ -180,7 +190,10 @@ entrar aqui.
 **Situação:** 11 a 14 corrigidos em 07/09/2026, com `typecheck`, `lint` e os
 239 testes passando em `TZ=UTC`, `America/Sao_Paulo`, `Asia/Tokyo` e
 `America/Los_Angeles`. O 15 segue aberto por decisão (área da etapa 11).
-Os achados locais 1 a 10 não entraram nesta rodada.
+
+Numa segunda rodada, no mesmo dia, foram corrigidos os dois achados **Alta**
+da revisão local (1 e 2) — cada um com a decisão registrada na sua seção.
+A suíte foi a 243 testes. **Continuam abertos:** 3 a 10 e o 15.
 
 ### Média
 

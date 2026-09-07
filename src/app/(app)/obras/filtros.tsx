@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { classeInput } from "@/components/ui/formulario";
+import { classeCampo } from "@/components/ui/formulario";
 import { ROTULOS_FAROL } from "@/modules/farol/regras";
 import {
   FAROIS,
@@ -30,7 +30,7 @@ export function BarraDeFiltros({
   return (
     <form
       method="get"
-      className="mb-5 flex flex-wrap gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5"
+      className="mb-5 flex flex-wrap items-center gap-2.5 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3.5"
     >
       <label className="sr-only" htmlFor="busca">
         Buscar
@@ -41,7 +41,7 @@ export function BarraDeFiltros({
         type="search"
         defaultValue={filtros.busca}
         placeholder="Buscar obra, contrato ou protocolo"
-        className={`${classeInput} min-w-56 flex-1`}
+        className={`${classeCampo} min-w-56 flex-1`}
       />
 
       <label className="sr-only" htmlFor="status">
@@ -51,7 +51,7 @@ export function BarraDeFiltros({
         id="status"
         name="status"
         defaultValue={filtros.status ?? ""}
-        className={`${classeInput} w-auto min-w-44`}
+        className={`${classeCampo} min-w-44`}
       >
         <option value="">Todas as situações</option>
         {STATUS_OBRA.map((s) => (
@@ -68,7 +68,7 @@ export function BarraDeFiltros({
         id="farol"
         name="farol"
         defaultValue={filtros.farol ?? ""}
-        className={`${classeInput} w-auto min-w-40`}
+        className={`${classeCampo} min-w-40`}
       >
         <option value="">Todos os faróis</option>
         {FAROIS.map((f) => (
@@ -85,7 +85,7 @@ export function BarraDeFiltros({
         id="responsavel"
         name="responsavel"
         defaultValue={filtros.responsavelId ?? ""}
-        className={`${classeInput} w-auto min-w-44`}
+        className={`${classeCampo} min-w-44`}
       >
         <option value="">Todos os responsáveis</option>
         {responsaveis.map((r) => (
@@ -102,7 +102,7 @@ export function BarraDeFiltros({
         id="contratante"
         name="contratante"
         defaultValue={filtros.contratanteId ?? ""}
-        className={`${classeInput} w-auto min-w-44`}
+        className={`${classeCampo} min-w-44`}
       >
         <option value="">Todos os contratantes</option>
         {contratantes.map((c) => (

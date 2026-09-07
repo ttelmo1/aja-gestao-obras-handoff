@@ -166,6 +166,8 @@ export const ROTULOS_FAROL: Record<Farol, string> = {
   VERDE: "Em dia",
   AMARELO: "Atenção",
   VERMELHO: "Crítico",
-  CINZA: "Sem dados",
+  // Cobre dois casos — obra sem ordem de início e obra cancelada —, então não
+  // pode ser "Não iniciada". "Sem dados" descrevia o sistema, não a obra.
+  CINZA: "Não avaliada",
 };
 

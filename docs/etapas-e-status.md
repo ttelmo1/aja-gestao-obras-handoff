@@ -785,7 +785,7 @@ fato e fazer o painel dizer **por que** a luz está acesa.
 | OBR-2026-001 | 🟡 Atenção | Faltam 30 dias para o término previsto |
 | OBR-DEMO-002 | 🔴 Crítico | Execução 29 p.p. atrás do previsto (+2 motivos) |
 | OBR-DEMO-003 | 🔴 Crítico | Prazo vencido há 83 dias (+2 motivos) |
-| OBR-DEMO-004 | ⚪ Sem dados | Sem ordem de início |
+| OBR-DEMO-004 | ⚪ Não avaliada | Sem ordem de início |
 
 As quatro cores aparecem no painel, e duas obras acendem por mais de um
 critério — é a tela para calibrar os limites com o cliente na frente.

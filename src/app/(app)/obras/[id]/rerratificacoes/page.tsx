@@ -53,10 +53,14 @@ export default async function RerratificacoesPage({
 
       {acumulado.excedeLimite && (
         <Alerta tipo="erro">
-          Os aditivos aprovados somam {formatarPercentual(acumulado.percentual)} do
-          valor original do contrato, acima do limite de referência de{" "}
-          {LIMITE_ACRESCIMO_PERCENTUAL}% da Lei 14.133/2021 (art. 125). Reforma
-          de edifício admite 50% — confira o enquadramento com o jurídico.
+          {acumulado.percentual.isNegative()
+            ? "As supressões aprovadas somam "
+            : "Os aditivos aprovados somam "}
+          {formatarPercentual(acumulado.percentual.abs())} do valor original do
+          contrato, acima do limite de referência de{" "}
+          {LIMITE_ACRESCIMO_PERCENTUAL}% da Lei 14.133/2021 (art. 125), que vale
+          para os dois lados. Reforma de edifício admite 50% — confira o
+          enquadramento com o jurídico.
         </Alerta>
       )}
 
@@ -85,7 +89,7 @@ export default async function RerratificacoesPage({
               {formatarBRL(obra.valorContratado.plus(impacto.valorAprovado))}
             </span>
           </Dado>
-          <Dado rotulo="Acréscimo acumulado">
+          <Dado rotulo="Variação acumulada">
             <span
               className={acumulado.excedeLimite ? "text-[var(--danger)]" : undefined}
             >

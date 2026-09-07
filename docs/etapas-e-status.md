@@ -952,6 +952,15 @@ resposta do cliente ou de volume real de dados.
 3. **Varredura de consistência entre telas.** Rótulo, formato de data e dinheiro
    e vocabulário de situação nasceram etapa a etapa; a passada final é para
    eles não discordarem entre si.
+4. **Máquina de estados da medição.** `salvarMedicao` aceita qualquer
+   transição de status, inclusive `PAGA → RASCUNHO` — e dois passos (voltar a
+   rascunho, depois excluir) contornam a trava que impede apagar medição
+   protocolada. Vem da revisão de código (achado 4), adiada para cá em
+   07/09/2026 porque exige desenhar as transições válidas, não um remendo.
+   Casa com o item 2: é no percurso ponta a ponta que isso se exercita.
+5. **Pendências restantes da revisão de código.** Os achados de Baixa (5 a 10)
+   e o nit 15, listados em [`revisao-de-codigo.md`](revisao-de-codigo.md).
+   Nenhum bloqueia; são de varredura, e alguns encostam no item 3.
 
 **Itens condicionais** (só entram se a condição se confirmar):
 

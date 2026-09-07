@@ -101,7 +101,7 @@ conclusão invertida: se não há proxy reverso, o header não deveria ser lido.
 
 ### Média
 
-#### 3. Limite legal não detecta supressão
+#### 3. Limite legal não detecta supressão ✅
 
 `src/modules/rerratificacoes/calculos.ts:100`
 
@@ -114,9 +114,21 @@ permite *"acréscimos e supressões de até 25%"*, e o tipo documenta
 `valorAprovado` como "Pode ser negativo (supressão)". Mas uma supressão de −40%
 produz `pct = -40`, e `-40 > 25` é falso: nenhum alerta é emitido.
 
-**Correção provável:** `pct.abs().gt(LIMITE_ACRESCIMO_PERCENTUAL)`.
+**Corrigido (07/09/2026)** com `pct.abs().gt(LIMITE_ACRESCIMO_PERCENTUAL)`.
 
-#### 4. Status da medição não tem máquina de estados
+A tela precisou acompanhar: o alerta dizia "os aditivos aprovados somam X%", o
+que com supressão sairia como "somam -40%, acima do limite". Agora o texto
+troca conforme o sinal e mostra o módulo, e o indicador "Acréscimo acumulado"
+virou "Variação acumulada" — ele já exibia negativo antes, contradizendo o
+próprio rótulo.
+
+Fica registrada uma premissa: o sistema passa a tratar o teto de 25% como
+válido para os dois lados, que é o que a lei diz. A pergunta 3 do
+[ponto #17](pontos-para-reuniao.md) ("supressão também tem limite de 25% na
+prática do cliente?") continua sem resposta — se a resposta for não, é remover
+o `abs`.
+
+#### 4. Status da medição não tem máquina de estados ⏭️ etapa 12
 
 `src/app/(app)/obras/[id]/medicoes/acoes.ts:234`
 
@@ -126,6 +138,12 @@ justificativa de que medição protocolada virou processo no órgão. Mas
 `PAGA → RASCUNHO`. Dois passos (editar para rascunho, depois excluir) contornam
 a trava inteira. A auditoria registra os dois passos, o que atenua, mas a regra
 que o código diz proteger não está protegida.
+
+**Adiado para a etapa 12 por decisão (07/09/2026).** Não é conserto pontual:
+exige desenhar quais transições de status são válidas, e isso encosta na
+pergunta de quem pode reabrir uma medição já protocolada. Cabe junto do item 2
+da etapa 12 (testes de integração ponta a ponta), que é onde o percurso
+completo da medição vai ser exercitado.
 
 ### Baixa
 
@@ -193,7 +211,11 @@ entrar aqui.
 
 Numa segunda rodada, no mesmo dia, foram corrigidos os dois achados **Alta**
 da revisão local (1 e 2) — cada um com a decisão registrada na sua seção.
-A suíte foi a 243 testes. **Continuam abertos:** 3 a 10 e o 15.
+A suíte foi a 243 testes.
+
+Numa terceira rodada, ainda em 07/09/2026, foi corrigido o achado 3 e o 4 foi
+adiado para a etapa 12, por decisão. Suíte em 245 testes. **Continuam
+abertos:** 5 a 10 (Baixa), o 15 (nit) e o 4 (agendado).
 
 ### Média
 

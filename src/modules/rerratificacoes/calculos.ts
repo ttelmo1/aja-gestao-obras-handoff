@@ -75,14 +75,17 @@ export function impactoDasRerratificacoes(
 export const LIMITE_ACRESCIMO_PERCENTUAL = 25;
 
 export type PercentualAcumulado = {
-  /** Acréscimo acumulado sobre o valor ORIGINAL, em percentual. */
+  /**
+   * Variação acumulada sobre o valor ORIGINAL, em percentual. Negativa quando
+   * as supressões superam os acréscimos.
+   */
   percentual: Decimal;
-  /** Passou do limite de alerta? */
+  /** Passou do limite de alerta, para qualquer um dos dois lados? */
   excedeLimite: boolean;
 };
 
 /**
- * Quanto o contrato já cresceu, em percentual do valor original.
+ * Quanto o contrato variou, em percentual do valor original.
  *
  * A conta é sobre o valor original de propósito: é assim que o limite legal
  * é medido. Calcular sobre o valor já aditivado deixaria cada novo aditivo
@@ -97,7 +100,13 @@ export function percentualAcumulado(
     return { percentual: new Decimal(0), excedeLimite: false };
   }
   const pct = percentual(valorAprovado, original);
-  return { percentual: pct, excedeLimite: pct.gt(LIMITE_ACRESCIMO_PERCENTUAL) };
+  // Compara em módulo: a lei fala em "acréscimos e supressões" de até 25%, e
+  // `valorAprovado` é negativo quando as supressões pesam mais. Sem o `abs`,
+  // uma supressão de 40% não acenderia alerta nenhum — -40 não é maior que 25.
+  return {
+    percentual: pct,
+    excedeLimite: pct.abs().gt(LIMITE_ACRESCIMO_PERCENTUAL),
+  };
 }
 
 /** Próximo número da sequência de rerratificações da obra. */

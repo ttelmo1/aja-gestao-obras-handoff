@@ -85,9 +85,23 @@ describe("percentual acumulado sobre o contrato", () => {
     );
   });
 
-  it("supressão dá percentual negativo e nunca acende alerta", () => {
+  it("supressão dá percentual negativo e, dentro do limite, não acende alerta", () => {
     const a = percentualAcumulado("1000000.00", "-100000.00");
     assert.equal(a.percentual.toString(), "-10");
+    assert.equal(a.excedeLimite, false);
+  });
+
+  it("supressão além do limite acende o alerta, como o acréscimo", () => {
+    // O art. 125 fala em "acréscimos e supressões" de até 25%: o teto vale
+    // para os dois lados. Comparar sem módulo deixava -40% passar calado.
+    const a = percentualAcumulado("1000000.00", "-400000.00");
+    assert.equal(a.percentual.toString(), "-40");
+    assert.equal(a.excedeLimite, true);
+  });
+
+  it("supressão exatamente no limite não é excesso", () => {
+    const a = percentualAcumulado("1000000.00", "-250000.00");
+    assert.equal(a.percentual.toString(), "-25");
     assert.equal(a.excedeLimite, false);
   });
 

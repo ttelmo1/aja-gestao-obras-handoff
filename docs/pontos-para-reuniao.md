@@ -575,7 +575,11 @@ aditivado — é assim que o limite legal é apurado.
 1. Os contratos da AJA são de obra nova (25%) ou há reforma de edifício (50%)?
    Se houver os dois, vale um campo na obra para o sistema saber qual usar.
 2. O sistema deve **impedir** o registro acima do limite, ou só avisar?
-3. Supressão também tem limite de 25% na prática do cliente?
+3. Supressão também tem limite de 25% na prática do cliente? **Assumimos que
+   sim** — é o que o art. 125 diz, e desde 07/09/2026 o alerta acende para os
+   dois lados (revisão de código, achado 3). Antes disso, supressão de qualquer
+   tamanho passava calada. Se na prática do cliente supressão não tem teto, é
+   remover o `abs` da comparação.
 
 **Custo de mudar:** baixo. É uma constante em
 `modules/rerratificacoes/calculos.ts`; virar campo por obra é uma coluna.

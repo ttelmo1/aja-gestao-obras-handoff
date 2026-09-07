@@ -5,8 +5,10 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 - **Contrato:** R$ 10.000,00 / 140h (R$70/h), 4 parcelas.
 - **Orçado por módulo:** 143h (folga negativa de 3h — ver
   [`escopo-e-orcamento.md`](escopo-e-orcamento.md)).
-- **Última atualização:** 05/09/2026 — etapa 6 concluída; o núcleo previsto
-  para a 1ª reunião de validação está de pé.
+- **Última atualização:** 07/09/2026 — etapas 7, 8 e 10 concluídas e a
+  mecânica dos relatórios pronta. As respostas do engenheiro em 07/09
+  (ponto #1 e #10 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md))
+  **destravaram as etapas 9 e 11**.
 
 ## Legenda
 
@@ -27,7 +29,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 6 | Tramitação (fluxo fixo) | 30h | ✅ | 4 |
 | 7 | Gestão documental | 24h | ✅ | 4, 5, 6 |
 | 8 | Rerratificações | 8h | ✅ | 7 |
-| 9 | Motor do farol | 6h | 🔵 | 5, 6 |
+| 9 | Motor do farol | 6h | ✅ | 5, 6 |
 | 10 | Auditoria — telas de histórico | 5h | ✅ | 3, 4 |
 | 11 | Relatórios XLS/PDF | 12h | 🟡 | 5, 6, 8 |
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
@@ -38,6 +40,21 @@ com dados fictícios — `npm run db:seed -- --demo`):
 - **1ª reunião:** após a etapa 6 — núcleo demonstrável (auth, obras,
   medições, tramitação).
 - **2ª reunião:** após a etapa 11 — sistema completo, antes da instalação.
+
+## O que destrava agora (07/09/2026)
+
+O engenheiro confirmou que **o farol é sobre a obra inteira** — qualquer um dos
+critérios acende — e que são **três faixas mais o cinza**. Com isso a **etapa 9
+foi concluída** no mesmo dia; resta calibrar os limites numéricos
+(`LIMITES_PROVISORIOS`) na apresentação, com a tela aberta.
+
+Confirmou também que os relatórios são **internos, para a diretoria**, e que
+**não há layout obrigatório de órgão**. Some o único risco de estouro das 12h
+da etapa 11 — falta o conteúdo, que sai do exemplo que ele ficou de mandar.
+
+**Segue bloqueado por falta de resposta:** as colunas dos relatórios e a decisão
+de retenções além do ISS (ponto #9), que muda colunas de `Medicao` e dos
+próprios relatórios — decidir depois de escrever os relatórios é retrabalho.
 
 ## Etapa 0 — Fundação ✅
 
@@ -78,6 +95,9 @@ Concluída em 04/09/2026.
 3. **Agregados financeiros não são colunas.** `% medido`, `saldo a medir` e
    `valor medido total` derivam das medições a cada leitura, para não existirem
    duas versões da verdade. Só o farol é cacheado, com `farolCalculadoEm`.
+   **Revertido na etapa 9:** o cache do farol nunca chegou a ser escrito, e não
+   deveria mesmo — obra fica amarela pela passagem do tempo, sem ninguém salvar
+   nada. As colunas foram removidas.
 4. **Prisma fixado em 7.10.0**, não em `latest`: o tag `latest` do npm está
    apontando para `8.0.0-rc.13`, um release candidate.
 5. **Nada depende de internet em runtime.** Fontes do Google trocadas por
@@ -715,6 +735,60 @@ Concluída em 07/09/2026.
 | Excluir aprovada | ✅ recusada |
 | Excluir em elaboração | ✅ permitida, cache volta a zero |
 | Planilha anexada aparece na central | ✅ origem "Rerratificação 01" |
+
+## Etapa 9 — Motor do farol ✅
+
+Concluída em 07/09/2026, depois de o engenheiro confirmar o escopo (ponto #1 de
+[`pontos-para-reuniao.md`](pontos-para-reuniao.md)): o farol é sobre a obra
+inteira, **basta um critério** para acender, e são três faixas mais o cinza.
+
+O motor existia desde a etapa 0 à espera dessa resposta. Ela confirmou o
+desenho, então a etapa virou o que sobrou: tirar o cache que nunca existiu de
+fato e fazer o painel dizer **por que** a luz está acesa.
+
+**Entregue:**
+
+- `modules/farol/regras.ts` — escopo confirmado registrado no topo do arquivo,
+  com aviso de que os **limites numéricos continuam provisórios**. O resultado
+  ganhou `motivoPrincipal`: o motivo do pior nível, não o primeiro da lista.
+- Cartão do painel — o motivo do alerta agora é **texto no cartão**, com o
+  contador de quantos outros motivos existem (`+2`). Antes só aparecia no
+  `title`, que não existe em tablet, e o cliente pediu o farol justamente para
+  "chamar a atenção e o responsável trabalhar em cima".
+- Migration `farol_deixa_de_ser_coluna` — remove `Obra.farol` e
+  `Obra.farolCalculadoEm`, troca o índice `(status, farol)` por `(status)`.
+- Testes: **5 novos** (236 no total), incluindo o caso que o cliente descreveu
+  — um critério sozinho acende — e a garantia de que o motivo mostrado é o do
+  pior nível.
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **O farol não é coluna.** O cache existia desde a etapa 0 e nunca foi
+   escrito por lugar nenhum; o painel, a tela da obra e os relatórios sempre
+   chamaram o motor. Mantê-lo exigiria recalcular a cada escrita de obra,
+   medição e movimento de tramitação — e ainda assim envelheceria sozinho, já
+   que dois dos três critérios dependem só da data de hoje. O índice composto
+   `(status, farol)` nunca serviu consulta alguma, porque o filtro por farol é
+   aplicado depois do cálculo, em memória.
+2. **`motivoPrincipal` é o do pior nível, não o primeiro.** Numa obra vermelha
+   por processo parado que também está com o prazo perto, mostrar "faltam 12
+   dias" seria mostrar o motivo errado — a ordem de avaliação dos critérios não
+   é ordem de gravidade.
+3. **Os limites continuam em `LIMITES_PROVISORIOS`.** O cliente confirmou a
+   lógica, não os números. Calibrar é editar uma constante.
+
+**Conferido com os dados de demonstração** (`npm run db:seed -- --demo`):
+
+| Obra | Farol | Motivo mostrado |
+|---|---|---|
+| OBR-DEMO-001 | 🟢 Verde | Dentro do prazo e sem pendências |
+| OBR-2026-001 | 🟡 Atenção | Faltam 30 dias para o término previsto |
+| OBR-DEMO-002 | 🔴 Crítico | Execução 29 p.p. atrás do previsto (+2 motivos) |
+| OBR-DEMO-003 | 🔴 Crítico | Prazo vencido há 83 dias (+2 motivos) |
+| OBR-DEMO-004 | ⚪ Sem dados | Sem ordem de início |
+
+As quatro cores aparecem no painel, e duas obras acendem por mais de um
+critério — é a tela para calibrar os limites com o cliente na frente.
 
 ## Etapa 10 — Auditoria: telas de histórico ✅
 

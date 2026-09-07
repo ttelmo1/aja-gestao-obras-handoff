@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { calcularFarol } from "@/modules/farol/regras";
+import { calcularFarol, ROTULOS_FAROL } from "@/modules/farol/regras";
 import { Farol, StatusObra } from "@/generated/prisma/enums";
 
 const AGORA = new Date("2026-06-01T12:00:00Z");
@@ -80,5 +80,50 @@ describe("calcularFarol", () => {
 
   it("sempre explica o motivo", () => {
     assert.ok(calcularFarol(entrada()).motivos.length > 0);
+  });
+
+  // Confirmado pelo engenheiro em 07/09/2026: "qualquer problema" acende.
+  it("basta um critério para acender, mesmo com o resto em dia", () => {
+    const r = calcularFarol(entrada({ diasParado: 40 }));
+    assert.equal(r.farol, Farol.VERMELHO);
+    assert.match(r.motivos.join(" "), /parado/);
+  });
+
+  it("acumula os motivos quando mais de um critério acende", () => {
+    const r = calcularFarol(
+      entrada({ dataPrevistaTermino: new Date("2026-06-20"), diasParado: 40 }),
+    );
+    assert.equal(r.farol, Farol.VERMELHO);
+    assert.equal(r.motivos.length, 3); // prazo próximo, parado, execução atrás
+  });
+
+  it("o motivo principal é o do pior nível, não o primeiro da lista", () => {
+    // Prazo próximo (amarelo) vem antes de processo parado (vermelho) na
+    // ordem de avaliação — o cartão precisa mostrar o segundo.
+    const r = calcularFarol(
+      entrada({
+        dataPrevistaTermino: new Date("2026-06-20"),
+        percentualExecutado: 100,
+        diasParado: 40,
+      }),
+    );
+    assert.equal(r.farol, Farol.VERMELHO);
+    assert.match(r.motivoPrincipal ?? "", /parado/);
+  });
+
+  it("obra em dia também tem motivo principal", () => {
+    assert.equal(
+      calcularFarol(entrada()).motivoPrincipal,
+      "Dentro do prazo e sem pendências.",
+    );
+  });
+
+  it("são três faixas mais o cinza — o laranja não existe no enum", () => {
+    assert.deepEqual(Object.keys(ROTULOS_FAROL).sort(), [
+      "AMARELO",
+      "CINZA",
+      "VERDE",
+      "VERMELHO",
+    ]);
   });
 });

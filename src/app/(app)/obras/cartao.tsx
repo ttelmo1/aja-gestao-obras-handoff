@@ -27,7 +27,13 @@ export type ObraNoPainel = {
 };
 
 export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
-  const { financeiro, prazo, medicao, farol, motivosFarol } = obra.resumo;
+  const { financeiro, prazo, medicao, farol, motivosFarol, motivoPrincipalFarol } =
+    obra.resumo;
+  // O cliente quer o farol para "chamar a atenção e o responsável trabalhar em
+  // cima" — então o motivo fica escrito no cartão, e não só no hover, que não
+  // existe em tablet. Verde e cinza não precisam: a ausência de alerta é o
+  // recado.
+  const alerta = farol === "AMARELO" || farol === "VERMELHO";
 
   return (
     <Link
@@ -53,6 +59,21 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
         </div>
         <BadgeFarol farol={farol} titulo={motivosFarol.join(" ")} />
       </div>
+
+      {alerta && motivoPrincipalFarol && (
+        <p
+          className="mb-3 text-[12px] font-semibold"
+          style={{ color: farol === "VERMELHO" ? "var(--red)" : "var(--warning-fg)" }}
+        >
+          {motivoPrincipalFarol}
+          {motivosFarol.length > 1 && (
+            <span className="font-normal text-[var(--muted)]">
+              {" "}
+              +{motivosFarol.length - 1}
+            </span>
+          )}
+        </p>
+      )}
 
       <Dados>
         <Dado rotulo="Código">{obra.codigo}</Dado>

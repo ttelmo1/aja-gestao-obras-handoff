@@ -146,6 +146,10 @@ enum StatusObra {
 }
 
 /// Farol de status — calculado pelo motor de regras (requisitos.md 1.3).
+///
+/// Não é coluna de `Obra` de propósito: o farol depende do tempo que passa, e
+/// uma obra fica amarela sozinha à meia-noite, sem ninguém salvar nada. Cache
+/// aqui só produziria luz errada. Ver docs/pontos-para-reuniao.md, ponto #1.
 /// CINZA = sem dados suficientes para classificar.
 enum Farol {
   VERDE
@@ -178,8 +182,9 @@ model Obra {
   /// Valor original do contrato.
   valorContratado Decimal @db.Decimal(15, 2)
   /// Cache da soma do impacto das rerratificações aprovadas (pode ser
-  /// negativo). Fonte da verdade é modules/rerratificacoes/calculos.ts —
-  /// mesma divisão de papéis da coluna `farol`.
+  /// negativo). Fonte da verdade é modules/rerratificacoes/calculos.ts, que
+  /// reescreve a coluna a cada aprovação — ao contrário do farol, que não é
+  /// coluna nenhuma porque envelheceria sozinho com a passagem do tempo.
   valorAditivado  Decimal @default(0) @db.Decimal(15, 2)
 
   dataAssinatura      DateTime?
@@ -194,10 +199,6 @@ model Obra {
   /// Intervalo em dias — só usado quando a periodicidade é PERSONALIZADA.
   intervaloMedicaoDias Int?
 
-  /// Cache do farol. Fonte da verdade é modules/farol/regras.ts.
-  farol            Farol     @default(CINZA)
-  farolCalculadoEm DateTime?
-
   observacoes String?
 
   criadoPorId  String?
@@ -210,7 +211,7 @@ model Obra {
   rerratificacoes Rerratificacao[]
   documentos      Documento[]
 
-  @@index([status, farol])
+  @@index([status])
   @@index([contratanteId])
   @@index([responsavelId])
   @@index([dataPrevistaTermino])

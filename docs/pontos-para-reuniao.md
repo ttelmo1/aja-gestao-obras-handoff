@@ -8,13 +8,13 @@ imediato, não retrabalho.
 Ordenados por custo de mudar, do mais caro para o mais barato.
 
 - **Status:** `🔴 aberto` · `🟡 assumido, a confirmar` · `🟢 confirmado`
-- **Última atualização:** 04/09/2026
+- **Última atualização:** 07/09/2026
 
 ## Índice
 
 | # | Ponto | Status | Custo de mudar |
 |---|---|---|---|
-| 1 | Critérios de cor do farol | 🟡 | Baixo |
+| 1 | Critérios de cor do farol — escopo e cores confirmados, limites em aberto | 🟡 | Baixo |
 | 2 | Upload de DWG/RVT | 🔴 | Baixo a alto |
 | 3 | Permissões por perfil | 🟡 | Baixo |
 | 4 | Obra ↔ contrato é 1:1 | 🟢 | ~~Alto~~ — resolvido |
@@ -23,21 +23,37 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 7 | Numeração de medições e rerratificações | 🟡 | Médio |
 | 8 | Exclusão de registros | 🟡 | Médio |
 | 9 | Retenções além do ISS | 🔴 | Médio |
-| 10 | Conteúdo dos relatórios | 🔴 | Médio |
+| 10 | Conteúdo dos relatórios — público e layout confirmados | 🟡 | Médio |
 | 11 | Forma de instalação no servidor | 🔴 | Médio |
 | 12 | Recuperação de senha sem servidor de e-mail | 🟡 | Baixo |
 | 13 | Periodicidade da medição e o que conta como atrasada | 🟡 | Baixo |
 | 14 | Consórcio: contrato com duas empresas | 🟡 | Baixo |
-| 15 | Contratos de manutenção não são obras | 🟡 | Baixo a médio |
-| 16 | Aba Tramitação não existe no mockup | 🟡 | Baixo |
-| 17 | Limite legal de acréscimo contratual | 🟡 | Baixo |
+| 15 | Contratos de manutenção não são obras — parcela fixa em Nilópolis | 🟡 | Baixo |
 | 16 | Onde a tramitação mora: por medição ou por etapa | 🟡 | Médio |
+| 17 | Limite legal de acréscimo contratual | 🟡 | Baixo |
 
 ---
 
 ## 1. Critérios exatos de cada cor do farol 🟡
 
 Declarado em aberto nos próprios requisitos (seção 3).
+
+> **Confirmado pelo engenheiro em 07/09/2026 — escopo e cores.**
+>
+> **O farol é sobre a obra inteira**, não sobre prazo de medição: *"o indicador
+> em vermelho é pra ter qualquer problema, qualquer um destes — porque aí chama
+> a atenção e o responsável trabalha em cima"*. A leitura do mockup fica
+> descartada, e o motor de três critérios combinados, com o pior valendo, está
+> certo como foi construído.
+>
+> **Três faixas mais o cinza**, com os papéis que já usávamos: amarelo é
+> atenção, vermelho é gravidade e urgência, cinza é status neutro para obra
+> ainda não iniciada. O laranja sai de cena.
+>
+> **O que ele não respondeu foram os números.** "Qualquer problema" define a
+> lógica — basta um critério acender —, não os limites. Os 30 dias de
+> proximidade do término, os 15/30 dias parado e os 10/25 p.p. de atraso
+> físico continuam sendo suposição nossa.
 
 **Assumimos** — três critérios combinados, valendo sempre o pior:
 
@@ -50,27 +66,37 @@ Declarado em aberto nos próprios requisitos (seção 3).
 Mais: obra paralisada é sempre 🔴; finalizada é 🟢; sem ordem de início fica
 ⚪ cinza (sem dados), não verde.
 
-**O mockup sugere outra coisa, e isso importa.** Os três faróis de
+**O mockup sugeria outra coisa — descartado em 07/09/2026**, registrado aqui
+porque explica por que o motor não foi simplificado. Os três faróis de
 `docs/raw/mockup.html` são legendados *"Próxima medição dentro do prazo"*,
 *"Medição próxima"* e *"Medição vencida"* — ali o farol mede **prazo de
-medição**, um critério só, e não a saúde geral da obra. Pode ser que o
-cliente espere algo bem mais simples do que os três critérios que assumimos.
+medição**, um critério só, e não a saúde geral da obra. O cliente quis o
+oposto do que o mockup sugeria — e o mockup, aqui, é o documento velho.
 
 O mockup também usa **verde, laranja e vermelho**; nosso enum tem verde,
-amarelo, vermelho e cinza. Adotamos o amarelo e deixamos o laranja como token
-disponível, caso sejam quatro faixas.
+amarelo, vermelho e cinza. O amarelo fica, e o laranja pode ser aposentado:
+são três faixas mais o cinza, confirmadas.
 
-**Perguntar — nesta ordem:**
+**Ainda perguntar — na apresentação, com a tela aberta:**
 
-1. O farol é sobre **prazo de medição** (como no mockup) ou sobre a obra
-   inteira (como assumimos)? Esta pergunta vem antes das outras.
-2. Se for sobre a obra: os limites da tabela acima fazem sentido na prática?
-3. Faltou algum critério — garantia vencendo, por exemplo?
-4. São três faixas ou quatro?
+1. Os limites da tabela acima fazem sentido na prática? Não se responde no
+   abstrato: mostrar uma obra vermelha na demo e perguntar *"esta está
+   vermelha porque faltam 20 dias para o término — está certo?"*.
+2. Faltou algum critério — garantia vencendo, por exemplo?
+3. **Risco a levantar em voz alta:** com "qualquer problema acende vermelho" e
+   limites frouxos, o painel vira uma parede de vermelho e perde exatamente a
+   função que ele descreveu, a de chamar atenção. É argumento para calibrar os
+   números olhando dados reais, não para mudar a regra.
 
-**Custo de mudar:** baixo enquanto for número — estão isolados em
-`LIMITES_PROVISORIOS`. Se o farol virar "prazo de medição", o motor fica
-**mais simples** do que é hoje, não mais complexo: é apagar critério.
+**Custo de mudar:** baixo — os limites estão isolados em
+`LIMITES_PROVISORIOS`, e calibrar é editar constante. A hipótese cara (trocar
+o escopo do farol) está descartada.
+
+**Atualização (etapa 9, 07/09/2026):** o motor foi fechado com o escopo
+confirmado, e o painel passou a **escrever no cartão** o motivo do alerta, não
+só no hover. Nos dados de demonstração as quatro cores aparecem, e duas obras
+acendem por mais de um critério — é a tela para calibrar os números na frente
+do cliente.
 
 **Atualização (etapa 6):** o critério **dias parado** entrou em operação. Ele
 existia desde a etapa 0 mas recebia `null` de todos os chamadores, porque não
@@ -252,18 +278,31 @@ só o bruto — se houver retenções, esta é a coluna que falta no histórico.
 relatórios.
 **Onde:** `prisma/schema.prisma`, `src/modules/medicoes/calculos.ts`.
 
-## 10. Conteúdo dos relatórios 🔴
+## 10. Conteúdo dos relatórios 🟡
 
 Formatos confirmados (XLS e PDF), conteúdo não.
+
+> **Confirmado pelo engenheiro em 07/09/2026 — público e layout.**
+>
+> **Nada vai para o órgão.** Os relatórios são internos, *"principalmente para
+> a diretoria"*; fora dela, quem olha é o Henrique.
+>
+> **Não existe layout obrigatório.** Sai da lista o único risco real de estouro
+> das 12h orçadas: relatório tabular direto atende.
+>
+> **Falta o exemplo.** Ele topou mandar um relatório que monta hoje e ainda não
+> mandou — é o que define as colunas. Cobrar antes da reunião.
 
 **Assumimos** três relatórios: obras com farol e situação financeira; medições
 por obra e por período; tempo de permanência por etapa e setor.
 
-**Perguntar:** quais relatórios são realmente usados hoje, e para quem vão —
-uso interno ou prestação de contas ao órgão? Existe modelo/layout obrigatório?
+**Ainda perguntar:** o exemplo prometido; e, já sabendo que o leitor é a
+diretoria, que decisão ela toma olhando o relatório — é acompanhamento de
+prazo, de dinheiro a receber, ou os dois na mesma folha?
 
-**Custo de mudar:** médio, e cresce se houver layout obrigatório de órgão
-público — as 12h orçadas assumem relatório tabular direto.
+**Custo de mudar:** médio. A hipótese cara — layout obrigatório de órgão
+público — está descartada; as 12h orçadas assumem relatório tabular direto, que
+é o que o cliente precisa.
 **Onde:** `src/modules/relatorios/`.
 
 **Estado:** a mecânica de exportação (XLSX e PDF) já está pronta e testada —
@@ -373,6 +412,11 @@ então ela virou campo da obra na etapa 5.
    estar parado** no órgão? São coisas diferentes, e a segunda depende da
    tramitação (etapa 6).
 
+**Atualização (07/09/2026):** a manutenção de Nilópolis é medida em parcela
+mensal fixa (ver ponto [#15](#15-contratos-de-manutenção-não-são-obras-)) — um
+caso concreto a favor do padrão mensal. Ainda sem resposta se a periodicidade
+varia entre os contratos de obra.
+
 **Custo de mudar:** baixo. Tudo está em `modules/medicoes/periodicidade.ts`,
 sem persistir nada calculado — mudar a regra é mudar a função.
 **Onde:** `src/modules/medicoes/periodicidade.ts`, campo
@@ -406,6 +450,26 @@ fora do orçado.
 **Onde:** `prisma/schema.prisma`, model `Obra`.
 
 ## 15. Contratos de manutenção não são obras 🟡
+
+> **Respondido em parte em 07/09/2026 — e a preocupação muda de forma.**
+>
+> A manutenção do município de **Nilópolis** é medida pelo **valor do contrato
+> dividido por 12**: o mesmo valor todo mês, *"tendo muita demanda ou pouca
+> demanda"*. Não é contrato sob demanda, é parcela fixa.
+>
+> **Isso desarma o alerta falso descrito abaixo.** Se a medição é 1/12 ao mês,
+> o avanço acompanha o tempo decorrido por construção: quem lançar o acumulado
+> como 3/12, 4/12 nunca fica atrás do prazo. O critério de avanço físico
+> funciona sozinho — sem campo `tipoContrato`, sem `if` no motor do farol.
+>
+> **Com uma condição:** que quem lança digite o acumulado assim. Se a pessoa
+> deixar o avanço físico em 0% porque "não teve obra para medir", o alerta
+> falso volta pela porta dos fundos. Isso é assunto de rótulo de formulário e
+> de treinamento, não de modelagem.
+>
+> **Continua sem resposta:** se a manutenção entra na mesma lista das obras ou
+> em uma separada, e como funciona o **segundo** contrato — ele descreveu só o
+> de Nilópolis.
 
 Levantado pelo engenheiro em 04/09/2026, na mesma conversa. Ele mencionou
 **dois contratos de manutenção** e disse que "precisa ver como vai fazer",

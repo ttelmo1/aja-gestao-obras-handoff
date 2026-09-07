@@ -4,11 +4,19 @@ import { diasDesde, diasEntre } from "@/lib/date-br";
 /**
  * Motor do farol (requisitos.md 1.3).
  *
- * ATENÇÃO: os critérios exatos de cada cor AINDA NÃO foram definidos pelo
- * cliente — é ponto em aberto declarado nos requisitos (seção 3). Os limites
- * abaixo são uma proposta para levar à reunião de validação, não uma regra
- * acordada. Todo o resto do sistema consome apenas `calcularFarol`, então
- * mudar os critérios é mudar este arquivo.
+ * ESCOPO CONFIRMADO pelo engenheiro do cliente em 07/09/2026: o farol é sobre
+ * a obra inteira, não sobre o prazo da medição, e **basta um critério** para
+ * acender — "qualquer problema, porque aí chama a atenção e o responsável
+ * trabalha em cima". São três faixas mais o cinza: amarelo é atenção, vermelho
+ * é urgência, cinza é neutro (obra que ainda não começou).
+ *
+ * OS LIMITES CONTINUAM PROVISÓRIOS. Ele confirmou a lógica, não os números —
+ * quantos dias de prazo, quantos dias parado, quantos pontos percentuais de
+ * atraso. Calibrar na apresentação, com a tela aberta.
+ *
+ * Todo o resto do sistema consome apenas `calcularFarol`, e o resultado nunca
+ * é persistido: obra fica amarela pela passagem do tempo, sem ninguém salvar
+ * nada, então coluna cacheada só teria como envelhecer errado.
  *
  * Ver docs/pontos-para-reuniao.md, ponto #1.
  */
@@ -42,6 +50,14 @@ export type ResultadoFarol = {
   farol: Farol;
   /** Motivos legíveis — o usuário precisa saber por que a luz está vermelha. */
   motivos: string[];
+  /**
+   * O motivo que determinou a cor — o primeiro entre os do pior nível.
+   *
+   * Existe porque o cartão do painel tem uma linha, não seis: numa obra
+   * vermelha por prazo vencido *e* processo parado, mostrar "faltam 12 dias
+   * para o término" seria mostrar o motivo errado.
+   */
+  motivoPrincipal: string | null;
 };
 
 export function calcularFarol(e: EntradaFarol): ResultadoFarol {
@@ -49,22 +65,40 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
   const motivos: string[] = [];
 
   if (e.status === StatusObra.FINALIZADA) {
-    return { farol: Farol.VERDE, motivos: ["Obra finalizada."] };
+    return {
+      farol: Farol.VERDE,
+      motivos: ["Obra finalizada."],
+      motivoPrincipal: "Obra finalizada.",
+    };
   }
   if (e.status === StatusObra.CANCELADA) {
-    return { farol: Farol.CINZA, motivos: ["Obra cancelada."] };
+    return {
+      farol: Farol.CINZA,
+      motivos: ["Obra cancelada."],
+      motivoPrincipal: "Obra cancelada.",
+    };
   }
   if (e.status === StatusObra.PARALISADA) {
-    return { farol: Farol.VERMELHO, motivos: ["Obra paralisada."] };
+    return {
+      farol: Farol.VERMELHO,
+      motivos: ["Obra paralisada."],
+      motivoPrincipal: "Obra paralisada.",
+    };
   }
   if (e.status === StatusObra.PLANEJAMENTO && !e.dataOrdemInicio) {
-    return { farol: Farol.CINZA, motivos: ["Sem ordem de início."] };
+    return {
+      farol: Farol.CINZA,
+      motivos: ["Sem ordem de início."],
+      motivoPrincipal: "Sem ordem de início.",
+    };
   }
 
   let nivel = 0; // 0 verde, 1 amarelo, 2 vermelho
+  const niveis: number[] = [];
   const subir = (n: number, motivo: string) => {
     nivel = Math.max(nivel, n);
     motivos.push(motivo);
+    niveis.push(n);
   };
 
   // 1. Prazo contratual.
@@ -96,8 +130,15 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
     }
   }
 
-  if (motivos.length === 0) motivos.push("Dentro do prazo e sem pendências.");
-  return { farol: [Farol.VERDE, Farol.AMARELO, Farol.VERMELHO][nivel], motivos };
+  if (motivos.length === 0) {
+    motivos.push("Dentro do prazo e sem pendências.");
+    niveis.push(0);
+  }
+  return {
+    farol: [Farol.VERDE, Farol.AMARELO, Farol.VERMELHO][nivel],
+    motivos,
+    motivoPrincipal: motivos[niveis.indexOf(nivel)] ?? null,
+  };
 }
 
 /**
@@ -127,3 +168,4 @@ export const ROTULOS_FAROL: Record<Farol, string> = {
   VERMELHO: "Crítico",
   CINZA: "Sem dados",
 };
+

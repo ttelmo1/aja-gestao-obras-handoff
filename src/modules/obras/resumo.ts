@@ -46,6 +46,8 @@ export type ResumoObra = {
   medicao: SituacaoMedicao | null;
   farol: Farol;
   motivosFarol: string[];
+  /** O motivo que determinou a cor — o que cabe numa linha do cartão. */
+  motivoPrincipalFarol: string | null;
 };
 
 export function resumoDaObra(
@@ -82,7 +84,7 @@ export function resumoDaObra(
     agora,
   });
 
-  const { farol, motivos } = calcularFarol({
+  const { farol, motivos, motivoPrincipal } = calcularFarol({
     status: obra.status,
     dataOrdemInicio: obra.dataOrdemInicio,
     dataPrevistaTermino: obra.dataPrevistaTermino,
@@ -96,7 +98,15 @@ export function resumoDaObra(
     agora,
   });
 
-  return { financeiro, prazo, medicao, diasParado, farol, motivosFarol: motivos };
+  return {
+    financeiro,
+    prazo,
+    medicao,
+    diasParado,
+    farol,
+    motivosFarol: motivos,
+    motivoPrincipalFarol: motivoPrincipal,
+  };
 }
 
 export type TotaisPainel = {

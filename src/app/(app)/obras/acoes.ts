@@ -213,7 +213,15 @@ export async function excluirObra(
       id: true,
       codigo: true,
       objeto: true,
-      _count: { select: { medicoes: true, documentos: true, rerratificacoes: true } },
+      _count: {
+        select: {
+          medicoes: true,
+          // Só documento vivo trava: o soft-deleted não aparece em tela
+          // nenhuma, então exigir que o usuário o "remova" é beco sem saída.
+          documentos: { where: { excluidoEm: null } },
+          rerratificacoes: true,
+        },
+      },
     },
   });
   if (!obra) return { erro: "Obra não encontrada." };

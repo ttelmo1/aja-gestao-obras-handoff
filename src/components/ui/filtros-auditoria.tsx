@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { classeInput } from "@/components/ui/formulario";
+import { dataParaIso } from "@/lib/date-br";
 import {
   queryDaPagina,
   type FiltrosAuditoria,
@@ -90,7 +91,7 @@ export function BarraDeFiltrosAuditoria({
         <input
           type="date"
           name="de"
-          defaultValue={filtros.de ? campoData(filtros.de) : ""}
+          defaultValue={filtros.de ? dataParaIso(filtros.de) : ""}
           className={classeInput}
         />
       </label>
@@ -99,7 +100,7 @@ export function BarraDeFiltrosAuditoria({
         <input
           type="date"
           name="ate"
-          defaultValue={filtros.ate ? campoData(filtros.ate) : ""}
+          defaultValue={filtros.ate ? dataParaIso(filtros.ate) : ""}
           className={classeInput}
         />
       </label>
@@ -123,12 +124,6 @@ export function BarraDeFiltrosAuditoria({
       </div>
     </form>
   );
-}
-
-function campoData(d: Date): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Sao_Paulo",
-  }).format(d);
 }
 
 /**

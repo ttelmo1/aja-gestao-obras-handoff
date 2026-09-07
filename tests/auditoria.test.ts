@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
+import { dataParaIso } from "@/lib/date-br";
+
 import {
   condicaoDeAuditoria,
   lerFiltrosAuditoria,
@@ -53,10 +55,17 @@ describe("filtros da auditoria", () => {
 
   it("o intervalo pega o dia inteiro, das 00:00 às 23:59", () => {
     // Sem isso, filtrar "até hoje" perderia tudo que aconteceu hoje.
+    // A conferência é no fuso de Brasília, não com `getHours()`: o servidor
+    // do cliente pode rodar em UTC, e o dia do filtro é sempre o de lá.
+    const horaEmBrasilia = new Intl.DateTimeFormat("pt-BR", {
+      timeZone: "America/Sao_Paulo",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
     const f = lerFiltrosAuditoria({ de: "2026-09-01", ate: "2026-09-07" });
-    assert.equal(f.de?.getHours(), 0);
-    assert.equal(f.ate?.getHours(), 23);
-    assert.equal(f.ate?.getMinutes(), 59);
+    assert.equal(horaEmBrasilia.format(f.de!), "00:00");
+    assert.equal(horaEmBrasilia.format(f.ate!), "23:59");
   });
 
   it("data malformada é ignorada", () => {
@@ -130,5 +139,41 @@ describe("rótulos da auditoria", () => {
     for (const e of ENTIDADES_AUDITAVEIS) {
       assert.ok(e in ROTULOS_ENTIDADE, `entidade sem rótulo declarado: ${e}`);
     }
+  });
+});
+
+describe("filtro de data atravessa a paginação sem se deslocar", () => {
+  const emBrasilia = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    dateStyle: "short",
+    timeStyle: "medium",
+  });
+
+  it("devolve à URL a mesma data que recebeu", () => {
+    const f = lerFiltrosAuditoria({ de: "2026-09-01", ate: "2026-09-07" });
+    const q = queryDaPagina(f, 2);
+    assert.match(q, /de=2026-09-01/);
+    assert.match(q, /ate=2026-09-07/);
+  });
+
+  it("não alarga o intervalo por mais que se pagine", () => {
+    // O defeito original só aparecia na ida e volta: cada página relia o que
+    // a anterior serializou, e `ate` andava um dia por clique.
+    let f = lerFiltrosAuditoria({ ate: "2026-09-07" });
+    for (let pagina = 2; pagina <= 5; pagina++) {
+      const q = new URLSearchParams(queryDaPagina(f, pagina).slice(1));
+      f = lerFiltrosAuditoria(Object.fromEntries(q));
+      assert.equal(q.get("ate"), "2026-09-07", `página ${pagina}`);
+    }
+  });
+
+  it("ancora o dia no fuso de Brasília, não no do servidor", () => {
+    const f = lerFiltrosAuditoria({ de: "2026-09-07", ate: "2026-09-07" });
+    assert.equal(emBrasilia.format(f.de!), "07/09/2026, 00:00:00");
+    // O fim do dia é 23:59:59.999 — o `Intl` arredonda o milissegundo ao
+    // formatar, então a checagem é pela borda: o instante ainda é dia 7, e
+    // um milissegundo depois já é dia 8.
+    assert.equal(dataParaIso(f.ate!), "2026-09-07");
+    assert.equal(dataParaIso(new Date(f.ate!.getTime() + 1)), "2026-09-08");
   });
 });

@@ -223,7 +223,7 @@ export async function excluirMedicao(
       status: true,
       valorMedido: true,
       obra: { select: { codigo: true } },
-      _count: { select: { documentos: true } },
+      _count: { select: { documentos: { where: { excluidoEm: null } } } },
     },
   });
   if (!medicao) return { erro: "Medição não encontrada." };

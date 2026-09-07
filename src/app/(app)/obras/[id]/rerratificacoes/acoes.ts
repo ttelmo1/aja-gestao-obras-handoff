@@ -220,7 +220,7 @@ export async function excluirRerratificacao(
       status: true,
       valorImpactado: true,
       obra: { select: { codigo: true } },
-      _count: { select: { documentos: true } },
+      _count: { select: { documentos: { where: { excluidoEm: null } } } },
     },
   });
   if (!rerratificacao) return { erro: "Rerratificação não encontrada." };

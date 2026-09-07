@@ -18,7 +18,7 @@ export default async function ObraLayout({
   children,
   params,
 }: LayoutProps<"/obras/[id]">) {
-  await exigirPermissao("obra", "ver");
+  const usuario = await exigirPermissao("obra", "ver");
   const { id } = await params;
   const obra = await carregarObra(id);
   if (!obra) notFound();
@@ -58,7 +58,7 @@ export default async function ObraLayout({
         </div>
       </header>
 
-      <AbasDaObra obraId={obra.id} />
+      <AbasDaObra obraId={obra.id} perfil={usuario.perfil} />
       {children}
     </div>
   );

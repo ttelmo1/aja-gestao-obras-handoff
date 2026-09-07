@@ -25,9 +25,11 @@ export const dynamic = "force-dynamic";
  * Aba Histórico — a linha do tempo do mockup, alimentada pela trilha de
  * auditoria que grava desde a etapa 0 (requisitos.md 1.8).
  *
- * A tabela é append-only por trigger no banco: nada aqui edita ou apaga, e a
- * matriz de permissões dá só leitura de auditoria a todos os perfis,
- * inclusive ao administrador.
+ * A tabela é append-only por trigger no banco: nada aqui edita ou apaga —
+ * nem o administrador, que também só tem leitura de auditoria na matriz.
+ * Quem enxerga a trilha é decisão de perfil: hoje só ADMINISTRADOR e GESTOR,
+ * e por isso a aba Histórico não aparece para os outros dois (ver `abas.tsx`).
+ * Se o cliente quiser a trilha visível para todos, é uma linha na matriz.
  */
 export default async function HistoricoPage({
   params,

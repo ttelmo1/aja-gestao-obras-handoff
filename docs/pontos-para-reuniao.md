@@ -154,6 +154,14 @@ Ninguém edita ou apaga a auditoria — nem o administrador.
 **Perguntar:** quatro perfis bastam? Quem na empresa cai em cada um? Existe
 alguém que deva ver só as obras em que é responsável?
 
+**Perguntar também — quem enxerga a trilha de auditoria?** Hoje a matriz dá
+leitura de auditoria só a Administrador e Gestor, então a aba **Histórico** da
+obra não aparece para Operacional nem Visualizador (revisão de código, achado
+11 — antes ela aparecia e o clique dava "sem permissão"). É defensável dos dois
+jeitos: esconder protege o "quem fez o quê" de quem só opera, mostrar deixa a
+equipe conferir o próprio trabalho. Se o cliente quiser a trilha visível para
+todos, é uma linha na matriz.
+
 **Custo de mudar:** baixo enquanto for ajuste de matriz — é uma linha de
 tabela em código, sem migration nem tela de administração. **Vira caro** se o
 cliente quiser montar perfis pela interface: isso é tabela no banco, tela de
@@ -331,6 +339,14 @@ móveis" e "um único processo Node, sem serviços extras".
   (`COOKIE_SEGURO`) e não é detalhe estético: com a flag `Secure` ligada em
   servidor HTTP o navegador descarta o cookie de sessão e **ninguém consegue
   entrar**, sem erro em log nenhum. Fica `false` até haver certificado.
+- **Vai haver proxy reverso (nginx, IIS) na frente do Node?** Interessa por
+  causa do IP: hoje o sistema lê `x-forwarded-for`, que sem proxy é escolhido
+  pelo próprio cliente — IP de auditoria autodeclarado e freio de login
+  contornável (revisão de código, achado 2). **Decidido:** parar de ler o
+  header e passar o freio de login a ser por e-mail, aceitando que o IP fique
+  vazio. Se a resposta aqui for "sim, vai ter proxy", aí se reabre — com a
+  informação de que o app router do Next não expõe o IP da conexão, então a
+  alternativa seria custom server, que muda este procedimento de instalação.
 
 **Por que Docker provavelmente não é a resposta aqui**, apesar de ser o padrão
 de mercado: não há manutenção inclusa após o aceite, então quem estiver no

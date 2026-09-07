@@ -119,13 +119,23 @@ export async function enviarDocumentos(
 
   const { ip } = await origemDaRequisicao();
   const salvos: string[] = [];
+  const gravados: { arquivo: File; salvo: Awaited<ReturnType<typeof salvarArquivo>> }[] = [];
 
   try {
+    // Grava todos os arquivos primeiro e só então abre uma única transação
+    // para as linhas. Duas razões: uma transação por arquivo faria a falha do
+    // terceiro apagar do disco os dois primeiros, cujas linhas já teriam
+    // comitado, deixando registro apontando para arquivo inexistente; e
+    // manter a escrita em disco dentro da transação esbarraria no timeout
+    // padrão do Prisma num lote grande.
     for (const arquivo of arquivos) {
       const salvo = await salvarArquivo(arquivo, dados.obraId);
       salvos.push(salvo.caminhoRelativo);
+      gravados.push({ arquivo, salvo });
+    }
 
-      await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx) => {
+      for (const { arquivo, salvo } of gravados) {
         const documento = await tx.documento.create({
           data: {
             nomeOriginal: arquivo.name,
@@ -161,8 +171,8 @@ export async function enviarDocumentos(
           },
           tx,
         );
-      });
-    }
+      }
+    });
   } catch (erro) {
     await Promise.all(salvos.map((c) => apagarArquivo(c).catch(() => {})));
     throw erro;

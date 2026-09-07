@@ -1,4 +1,5 @@
 import { AcaoAuditoria } from "@/generated/prisma/enums";
+import { dataParaIso, isoParaInstante } from "@/lib/date-br";
 
 import { ENTIDADES_AUDITAVEIS } from "./rotulos";
 
@@ -28,12 +29,14 @@ function texto(v: string | string[] | undefined): string | null {
   return typeof v === "string" && v.trim() !== "" ? v.trim() : null;
 }
 
-/** Data do filtro lida ao meio-dia, como todo campo de data do sistema. */
+/**
+ * Data do filtro ancorada no fuso de Brasília, não no `TZ` do processo — e
+ * devolvida à URL pelo mesmo fuso (`queryDaPagina`), para o filtro atravessar
+ * a paginação sem se deslocar um dia a cada clique.
+ */
 function data(v: string | string[] | undefined, fimDoDia = false): Date | null {
   const t = texto(v);
-  if (!t || !/^\d{4}-\d{2}-\d{2}$/.test(t)) return null;
-  const d = new Date(`${t}T${fimDoDia ? "23:59:59" : "00:00:00"}`);
-  return Number.isNaN(d.getTime()) ? null : d;
+  return t ? isoParaInstante(t, fimDoDia) : null;
 }
 
 export function lerFiltrosAuditoria(
@@ -109,8 +112,8 @@ export function queryDaPagina(
   if (f.acao) p.set("acao", f.acao);
   if (f.entidade) p.set("entidade", f.entidade);
   if (f.usuarioId) p.set("usuario", f.usuarioId);
-  if (f.de) p.set("de", f.de.toISOString().slice(0, 10));
-  if (f.ate) p.set("ate", f.ate.toISOString().slice(0, 10));
+  if (f.de) p.set("de", dataParaIso(f.de));
+  if (f.ate) p.set("ate", dataParaIso(f.ate));
   if (pagina > 1) p.set("pagina", String(pagina));
   const s = p.toString();
   return s ? `?${s}` : "";

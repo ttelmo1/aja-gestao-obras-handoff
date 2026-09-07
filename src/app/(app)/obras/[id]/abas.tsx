@@ -3,28 +3,36 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import type { Perfil } from "@/generated/prisma/enums";
+import { pode, type Recurso } from "@/modules/auth/permissoes";
+
 /**
  * Abas da obra, na ordem do mockup. São rotas de verdade, não troca de
  * `display`: cada aba tem URL própria, dá para deixar aberta numa segunda
  * janela e o botão voltar do navegador funciona.
+ *
+ * Cada aba declara o recurso que sua página exige, e a barra esconde o que o
+ * perfil não pode abrir — mesmo critério que o menu principal aplica à
+ * `NAVEGACAO`. Sem isso, a aba aparece e o clique cai em `/sem-permissao`.
  */
-const ABAS = [
-  { sufixo: "", rotulo: "Resumo" },
-  { sufixo: "/contrato", rotulo: "Contrato" },
-  { sufixo: "/medicoes", rotulo: "Medições" },
-  { sufixo: "/tramitacao", rotulo: "Tramitação" },
-  { sufixo: "/rerratificacoes", rotulo: "Rerratificações" },
-  { sufixo: "/documentos", rotulo: "Documentos" },
-  { sufixo: "/historico", rotulo: "Histórico" },
+const ABAS: { sufixo: string; rotulo: string; recurso: Recurso }[] = [
+  { sufixo: "", rotulo: "Resumo", recurso: "obra" },
+  { sufixo: "/contrato", rotulo: "Contrato", recurso: "obra" },
+  { sufixo: "/medicoes", rotulo: "Medições", recurso: "medicao" },
+  { sufixo: "/tramitacao", rotulo: "Tramitação", recurso: "tramitacao" },
+  { sufixo: "/rerratificacoes", rotulo: "Rerratificações", recurso: "rerratificacao" },
+  { sufixo: "/documentos", rotulo: "Documentos", recurso: "documento" },
+  { sufixo: "/historico", rotulo: "Histórico", recurso: "auditoria" },
 ];
 
-export function AbasDaObra({ obraId }: { obraId: string }) {
+export function AbasDaObra({ obraId, perfil }: { obraId: string; perfil: Perfil }) {
   const atual = usePathname();
   const base = `/obras/${obraId}`;
+  const visiveis = ABAS.filter((aba) => pode(perfil, aba.recurso, "ver"));
 
   return (
     <nav className="my-4 flex gap-1.5 overflow-x-auto">
-      {ABAS.map((aba) => {
+      {visiveis.map((aba) => {
         const href = `${base}${aba.sufixo}`;
         const ativa = atual === href;
         return (

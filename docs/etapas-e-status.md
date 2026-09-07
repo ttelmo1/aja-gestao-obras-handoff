@@ -29,7 +29,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 8 | Rerratificações | 8h | ✅ | 7 |
 | 9 | Motor do farol | 6h | 🔵 | 5, 6 |
 | 10 | Auditoria — telas de histórico | 5h | ✅ | 3, 4 |
-| 11 | Relatórios XLS/PDF | 12h | ⬜ | 5, 6, 8 |
+| 11 | Relatórios XLS/PDF | 12h | 🟡 | 5, 6, 8 |
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
 
 **Marcos de validação com o cliente** (2 reuniões previstas em contrato,
@@ -770,4 +770,85 @@ isso não volta ao topo; "Relatórios" retorna na etapa 11 junto com a tela.
 | Página inválida, ação inventada, data malformada | ✅ ignorados, HTTP 200 |
 | Diferença campo a campo | ✅ "numero: 1", "valorImpactado: 70000" |
 | Links do menu principal | ✅ todos respondem |
+
+## Etapa 11 — Relatórios XLS/PDF 🟡
+
+Parcial: a **mecânica de exportação** está pronta e testada; o **conteúdo dos
+relatórios e as telas** aguardam a 1ª reunião (ponto #10 —
+`docs/pontos-para-reuniao.md`).
+
+Feita nesta fase porque é a metade da etapa que não depende de resposta
+nenhuma: seja qual for o relatório que o cliente pedir, ele sai por aqui.
+
+**Entregue:**
+
+- `modules/relatorios/modelo.ts` — o modelo neutro. Um relatório é título,
+  filtros aplicados, colunas tipadas, linhas e uma linha de totais. Quem
+  escrever um relatório novo devolve esta estrutura e ganha os dois formatos.
+- `modules/relatorios/xlsx.ts` + `zip.ts` — gerador de XLSX. Escreve o pacote
+  OOXML e o ZIP direto.
+- `modules/relatorios/pdf.ts` + `fontes.ts` — gerador de PDF tabular: A4
+  retrato ou paisagem, cabeçalho com os filtros aplicados, cabeçalho de tabela
+  repetido a cada página, zebra, totais e paginação no rodapé.
+- `modules/relatorios/exportar.ts` — fachada: modelo + formato → arquivo, nome
+  de arquivo e resposta HTTP de download.
+- Testes: **36 novos** (231 no total).
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **Sem biblioteca de PDF nem de planilha.** O servidor do cliente é offline,
+   então tudo teria que ser empacotado junto. As bibliotecas de PDF em Node ou
+   embutem arquivos de fonte, ou rodam um navegador headless — um segundo
+   processo para instalar e manter on-premise. Para relatório tabular, sai mais
+   barato escrever o formato: `node:zlib` já faz o deflate do XLSX, e o PDF usa
+   Helvetica, que todo leitor de PDF já tem.
+   O preço é `fontes.ts`, com a tabela de larguras da Helvetica — sem ela não
+   há como alinhar coluna de dinheiro à direita nem cortar o que não cabe.
+2. **XLSX, não XLS.** O contrato diz "XLS", que na prática quer dizer "abre no
+   Excel". O XLS binário é formato de 1997 e o Excel moderno abre com aviso;
+   o XLSX abre limpo e é o que os próprios documentos anexados ao sistema já
+   usam.
+3. **Número é número na planilha.** Dinheiro, percentual e data saem como valor
+   numérico com formato aplicado, nunca como texto formatado. Exportar em
+   planilha só faz sentido se o cliente puder somar e filtrar — texto seria um
+   PDF em outra roupa. A célula do Excel não tem tipo decimal, então este é o
+   único ponto do sistema onde `Decimal` vira `number`, e é na formatação
+   final, como manda a convenção.
+4. **A célula carrega texto e número.** O PDF imprime o texto em pt-BR, a
+   planilha grava o número: os dois geradores leem a mesma célula, e não há
+   como o PDF e o Excel discordarem do mesmo relatório.
+5. **"—" e vazio são coisas diferentes.** `texto(null)` vira "—" ("existe e não
+   foi preenchido"); `branco()` fica vazio ("não se aplica"), para a linha de
+   totais não encher de travessão. Célula com texto nunca leva formato de
+   número — "—" sob um formato de data faz o Excel acusar conteúdo inválido.
+6. **Os filtros aplicados vão impressos no cabeçalho.** Relatório de obra
+   pública circula fora do sistema; sem os filtros na folha, ninguém sabe
+   depois o que aquele número media.
+7. **Download como `attachment`.** Diferente do documento anexado, que abre
+   `inline`: relatório é arquivo para guardar e anexar, e abrir na aba
+   descartaria o nome que o sistema acabou de montar.
+8. **ZIP com data fixa.** Dois relatórios com o mesmo conteúdo geram bytes
+   idênticos — o carimbo de hora do ZIP não pode ser a única diferença.
+
+**Verificado com os arquivos gerados:**
+
+| Verificação | Resultado |
+|---|---|
+| XLSX aberto por um leitor OOXML independente | ✅ 87 linhas, 8 colunas |
+| Tipos das células | ✅ `int`, `datetime`, `str` — não string formatada |
+| Formatos aplicados | ✅ `"R$" #,##0.00`, `dd/mm/yyyy`, `0.00%` |
+| Painel congelado e autofiltro | ✅ `A10`, `A9:H96` |
+| Soma da coluna de valor | ✅ confere com a linha de totais |
+| PDF aberto pelo leitor do sistema operacional | ✅ 4 páginas, 87 linhas |
+| Acentuação e travessão no PDF | ✅ "Adequação Elétrica – Unidade Norte" |
+| Cabeçalho repetido e paginação nas páginas seguintes | ✅ "Página 4 de 4" |
+| Linha de totais aparece uma vez só | ✅ |
+| Relatório sem nenhuma linha | ✅ arquivo válido, com aviso na folha |
+
+**Falta para fechar a etapa** (depende da 1ª reunião):
+
+- Definir os relatórios (ponto #10) e escrever as consultas.
+- Tela `/relatorios` com os filtros e os dois botões de exportação, e devolver
+  "Relatórios" ao menu principal.
+- Botão de exportar nas telas que já listam dados (obras, medições, auditoria).
 

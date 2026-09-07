@@ -266,6 +266,11 @@ uso interno ou prestação de contas ao órgão? Existe modelo/layout obrigatór
 público — as 12h orçadas assumem relatório tabular direto.
 **Onde:** `src/modules/relatorios/`.
 
+**Estado:** a mecânica de exportação (XLSX e PDF) já está pronta e testada —
+ela não depende da resposta. O que a resposta define são as colunas e as
+consultas. Vale levar um relatório impresso à reunião: é mais fácil o cliente
+dizer o que falta olhando uma folha do que descrevendo do zero.
+
 ## 11. Como o sistema será instalado no servidor 🔴
 
 O contrato diz que a instalação é *"a definir após visita técnica à

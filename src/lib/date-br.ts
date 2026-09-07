@@ -114,13 +114,20 @@ export function formatarCompetencia(d: Date | null | undefined): string {
 const MS_POR_DIA = 86_400_000;
 
 /**
- * Dias corridos entre duas datas, normalizadas a meia-noite UTC para que
- * horário e horário de verão não produzam 0,9 ou 1,1 dia.
+ * Dias corridos entre duas datas, contados pelo dia civil em Brasília.
+ *
+ * Cada ponta é reduzida ao seu dia no fuso do sistema, não no `TZ` do
+ * processo: num servidor em UTC, tudo que acontece depois das 21h já cai no
+ * dia seguinte, e "dias parado" erraria por um dia toda noite.
  */
 export function diasEntre(inicio: Date, fim: Date): number {
-  const a = Date.UTC(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
-  const b = Date.UTC(fim.getFullYear(), fim.getMonth(), fim.getDate());
-  return Math.round((b - a) / MS_POR_DIA);
+  return Math.round((meiaNoiteBr(fim) - meiaNoiteBr(inicio)) / MS_POR_DIA);
+}
+
+/** Instante do início do dia civil brasiliense, em ms, para contagem de dias. */
+function meiaNoiteBr(d: Date): number {
+  const [ano, mes, dia] = dataParaIso(d).split("-").map(Number);
+  return Date.UTC(ano!, mes! - 1, dia!);
 }
 
 /** Dias corridos desde `inicio` até agora. */

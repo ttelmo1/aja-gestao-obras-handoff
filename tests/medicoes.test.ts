@@ -3,8 +3,11 @@ import { describe, it } from "node:test";
 
 import {
   competencia,
+  dataOpcional,
+  DIGITOS_INTEIROS_DINHEIRO,
   dinheiro,
   dinheiroOpcional,
+  dinheiroOpcionalPositivo,
   normalizarDinheiro,
   percentualObrigatorio,
   percentualOpcional,
@@ -211,6 +214,34 @@ describe("campos do formulário de medição", () => {
     // Zero diria "a nota é de R$ 0,00"; null diz "ainda não informado".
     assert.equal(dinheiroOpcional.parse(""), null);
     assert.equal(dinheiroOpcional.parse("1.500,50"), "1500.50");
+  });
+
+  it("nota fiscal e ISS não aceitam valor negativo", () => {
+    // `dinheiro` continua aceitando negativo de propósito — a rerratificação
+    // usa isso para supressão. Aqui, não faz sentido.
+    assert.equal(dinheiroOpcionalPositivo.parse(""), null);
+    assert.equal(dinheiroOpcionalPositivo.parse("1.500,50"), "1500.50");
+    assert.equal(dinheiroOpcionalPositivo.safeParse("-500,00").success, false);
+    assert.equal(dinheiro.parse("-500,00"), "-500.00");
+  });
+
+  it("data malformada é erro, não campo esvaziado em silêncio", () => {
+    assert.equal(dataOpcional.parse(""), null);
+    // 30 de fevereiro não existe, e `new Date` a converteria em 02/03 calado.
+    assert.equal(dataOpcional.safeParse("2026-02-30").success, false);
+    assert.equal(dataOpcional.safeParse("31/12/2026").success, false);
+    assert.equal(dataOpcional.safeParse("2026-13-01").success, false);
+    assert.equal(dataOpcional.safeParse("ontem").success, false);
+    assert.ok(dataOpcional.parse("2026-09-07") instanceof Date);
+  });
+
+  it("valor maior que a coluna do banco é recusado no formulário", () => {
+    // `Decimal(15, 2)` guarda 13 dígitos inteiros; acima disso o insert
+    // estouraria no banco e viraria erro 500 em vez de mensagem na tela.
+    const noLimite = "9".repeat(DIGITOS_INTEIROS_DINHEIRO);
+    assert.equal(normalizarDinheiro(noLimite), `${noLimite}.00`);
+    assert.equal(normalizarDinheiro("9".repeat(DIGITOS_INTEIROS_DINHEIRO + 1)), null);
+    assert.equal(dinheiro.safeParse("9".repeat(DIGITOS_INTEIROS_DINHEIRO + 1)).success, false);
   });
 
   it("percentual aceita vírgula e recusa acima de 100", () => {

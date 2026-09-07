@@ -9,7 +9,7 @@ import {
   competencia,
   dataOpcional,
   dinheiro,
-  dinheiroOpcional,
+  dinheiroOpcionalPositivo,
   inteiroOpcional,
   percentualObrigatorio,
   percentualOpcional,
@@ -37,9 +37,9 @@ const medicaoSchema = z
     dataProtocolo: dataOpcional,
     notaFiscalNumero: textoOpcional,
     notaFiscalData: dataOpcional,
-    notaFiscalValor: dinheiroOpcional,
+    notaFiscalValor: dinheiroOpcionalPositivo,
     issAliquota: percentualOpcional,
-    issValor: dinheiroOpcional,
+    issValor: dinheiroOpcionalPositivo,
     responsavelId: textoOpcional,
     status: z.enum(StatusMedicao),
     dataPagamento: dataOpcional,
@@ -160,8 +160,10 @@ export async function salvarMedicao(
         );
       });
 
+      // `layout` porque a medição mexe no cabeçalho e no farol da obra, não
+      // só na aba — mesma revalidação que as rerratificações já faziam.
+      revalidatePath(`/obras/${obraId}`, "layout");
       revalidatePath("/obras");
-      revalidatePath(`/obras/${obraId}/medicoes`);
       return { sucesso: "Alterações salvas." };
     }
 
@@ -202,6 +204,7 @@ export async function salvarMedicao(
     throw erro;
   }
 
+  revalidatePath(`/obras/${obraId}`, "layout");
   revalidatePath("/obras");
   redirect(`/obras/${obraId}/medicoes?salva=1`);
 }
@@ -259,6 +262,7 @@ export async function excluirMedicao(
     );
   });
 
+  revalidatePath(`/obras/${medicao.obraId}`, "layout");
   revalidatePath("/obras");
   redirect(`/obras/${medicao.obraId}/medicoes`);
 }

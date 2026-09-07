@@ -11,17 +11,33 @@ import { dec } from "./money";
  * diferente dependendo de onde foi preenchida.
  */
 
-/** Campo de data do formulário: `""` vira `null`, e a data é lida ao meio-dia. */
+/**
+ * Campo de data do formulário: `""` vira `null`, e a data é lida ao meio-dia.
+ *
+ * Data malformada é erro de validação, não `null`: devolver `null` fazia o
+ * campo simplesmente esvaziar na volta, sem dizer nada — o usuário digitava
+ * uma data errada e o formulário salvava como se ele não tivesse preenchido.
+ */
+function dataDoCampo(v: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v);
+  if (!m) return null;
+  const [ano, mes, dia] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  // Meio-dia local evita o clássico "a data voltou um dia": `new Date("2026-03-10")`
+  // é meia-noite UTC, que em Brasília ainda é 09/03.
+  const d = new Date(`${v}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return null;
+  // `new Date` não recusa dia impossível: "2026-02-30" vira 02/03 calado. Se o
+  // que voltou não é o que foi digitado, a data não existe.
+  const confere =
+    d.getFullYear() === ano && d.getMonth() === mes - 1 && d.getDate() === dia;
+  return confere ? d : null;
+}
+
 export const dataOpcional = z
   .string()
   .trim()
-  .transform((v) => {
-    if (v === "") return null;
-    // Meio-dia local evita o clássico "a data voltou um dia": `new Date("2026-03-10")`
-    // é meia-noite UTC, que em Brasília ainda é 09/03.
-    const d = new Date(`${v}T12:00:00`);
-    return Number.isNaN(d.getTime()) ? null : d;
-  })
+  .refine((v) => v === "" || dataDoCampo(v) !== null, "Data inválida.")
+  .transform((v) => (v === "" ? null : dataDoCampo(v)))
   .nullable();
 
 /**
@@ -33,6 +49,9 @@ export const competencia = z
   .trim()
   .refine((v) => /^\d{4}-\d{2}$/.test(v), "Informe a competência (mês/ano).")
   .transform((v) => new Date(`${v}-01T12:00:00`));
+
+/** Casas inteiras que cabem numa coluna `Decimal(15, 2)`. */
+export const DIGITOS_INTEIROS_DINHEIRO = 13;
 
 /**
  * Normaliza um valor monetário digitado para o formato do `Decimal`.
@@ -64,7 +83,14 @@ export function normalizarDinheiro(bruto: string): string | null {
         semEspacos.replace(/\.(?=.*\.)/g, "")
       : semEspacos.replace(/\./g, "");
 
-  return /^-?\d+(\.\d{1,2})?$/.test(cru) ? dec(cru).toFixed(2) : null;
+  if (!/^-?\d+(\.\d{1,2})?$/.test(cru)) return null;
+  // As colunas de dinheiro são `Decimal(15, 2)`: 13 dígitos antes da vírgula.
+  // Sem este corte, um valor absurdo só falharia no banco, e o `catch` das
+  // actions só trata `P2002` — o resto vira erro 500 em vez de mensagem no
+  // formulário.
+  const inteiros = cru.replace("-", "").split(".")[0]!;
+  if (inteiros.length > DIGITOS_INTEIROS_DINHEIRO) return null;
+  return dec(cru).toFixed(2);
 }
 
 /** Valor monetário digitado em pt-BR ("1.200.000,00") ou cru ("260000.00"). */
@@ -81,6 +107,19 @@ export const dinheiroOpcional = z
   .refine((v) => v !== null, "Valor inválido.")
   .transform((v) => (v === "" ? null : (v as string)))
   .nullable();
+
+/**
+ * Dinheiro opcional que não admite negativo.
+ *
+ * Nota fiscal e ISS não têm o `refine(gt(0))` que valor medido e contratado
+ * ganham no objeto, e `normalizarDinheiro` aceita o sinal — o campo engolia
+ * "-500,00" calado. O `dinheiro` comum continua aceitando negativo de
+ * propósito: a rerratificação usa isso para supressão.
+ */
+export const dinheiroOpcionalPositivo = dinheiroOpcional.refine(
+  (v) => v === null || !dec(v).isNegative(),
+  "O valor não pode ser negativo.",
+);
 
 /** Percentual 0–100 com duas casas. Em branco vira `null`. */
 export const percentualOpcional = z

@@ -147,27 +147,38 @@ completo da medição vai ser exercitado.
 
 ### Baixa
 
-5. **`dinheiroOpcional` aceita valor negativo.** `notaFiscalValor` e `issValor`
-   não têm o `refine(gt(0))` que `valorMedido` e `valorContratado` têm, e
-   `normalizarDinheiro` (`src/lib/campos.ts:67`) permite o sinal.
-6. **`diasEntre` usa o fuso do servidor.** `src/lib/date-br.ts:45-46` monta as
-   datas com `getFullYear/getMonth/getDate` enquanto toda a exibição fixa
-   `America/Sao_Paulo`. Se o servidor rodar em UTC, "dias parado" erra por um
-   dia entre 21h e meia-noite.
-7. **Data inválida vira `null` em silêncio.** `dataOpcional`
-   (`src/lib/campos.ts:23`) devolve `null` em vez de erro de validação — o
-   usuário digita uma data errada e o campo simplesmente esvazia.
-8. **Sem limite de dígitos para `Decimal(15,2)`.** `normalizarDinheiro` não
-   limita os 13 dígitos inteiros da coluna, e o `catch` das actions só trata
-   `P2002` — um valor absurdo vira erro 500 em vez de mensagem de formulário.
-9. **`revalidatePath` inconsistente nas medições.** Não revalida
-   `/obras/${obraId}`, ao contrário de `obras/acoes.ts`. Provavelmente inócuo
-   (as páginas são dinâmicas por lerem cookie), mas destoa do resto.
-10. **O `Map` do throttle nunca é limpo** (`src/lib/throttle.ts:16`).
+Todos corrigidos em 07/09/2026, numa passada só.
+
+5. ✅ **`dinheiroOpcional` aceita valor negativo.** `notaFiscalValor` e
+   `issValor` não tinham o `refine(gt(0))` que `valorMedido` e
+   `valorContratado` têm. **Corrigido** com `dinheiroOpcionalPositivo`, novo em
+   `campos.ts`. O `dinheiro` comum continua aceitando negativo: a
+   rerratificação depende disso para supressão (ver achado 3).
+6. ✅ **`diasEntre` usa o fuso do servidor.** Metade espelhada do achado 14.
+   **Corrigido** reduzindo cada ponta ao dia civil em Brasília com o
+   `dataParaIso` criado lá. Fecha o par: nenhum código de data depende mais do
+   `TZ` do processo.
+7. ✅ **Data inválida vira `null` em silêncio.** **Corrigido** — agora é erro
+   de validação. Ao escrever o teste apareceu um caso pior que o relatado:
+   `new Date("2026-02-30")` não estoura, rola para 02/03. Ou seja, data
+   impossível não virava `null`, virava *outro dia*, calada. `dataDoCampo`
+   agora confere se o que voltou é o que foi digitado.
+8. ✅ **Sem limite de dígitos para `Decimal(15,2)`.** **Corrigido** em
+   `normalizarDinheiro`, com `DIGITOS_INTEIROS_DINHEIRO = 13` — o valor absurdo
+   agora vira "Valor inválido." no formulário, não erro 500.
+9. ✅ **`revalidatePath` inconsistente nas medições.** **Corrigido** nos três
+   pontos, com `(`/obras/${obraId}`, "layout")`, que é o que as
+   rerratificações já faziam. Medição mexe no cabeçalho e no farol da obra, não
+   só na aba.
+10. ✅ **O `Map` do throttle nunca é limpo.** **Corrigido** com janela
+    deslizante (`JANELA_MS`) e limpeza dos vencidos a cada falha registrada. O
+    vazamento de memória era o menor dos problemas: sem decaimento, quatro
+    senhas erradas em janeiro somavam com a quinta em março e bloqueavam quem
+    não tinha errado nada. O arquivo agora é `src/modules/auth/throttle.ts`.
 
 ## Observação estrutural
 
-Os 236 testes são todos unitários puros, sobre funções de `src/modules/`. Nada
+Os 236 testes eram todos unitários puros, sobre funções de `src/modules/`. Nada
 exercita rota, Server Action, RBAC ou banco. Não é coincidência que **os
 achados 1, 2 e 4 estejam todos em `src/app/`** — é exatamente a faixa que os
 testes não alcançam. A etapa 12 ("ajustes, integração e testes") é o lugar
@@ -216,6 +227,11 @@ A suíte foi a 243 testes.
 Numa terceira rodada, ainda em 07/09/2026, foi corrigido o achado 3 e o 4 foi
 adiado para a etapa 12, por decisão. Suíte em 245 testes. **Continuam
 abertos:** 5 a 10 (Baixa), o 15 (nit) e o 4 (agendado).
+
+Numa quarta rodada, ainda em 07/09/2026, foram corrigidos os seis achados de
+**Baixa** (5 a 10). Suíte em 251 testes, verde em `TZ=UTC`,
+`America/Sao_Paulo` e `Asia/Tokyo`. **Continuam abertos:** só o 15 (nit, à
+espera da etapa 11) e o 4 (agendado para a etapa 12).
 
 ### Média
 

@@ -18,8 +18,10 @@ import {
 import {
   BLOQUEIO_MS,
   bloqueadoPor,
+  JANELA_MS,
   limparFalhas,
   registrarFalha,
+  tamanhoDoFreio,
   TENTATIVAS_ATE_BLOQUEIO,
 } from "@/modules/auth/throttle";
 
@@ -127,5 +129,49 @@ describe("freio de tentativas de login", () => {
     for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha("alvo@exemplo.com");
     assert.ok(bloqueadoPor("alvo@exemplo.com") > 0);
     assert.equal(bloqueadoPor("vizinho@exemplo.com"), 0);
+  });
+});
+
+describe("o freio não acumula registro para sempre", () => {
+  it("tentativa isolada muito depois começa contagem nova", () => {
+    // Sem janela deslizante, quatro erros hoje somariam com um erro daqui a
+    // meses e bloqueariam quem não errou nada.
+    const chave = "espacado@exemplo.com";
+    limparFalhas(chave);
+    const agora = Date.now();
+    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO - 1; i++) registrarFalha(chave, agora);
+    registrarFalha(chave, agora + JANELA_MS + 1);
+    assert.equal(bloqueadoPor(chave, agora + JANELA_MS + 1), 0);
+  });
+
+  it("registro parado e desbloqueado é esquecido", () => {
+    const antigo = "esquecivel@exemplo.com";
+    const atual = "ativo@exemplo.com";
+    limparFalhas(antigo);
+    limparFalhas(atual);
+    const agora = Date.now();
+
+    registrarFalha(antigo, agora);
+    const antes = tamanhoDoFreio();
+
+    // Uma falha bem depois dispara a limpeza dos registros vencidos.
+    registrarFalha(atual, agora + BLOQUEIO_MS + JANELA_MS + 1);
+    assert.equal(tamanhoDoFreio(), antes, "o antigo saiu e o novo entrou");
+    assert.equal(bloqueadoPor(antigo, agora + BLOQUEIO_MS + JANELA_MS + 1), 0);
+  });
+
+  it("a limpeza não solta quem está cumprindo bloqueio", () => {
+    const chave = "bloqueado@exemplo.com";
+    limparFalhas(chave);
+    const agora = Date.now();
+    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha(chave, agora);
+
+    // Meio do bloqueio: a falha de outra conta roda a limpeza, e este registro
+    // precisa sobreviver a ela.
+    const meio = agora + BLOQUEIO_MS / 2;
+    registrarFalha("outro@exemplo.com", meio);
+    assert.ok(bloqueadoPor(chave, meio) > 0);
+    limparFalhas("outro@exemplo.com");
+    limparFalhas(chave);
   });
 });

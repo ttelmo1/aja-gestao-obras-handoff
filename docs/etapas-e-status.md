@@ -958,9 +958,10 @@ resposta do cliente ou de volume real de dados.
    protocolada. Vem da revisão de código (achado 4), adiada para cá em
    07/09/2026 porque exige desenhar as transições válidas, não um remendo.
    Casa com o item 2: é no percurso ponta a ponta que isso se exercita.
-5. **Pendências restantes da revisão de código.** Os achados de Baixa (5 a 10)
-   e o nit 15, listados em [`revisao-de-codigo.md`](revisao-de-codigo.md).
-   Nenhum bloqueia; são de varredura, e alguns encostam no item 3.
+5. **Pendência restante da revisão de código.** Só o nit 15 (indicador
+   "Autores" da tela de auditoria), à espera de a etapa 11 fechar — os de
+   Baixa (5 a 10) foram corrigidos em 07/09/2026. Ver
+   [`revisao-de-codigo.md`](revisao-de-codigo.md).
 
 **Itens condicionais** (só entram se a condição se confirmar):
 

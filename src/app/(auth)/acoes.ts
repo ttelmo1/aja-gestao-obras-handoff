@@ -80,7 +80,7 @@ export async function entrar(
     acao: AcaoAuditoria.LOGIN,
     entidade: "Usuario",
     entidadeId: usuario.id,
-    descricao: `${usuario.nome} entrou no sistema.`,
+    descricao: "Entrou no sistema.",
   });
 
   // `redirect` funciona lançando: precisa ficar fora de qualquer try/catch.

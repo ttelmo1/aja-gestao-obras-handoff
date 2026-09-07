@@ -21,14 +21,14 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 0.2 | Identidade visual herdada do mockup | — | ✅ | — |
 | 1 | Auth + RBAC | 12h | ✅ | 0 |
 | 2 | Cadastros base (contratante, responsável, setor) | ~3h | ✅ | 1 |
-| 3 | Auditoria — camada de gravação | ~3h | 🔵 | 0 |
+| 3 | Auditoria — camada de gravação | ~3h | ✅ | 0 |
 | 4 | CRUD de obras + dashboard/filtros | 15h | ✅ | 2, 3 |
 | 5 | Medições + cálculos financeiros | 18h | ✅ | 4 |
 | 6 | Tramitação (fluxo fixo) | 30h | ✅ | 4 |
 | 7 | Gestão documental | 24h | ✅ | 4, 5, 6 |
 | 8 | Rerratificações | 8h | ✅ | 7 |
 | 9 | Motor do farol | 6h | 🔵 | 5, 6 |
-| 10 | Auditoria — telas de histórico | 5h | ⬜ | 3, 4 |
+| 10 | Auditoria — telas de histórico | 5h | ✅ | 3, 4 |
 | 11 | Relatórios XLS/PDF | 12h | ⬜ | 5, 6, 8 |
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
 
@@ -715,3 +715,59 @@ Concluída em 07/09/2026.
 | Excluir aprovada | ✅ recusada |
 | Excluir em elaboração | ✅ permitida, cache volta a zero |
 | Planilha anexada aparece na central | ✅ origem "Rerratificação 01" |
+
+## Etapa 10 — Auditoria: telas de histórico ✅
+
+Concluída em 07/09/2026. Fecha também a etapa 3, cuja camada de gravação
+existia desde a fundação mas nunca tinha sido exibida em lugar nenhum.
+
+**Entregue:**
+
+- **Aba Histórico da obra** — a linha do tempo do mockup: filete vertical,
+  ponto colorido por ação, data e hora miúdas, autor em navio.
+- **Tela geral de Auditoria** (`/auditoria`), no menu principal: responde
+  "o que fulano andou fazendo" e alcança o que não pertence a obra nenhuma —
+  cadastros, usuários e login.
+- Filtros por texto, ação, tipo de registro, autor e período; paginação de 50.
+- **Diferença campo a campo** em `<details>`: "de X para Y" do que mudou.
+- Testes: **195 passando** (17 novos).
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **Filtro e paginação nascem junto com a tela.** A trilha só cresce e nunca
+   é apagada — sem os dois, a tela ficaria inutilizável no primeiro ano.
+2. **O intervalo de datas pega o dia inteiro.** "Até hoje" com hora zero
+   perderia tudo que aconteceu hoje; o fim do período vai às 23:59:59.
+3. **Parâmetro inválido na URL é ignorado, não quebra a tela.** Ação
+   inexistente, entidade fantasma e página negativa caem no padrão.
+4. **O autor saiu de dentro da frase.** As descrições que os módulos gravam
+   são passivas ("Obra X alterada"), e prefixar o nome produzia "Administrador
+   Obra X alterada". Agora o autor vem antes, separado por ponto médio.
+   Corrigida junto a descrição de login, que repetia o nome ("Administrador
+   Administrador entrou no sistema").
+5. **A diferença vem fechada.** Numa obra com muitas edições, abrir todos os
+   diffs faria a linha do tempo perder a leitura corrida do mockup.
+6. **Nome do model virou nome de gente.** A coluna guarda
+   `TramitacaoMovimento`; a tela mostra "Tramitação".
+
+**Corrigido de passagem:**
+
+O menu principal apontava para `/documentos` e `/relatorios` desde a etapa 1
+— **duas rotas que nunca existiram, dois 404 no menu**, presentes durante toda
+a caminhada até aqui. O menu passa a listar só o que existe. A central de
+documentos é por obra, como no mockup ("Central de Documentos da Obra"), e por
+isso não volta ao topo; "Relatórios" retorna na etapa 11 junto com a tela.
+
+**Verificado com o servidor de pé, sem JavaScript:**
+
+| Verificação | Resultado |
+|---|---|
+| Linha do tempo da obra | ✅ 26 registros |
+| Tela geral de auditoria | ✅ 54 registros, 1 autor |
+| Filtro por ação e por tipo de registro | ✅ |
+| Filtro por período | ✅ 23 + 31 = 54, partição correta |
+| Busca sem resultado | ✅ estado vazio explicando o filtro |
+| Página inválida, ação inventada, data malformada | ✅ ignorados, HTTP 200 |
+| Diferença campo a campo | ✅ "numero: 1", "valorImpactado: 70000" |
+| Links do menu principal | ✅ todos respondem |
+

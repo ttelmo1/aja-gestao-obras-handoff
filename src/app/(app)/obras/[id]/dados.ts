@@ -175,3 +175,18 @@ export const carregarDocumentos = cache(async (obraId: string) => {
 export type DocumentoCarregado = Awaited<
   ReturnType<typeof carregarDocumentos>
 >[number];
+
+/** Rerratificações da obra, com a contagem de anexos vivos. */
+export const carregarRerratificacoes = cache(async (obraId: string) => {
+  return prisma.rerratificacao.findMany({
+    where: { obraId },
+    orderBy: { numero: "desc" },
+    include: {
+      _count: { select: { documentos: { where: { excluidoEm: null } } } },
+    },
+  });
+});
+
+export type RerratificacaoCarregada = Awaited<
+  ReturnType<typeof carregarRerratificacoes>
+>[number];

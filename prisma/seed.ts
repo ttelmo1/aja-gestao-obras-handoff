@@ -14,7 +14,11 @@ import {
   TipoEtapa,
 } from "../src/generated/prisma/enums";
 import { etapasIniciais } from "../src/modules/tramitacao/fluxo";
-import { TipoDocumento } from "../src/generated/prisma/enums";
+import {
+  StatusRerratificacao,
+  TipoDocumento,
+} from "../src/generated/prisma/enums";
+import { impactoDasRerratificacoes } from "../src/modules/rerratificacoes/calculos";
 
 /**
  * Seed de provisionamento inicial.
@@ -358,6 +362,109 @@ async function seedDemo() {
     }
   }
 
+  // --- Rerratificações ----------------------------------------------------
+  // Uma aprovada (mexe no valor do contrato) e uma ainda tramitando (não
+  // mexe) — é a distinção que a aba precisa deixar clara na demonstração.
+  const RERRATIFICACOES: Record<
+    string,
+    Array<{
+      numero: number;
+      status: StatusRerratificacao;
+      valor: string;
+      percentual: string;
+      itens: number;
+      prazo: number | null;
+      descricao: string;
+      observacoes: string;
+      diasAtras: number;
+    }>
+  > = {
+    "OBR-DEMO-001": [
+      {
+        numero: 1,
+        status: StatusRerratificacao.APROVADA,
+        valor: "120000.00",
+        percentual: "10.00",
+        itens: 8,
+        prazo: 45,
+        descricao: "Ajuste de quantitativos e serviços",
+        observacoes: "Acréscimo de 10% com prorrogação de 45 dias.",
+        diasAtras: 60,
+      },
+    ],
+    "OBR-DEMO-002": [
+      {
+        numero: 1,
+        status: StatusRerratificacao.PROTOCOLADA,
+        valor: "48000.00",
+        percentual: "10.00",
+        itens: 3,
+        prazo: null,
+        descricao: "Inclusão de quadro de distribuição",
+        observacoes: "Aguardando parecer da Controladoria.",
+        diasAtras: 20,
+      },
+    ],
+  };
+
+  let totalRerratificacoes = 0;
+  for (const obra of obras) {
+    const lista = RERRATIFICACOES[obra.codigo];
+    if (!lista) continue;
+
+    const registro = await prisma.obra.findUniqueOrThrow({
+      where: { codigo: obra.codigo },
+      select: { id: true },
+    });
+
+    for (const rr of lista) {
+      const existe = await prisma.rerratificacao.findUnique({
+        where: { obraId_numero: { obraId: registro.id, numero: rr.numero } },
+        select: { id: true },
+      });
+      if (existe) continue;
+
+      await prisma.rerratificacao.create({
+        data: {
+          obraId: registro.id,
+          numero: rr.numero,
+          data: dias(-rr.diasAtras),
+          protocolo:
+            rr.status === StatusRerratificacao.EM_ELABORACAO
+              ? null
+              : `${new Date().getFullYear()}.00${900 + rr.numero}`,
+          descricao: rr.descricao,
+          quantidadeItens: rr.itens,
+          percentualAlcancado: rr.percentual,
+          valorImpactado: rr.valor,
+          prazoAdicionalDias: rr.prazo,
+          status: rr.status,
+          observacoes: rr.observacoes,
+        },
+      });
+      totalRerratificacoes++;
+    }
+
+    // O cache do valor aditivado é reescrito a partir das aprovadas, igual
+    // faz a Server Action — a coluna nunca é digitada à mão.
+    const todas = await prisma.rerratificacao.findMany({
+      where: { obraId: registro.id },
+      select: { status: true, valorImpactado: true, prazoAdicionalDias: true },
+    });
+    await prisma.obra.update({
+      where: { id: registro.id },
+      data: {
+        valorAditivado: impactoDasRerratificacoes(todas).valorAprovado.toFixed(2),
+      },
+    });
+
+    // Obra com aditivo não tem a etapa de rerratificação "não se aplica".
+    await prisma.etapaObra.updateMany({
+      where: { obraId: registro.id, tipo: TipoEtapa.RERRATIFICACAO },
+      data: { status: StatusEtapa.EM_ANDAMENTO },
+    });
+  }
+
   // --- Documentos ---------------------------------------------------------
   // Arquivos de verdade no disco: a central de documentos só faz sentido na
   // demonstração se o botão "Abrir" abrir alguma coisa.
@@ -457,6 +564,9 @@ async function seedDemo() {
     `  demo: ${totalMovimentos} movimentos de tramitação, 3 processos em aberto`,
   );
   console.log(`  demo: ${totalDocumentos} documentos com arquivo no disco`);
+  console.log(
+    `  demo: ${totalRerratificacoes} rerratificações, uma aprovada e uma em tramitação`,
+  );
 }
 
 async function main() {

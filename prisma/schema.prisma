@@ -177,7 +177,9 @@ model Obra {
 
   /// Valor original do contrato.
   valorContratado Decimal @db.Decimal(15, 2)
-  /// Soma do impacto das rerratificações (pode ser negativo).
+  /// Cache da soma do impacto das rerratificações aprovadas (pode ser
+  /// negativo). Fonte da verdade é modules/rerratificacoes/calculos.ts —
+  /// mesma divisão de papéis da coluna `farol`.
   valorAditivado  Decimal @default(0) @db.Decimal(15, 2)
 
   dataAssinatura      DateTime?
@@ -387,6 +389,12 @@ model Rerratificacao {
   numero    Int
   data      DateTime?
   protocolo String?
+
+  /// "Ajuste de quantitativos e serviços" — a coluna Descrição do mockup.
+  descricao String?
+  /// Quantos itens a planilha alterou. É contagem, não detalhamento: o
+  /// item a item fica no Excel apresentado ao órgão (requisitos.md 1.7).
+  quantidadeItens Int?
 
   /// Impacto agregado.
   percentualAlcancado Decimal @db.Decimal(5, 2)

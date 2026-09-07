@@ -26,7 +26,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 5 | Medições + cálculos financeiros | 18h | ✅ | 4 |
 | 6 | Tramitação (fluxo fixo) | 30h | ✅ | 4 |
 | 7 | Gestão documental | 24h | ✅ | 4, 5, 6 |
-| 8 | Rerratificações | 8h | ⬜ | 7 |
+| 8 | Rerratificações | 8h | ✅ | 7 |
 | 9 | Motor do farol | 6h | 🔵 | 5, 6 |
 | 10 | Auditoria — telas de histórico | 5h | ⬜ | 3, 4 |
 | 11 | Relatórios XLS/PDF | 12h | ⬜ | 5, 6, 8 |
@@ -650,14 +650,68 @@ Concluída em 07/09/2026.
 | Trigger append-only da auditoria | ✅ recusou DELETE |
 | Travessia de caminho | ✅ 6 casos cobertos por teste |
 
-## Etapa 8 — Rerratificações ⬜
+## Etapa 8 — Rerratificações ✅
 
-**Escopo:** aditivos contratuais com **resumo agregado** — percentual
-alcançado e valor impactado —, sem detalhamento item a item (requisitos 1.7
-`[AJUSTADO]`: isso já consta na planilha apresentada ao órgão, que fica
-anexada). Preenche a aba Rerratificações.
+Concluída em 07/09/2026.
 
-**Pré-requisitos já resolvidos:** modelo `Rerratificacao`, a coluna
-`Obra.valorAditivado` que já entra em todos os cálculos financeiros (hoje
-sempre zero), a etapa `RERRATIFICACAO` do fluxo fixo, e o upload de
-documentos da etapa 7, que a aba vai reusar para anexar a planilha.
+**Entregue:**
+
+- **Aba Rerratificações** com o resumo agregado do requisito 1.7: valor
+  original, aditivado aprovado, valor atual do contrato e acréscimo
+  acumulado, mais a tabela do mockup (Nº, Data, Descrição, Itens alterados,
+  Documentos, Observações) acrescida de valor, percentual, prazo e situação.
+- Cadastro, edição e exclusão, com anexo da **planilha Excel** apresentada ao
+  órgão pelo módulo documental da etapa 7 — origem "Rerratificação 01" na
+  central.
+- **`Obra.valorAditivado` deixou de ser sempre zero**: passa a ser reescrito a
+  cada alteração e alimenta saldo a medir, % medido e os indicadores do
+  painel.
+- **Alerta do limite legal** de 25% da Lei 14.133/2021 (art. 125).
+- Seed `--demo` com duas rerratificações: uma aprovada e uma em tramitação.
+- Testes: **178 passando** (17 novos).
+
+**Decisões técnicas tomadas na etapa:**
+
+1. **Só rerratificação aprovada mexe no valor do contrato.** Em elaboração e
+   protocolada ainda podem ser negadas; somá-las inflaria o saldo a medir com
+   dinheiro que talvez nunca exista. Elas aparecem à parte, como expectativa.
+2. **`valorAditivado` é cache, recalculado na escrita — não na leitura.**
+   Diferente do farol, que envelhece sozinho com o tempo e por isso é sempre
+   recomputado, o valor aditivado só muda quando alguém mexe numa
+   rerratificação. Recalcular na mesma transação da escrita mantém a coluna
+   correta e evita uma consulta a mais em cada cartão do painel. A regra mora
+   em `modules/rerratificacoes/calculos.ts`; a coluna é onde o resultado fica.
+3. **O acréscimo acumulado é medido sobre o valor ORIGINAL.** Sobre o já
+   aditivado, cada novo aditivo pareceria menor que o anterior e o teto legal
+   nunca chegaria.
+4. **O limite de 25% é alerta, não trava.** Reforma de edifício admite 50%, e
+   quem decide o enquadramento é o jurídico do cliente, não este código.
+   Registrado como ponto #17.
+5. **Nenhum campo de item alterado**, por decisão de escopo — só a contagem
+   ("8 itens"), que é o que o mockup mostra. O detalhamento vive na planilha
+   anexada.
+6. **Supressão é aditivo negativo**, não uma entidade separada: o campo aceita
+   valor negativo e a soma diminui o contrato.
+7. **Aditivo só de prazo é válido; aditivo de nada não é.** Prorrogação sem
+   custo existe e é comum. O que o formulário recusa é valor zero *e* prazo
+   vazio — combinação que o campo em branco produzia silenciosamente.
+8. **Mesma regra de exclusão da medição:** só em elaboração se apaga; depois
+   de protocolada, o caminho é Rejeitada.
+
+**Verificado com o servidor de pé, sem JavaScript:**
+
+| Verificação | Resultado |
+|---|---|
+| Aprovada entra no contrato; protocolada não | ✅ 1.200.000 → 1.320.000 |
+| Aditivo propaga para painel, Resumo e Medições | ✅ % medido 50% → 45,45% |
+| Aprovar recalcula o cache do valor aditivado | ✅ |
+| Voltar a "em elaboração" desfaz o acréscimo | ✅ volta a R$ 0,00 |
+| Protocolada sem protocolo | ✅ recusada |
+| Percentual acima de 100 | ✅ recusado |
+| Sem valor e sem prazo | ✅ recusada |
+| Só prazo, sem valor | ✅ aceita |
+| Número repetido na mesma obra | ✅ recusado |
+| Alerta do limite de 25% | ✅ acendeu em 26,92% |
+| Excluir aprovada | ✅ recusada |
+| Excluir em elaboração | ✅ permitida, cache volta a zero |
+| Planilha anexada aparece na central | ✅ origem "Rerratificação 01" |

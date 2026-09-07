@@ -29,6 +29,8 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 13 | Periodicidade da medição e o que conta como atrasada | 🟡 | Baixo |
 | 14 | Consórcio: contrato com duas empresas | 🟡 | Baixo |
 | 15 | Contratos de manutenção não são obras | 🟡 | Baixo a médio |
+| 16 | Aba Tramitação não existe no mockup | 🟡 | Baixo |
+| 17 | Limite legal de acréscimo contratual | 🟡 | Baixo |
 | 16 | Onde a tramitação mora: por medição ou por etapa | 🟡 | Médio |
 
 ---
@@ -470,6 +472,30 @@ individual a outras entidades (rerratificação, por exemplo) é repetir o que
 já existe para medição — a coluna e a lógica estão prontas.
 **Onde:** `src/modules/tramitacao/`, `src/app/(app)/obras/[id]/tramitacao/`,
 `TramitacaoMovimento.medicaoId` em `prisma/schema.prisma`.
+
+## 17. Limite legal de acréscimo contratual 🟡
+
+A Lei 14.133/2021, art. 125, permite acréscimos e supressões de até **25%** do
+valor original — **50%** no caso de reforma de edifício ou equipamento.
+
+**Assumimos** 25% como **alerta, não como trava**. A tela avisa quando os
+aditivos aprovados passam disso, mas deixa salvar: quem decide se o caso é de
+50%, ou se há fundamento para exceder, é o jurídico do cliente.
+
+O percentual é medido sobre o **valor original** do contrato, não sobre o já
+aditivado — é assim que o limite legal é apurado.
+
+**Perguntar:**
+
+1. Os contratos da AJA são de obra nova (25%) ou há reforma de edifício (50%)?
+   Se houver os dois, vale um campo na obra para o sistema saber qual usar.
+2. O sistema deve **impedir** o registro acima do limite, ou só avisar?
+3. Supressão também tem limite de 25% na prática do cliente?
+
+**Custo de mudar:** baixo. É uma constante em
+`modules/rerratificacoes/calculos.ts`; virar campo por obra é uma coluna.
+**Onde:** `src/modules/rerratificacoes/calculos.ts`,
+`LIMITE_ACRESCIMO_PERCENTUAL`.
 
 ---
 

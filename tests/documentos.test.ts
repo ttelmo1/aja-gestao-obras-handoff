@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import { caminhoDaObra, resolverDentroDe } from "@/modules/documentos/caminho";
 import {
   TAMANHO_MAXIMO_BYTES,
+  abreInline,
+  tipoDeConteudo,
   validarArquivo,
 } from "@/modules/documentos/formatos";
 import {
@@ -223,5 +225,39 @@ describe("validação de arquivo enviado", () => {
       validarArquivo("grande.pdf", "application/pdf", TAMANHO_MAXIMO_BYTES + 1).ok,
       false,
     );
+  });
+
+  it("não grava mime de fora da allowlist, mesmo aceitando o arquivo", () => {
+    // `.png` com `text/html` declarado: a extensão manda, o arquivo entra —
+    // mas o que vai para o banco é o mime canônico da extensão, senão o
+    // download devolveria `text/html` e o payload rodaria na nossa origem.
+    const r = validarArquivo("laudo.png", "text/html", 1024);
+    assert.equal(r.ok, true);
+    assert.equal(r.ok === true ? r.mimeNormalizado : "", "image/png");
+
+    const svg = validarArquivo("foto.jpg", "image/svg+xml", 1024);
+    assert.equal(svg.ok === true ? svg.mimeNormalizado : "", "image/jpeg");
+  });
+
+  it("preserva o mime quando a allowlist o reconhece", () => {
+    const r = validarArquivo("lista.csv", "text/csv", 1024);
+    assert.equal(r.ok === true ? r.mimeNormalizado : "", "text/csv");
+  });
+});
+
+describe("resposta de download", () => {
+  it("o tipo vem da extensão, não do mime gravado", () => {
+    assert.equal(tipoDeConteudo("png"), "image/png");
+    assert.equal(tipoDeConteudo("PDF"), "application/pdf");
+    assert.equal(tipoDeConteudo("exe"), "application/octet-stream");
+  });
+
+  it("só PDF e imagem abrem na aba", () => {
+    for (const ext of ["pdf", "jpg", "jpeg", "png"]) {
+      assert.equal(abreInline(ext), true, ext);
+    }
+    for (const ext of ["xlsx", "xls", "csv", "html"]) {
+      assert.equal(abreInline(ext), false, ext);
+    }
   });
 });

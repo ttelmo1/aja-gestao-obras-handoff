@@ -112,14 +112,20 @@ export async function enviarDocumentos(
 
   // Valida todos antes de gravar qualquer um: melhor recusar o lote inteiro
   // do que deixar metade no disco e reclamar da outra metade.
+  const validados: { arquivo: File; mime: string }[] = [];
   for (const arquivo of arquivos) {
     const check = validarArquivo(arquivo.name, arquivo.type, arquivo.size);
     if (!check.ok) return { erro: `${arquivo.name}: ${check.motivo}` };
+    validados.push({ arquivo, mime: check.mimeNormalizado });
   }
 
   const { ip } = await origemDaRequisicao();
   const salvos: string[] = [];
-  const gravados: { arquivo: File; salvo: Awaited<ReturnType<typeof salvarArquivo>> }[] = [];
+  const gravados: {
+    arquivo: File;
+    mime: string;
+    salvo: Awaited<ReturnType<typeof salvarArquivo>>;
+  }[] = [];
 
   try {
     // Grava todos os arquivos primeiro e só então abre uma única transação
@@ -128,20 +134,20 @@ export async function enviarDocumentos(
     // comitado, deixando registro apontando para arquivo inexistente; e
     // manter a escrita em disco dentro da transação esbarraria no timeout
     // padrão do Prisma num lote grande.
-    for (const arquivo of arquivos) {
+    for (const { arquivo, mime } of validados) {
       const salvo = await salvarArquivo(arquivo, dados.obraId);
       salvos.push(salvo.caminhoRelativo);
-      gravados.push({ arquivo, salvo });
+      gravados.push({ arquivo, mime, salvo });
     }
 
     await prisma.$transaction(async (tx) => {
-      for (const { arquivo, salvo } of gravados) {
+      for (const { arquivo, mime, salvo } of gravados) {
         const documento = await tx.documento.create({
           data: {
             nomeOriginal: arquivo.name,
             nomeArmazenado: salvo.nomeArmazenado,
             caminhoRelativo: salvo.caminhoRelativo,
-            mimeType: arquivo.type || "application/octet-stream",
+            mimeType: mime,
             extensao: salvo.nomeArmazenado.split(".").pop() ?? "",
             tamanhoBytes: BigInt(salvo.tamanhoBytes),
             hashSha256: salvo.hashSha256,

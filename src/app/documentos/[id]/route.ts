@@ -2,6 +2,7 @@ import { abrirArquivo } from "@/lib/storage";
 import { usuarioAtual } from "@/lib/guarda";
 import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
+import { abreInline, tipoDeConteudo } from "@/modules/documentos/formatos";
 
 /**
  * Download de documento.
@@ -30,7 +31,7 @@ export async function GET(
     select: {
       nomeOriginal: true,
       caminhoRelativo: true,
-      mimeType: true,
+      extensao: true,
       tamanhoBytes: true,
       excluidoEm: true,
     },
@@ -49,13 +50,20 @@ export async function GET(
     );
   }
 
+  const inline = abreInline(documento.extensao);
+
   return new Response(conteudo, {
     headers: {
-      "Content-Type": documento.mimeType || "application/octet-stream",
+      // Derivado da extensão, nunca do `mimeType` gravado: aquele campo é o
+      // que o navegador de quem subiu declarou, e um `text/html` num `.png`
+      // viraria script rodando na nossa origem com a sessão de quem abriu.
+      "Content-Type": tipoDeConteudo(documento.extensao),
       "Content-Length": String(documento.tamanhoBytes),
-      // `inline` deixa o navegador abrir PDF e imagem sem baixar; o nome
-      // original volta aqui, já que no disco o arquivo é um uuid.
-      "Content-Disposition": `inline; filename*=UTF-8''${encodeURIComponent(documento.nomeOriginal)}`,
+      // Sem isto o navegador fareja o conteúdo e ignora o tipo acima.
+      "X-Content-Type-Options": "nosniff",
+      // PDF e imagem abrem na aba; o resto baixa. O nome original volta aqui,
+      // já que no disco o arquivo é um uuid.
+      "Content-Disposition": `${inline ? "inline" : "attachment"}; filename*=UTF-8''${encodeURIComponent(documento.nomeOriginal)}`,
       // Documento de obra não entra em cache compartilhado: a resposta
       // depende de quem pediu.
       "Cache-Control": "private, no-store",

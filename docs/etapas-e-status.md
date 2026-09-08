@@ -948,7 +948,9 @@ resposta do cliente ou de volume real de dados.
 2. **Testes de integração ponta a ponta.** Os módulos têm teste próprio desde a
    etapa 0; falta o percurso completo — obra → medição → tramitação →
    documento → relatório — atravessando as etapas que foram escritas em
-   momentos diferentes.
+   momentos diferentes. O roteiro manual dessa varredura está em
+   [`testes/`](testes/README.md), organizado por jornada de uso; o percurso
+   completo é o bloco TRA-50..54.
 3. **Varredura de consistência entre telas.** Rótulo, formato de data e dinheiro
    e vocabulário de situação nasceram etapa a etapa; a passada final é para
    eles não discordarem entre si.

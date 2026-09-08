@@ -13,6 +13,8 @@ import {
 } from "../src/generated/prisma/enums";
 import { env } from "../src/lib/env";
 import { driver } from "../src/lib/storage/driver";
+import { ROTULOS_TIPO_DOCUMENTO } from "../src/modules/documentos/rotulos";
+import { gerarPdf } from "../src/modules/relatorios/pdf";
 import { etapasIniciais } from "../src/modules/tramitacao/fluxo";
 import {
   StatusRerratificacao,
@@ -491,11 +493,41 @@ async function seedDemo() {
     });
     if (jaExiste) return false;
 
-    const conteudo =
-      `%PDF-1.4\n% ${nome} — documento de demonstração do sistema AJA\n` +
-      `% ${descricao}\n%%EOF\n`;
+    // PDF de verdade, pelo mesmo gerador dos relatórios do sistema. Um stub
+    // com só cabeçalho e `%%EOF` é recusado por qualquer leitor, e na
+    // demonstração isso parece falha do sistema, não arquivo de mentira.
+    const obra = await prisma.obra.findUniqueOrThrow({
+      where: { id: obraId },
+      select: { numeroContrato: true, objeto: true, contratante: { select: { nome: true } } },
+    });
+    const conteudo = gerarPdf({
+      titulo: nome,
+      subtitulo: descricao,
+      filtros: [
+        { rotulo: "Obra", valor: `${obra.numeroContrato} — ${obra.objeto}` },
+        { rotulo: "Contratante", valor: obra.contratante.nome },
+      ],
+      colunas: [
+        { chave: "campo", rotulo: "Campo" },
+        { chave: "valor", rotulo: "Valor" },
+      ],
+      linhas: [
+        [{ texto: "Tipo do documento" }, { texto: ROTULOS_TIPO_DOCUMENTO[tipo] }],
+        [{ texto: "Contrato" }, { texto: obra.numeroContrato }],
+        [{ texto: "Objeto" }, { texto: obra.objeto }],
+      ],
+      geradoEm: new Date(),
+      geradoPor: "Seed de demonstração",
+      observacao:
+        "Documento fictício, gerado pelo seed apenas para demonstração. " +
+        "Não corresponde a nenhum documento real e não tem valor legal.",
+    });
     const salvo = await armazenamento.salvarArquivo(
-      new File([conteudo], `${randomUUID()}.pdf`, { type: "application/pdf" }),
+      // `Buffer.from`: `gerarPdf` devolve `Uint8Array`, que o `File` não aceita
+      // direto por causa do tipo do buffer subjacente.
+      new File([Buffer.from(conteudo)], `${randomUUID()}.pdf`, {
+        type: "application/pdf",
+      }),
       obraId,
     );
 

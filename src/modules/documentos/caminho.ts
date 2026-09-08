@@ -3,7 +3,7 @@ import { join, resolve, sep } from "node:path";
 /**
  * Resolução de caminho dentro do armazenamento.
  *
- * Vive fora de `lib/storage.ts` porque aquele arquivo é `server-only` e
+ * Vive fora de `lib/storage/` porque a fachada é `server-only` e
  * importa `env()` — e esta é a regra de segurança mais importante do módulo
  * documental, justamente a que precisa de teste.
  *

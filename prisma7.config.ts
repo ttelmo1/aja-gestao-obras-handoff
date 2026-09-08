@@ -10,6 +10,12 @@ export default defineConfig({
     seed: "tsx prisma/seed.ts",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    /**
+     * `DIRECT_URL` quando existir: em Postgres atrás de pooler (PgBouncer no
+     * Neon, por exemplo) o `migrate` precisa de uma conexão direta — pelo
+     * endpoint pooled ele falha ao criar o advisory lock. Na instalação
+     * on-premise a variável não existe e vale a `DATABASE_URL` de sempre.
+     */
+    url: process.env["DIRECT_URL"] ?? process.env["DATABASE_URL"],
   },
 });

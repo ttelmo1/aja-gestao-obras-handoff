@@ -1,7 +1,5 @@
 import "dotenv/config";
-import { createHash, randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -13,6 +11,8 @@ import {
   StatusObra,
   TipoEtapa,
 } from "../src/generated/prisma/enums";
+import { env } from "../src/lib/env";
+import { driver } from "../src/lib/storage/driver";
 import { etapasIniciais } from "../src/modules/tramitacao/fluxo";
 import {
   StatusRerratificacao,
@@ -466,9 +466,11 @@ async function seedDemo() {
   }
 
   // --- Documentos ---------------------------------------------------------
-  // Arquivos de verdade no disco: a central de documentos só faz sentido na
-  // demonstração se o botão "Abrir" abrir alguma coisa.
-  const raizStorage = resolve(process.cwd(), process.env.STORAGE_DIR ?? "./storage");
+  // Arquivos de verdade no armazenamento: a central de documentos só faz
+  // sentido na demonstração se o botão "Abrir" abrir alguma coisa. Passa pelo
+  // mesmo driver das rotas, então funciona tanto em disco (on-premise) quanto
+  // em banco (demonstração serverless).
+  const armazenamento = driver();
 
   // Quem "enviou" os documentos de demonstração é o admin criado no seed base.
   const admin = await prisma.usuario.findFirstOrThrow({
@@ -489,26 +491,23 @@ async function seedDemo() {
     });
     if (jaExiste) return false;
 
-    const conteudo = Buffer.from(
+    const conteudo =
       `%PDF-1.4\n% ${nome} — documento de demonstração do sistema AJA\n` +
-        `% ${descricao}\n%%EOF\n`,
-      "utf8",
+      `% ${descricao}\n%%EOF\n`;
+    const salvo = await armazenamento.salvarArquivo(
+      new File([conteudo], `${randomUUID()}.pdf`, { type: "application/pdf" }),
+      obraId,
     );
-    const nomeArmazenado = `${randomUUID()}.pdf`;
-    const caminhoRelativo = join("obras", obraId, nomeArmazenado);
-    const destino = join(raizStorage, caminhoRelativo);
-    await mkdir(dirname(destino), { recursive: true });
-    await writeFile(destino, conteudo);
 
     await prisma.documento.create({
       data: {
         nomeOriginal: nome,
-        nomeArmazenado,
-        caminhoRelativo,
+        nomeArmazenado: salvo.nomeArmazenado,
+        caminhoRelativo: salvo.caminhoRelativo,
         mimeType: "application/pdf",
         extensao: "pdf",
-        tamanhoBytes: BigInt(conteudo.byteLength),
-        hashSha256: createHash("sha256").update(conteudo).digest("hex"),
+        tamanhoBytes: BigInt(salvo.tamanhoBytes),
+        hashSha256: salvo.hashSha256,
         tipo,
         descricao,
         obraId,
@@ -563,7 +562,11 @@ async function seedDemo() {
   console.log(
     `  demo: ${totalMovimentos} movimentos de tramitação, 3 processos em aberto`,
   );
-  console.log(`  demo: ${totalDocumentos} documentos com arquivo no disco`);
+  console.log(
+    `  demo: ${totalDocumentos} documentos com arquivo em ${
+      env().STORAGE_DRIVER === "db" ? "banco" : "disco"
+    }`,
+  );
   console.log(
     `  demo: ${totalRerratificacoes} rerratificações, uma aprovada e uma em tramitação`,
   );

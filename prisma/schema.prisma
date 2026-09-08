@@ -538,3 +538,23 @@ model Auditoria {
   @@index([criadoEm])
   @@index([usuarioId])
 }
+
+// ============================================================
+// Armazenamento de arquivos em banco (driver alternativo)
+// ============================================================
+
+/// Bytes dos documentos quando `STORAGE_DRIVER=db`.
+///
+/// Existe para o deploy de demonstração em plataforma serverless, onde o
+/// disco é efêmero e o arquivo enviado some entre uma requisição e outra. A
+/// instalação real é on-premise e usa `STORAGE_DRIVER=disco`, onde esta
+/// tabela fica vazia.
+///
+/// A chave é o mesmo `caminhoRelativo` gravado em `Documento` — assim os dois
+/// drivers têm exatamente a mesma semântica (caminho -> bytes) e nenhum código
+/// de rota precisa saber qual está ativo.
+model ArquivoBlob {
+  caminhoRelativo String   @id
+  conteudo        Bytes
+  criadoEm        DateTime @default(now())
+}

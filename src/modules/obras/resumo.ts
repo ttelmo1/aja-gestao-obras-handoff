@@ -89,6 +89,7 @@ export function resumoDaObra(
     dataOrdemInicio: obra.dataOrdemInicio,
     dataPrevistaTermino: obra.dataPrevistaTermino,
     diasParado,
+    diasParaMedicao: medicao?.diasRestantes ?? null,
     agora,
   });
 

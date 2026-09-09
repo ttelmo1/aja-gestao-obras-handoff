@@ -11,6 +11,7 @@ function entrada(over: Partial<Parameters<typeof calcularFarol>[0]> = {}) {
     dataOrdemInicio: new Date("2026-01-01"),
     dataPrevistaTermino: new Date("2026-12-31"),
     diasParado: null,
+    diasParaMedicao: null,
     agora: AGORA,
     ...over,
   };
@@ -61,6 +62,27 @@ describe("calcularFarol", () => {
   it("processo parado 20 dias é amarelo; 40 dias é vermelho", () => {
     assert.equal(calcularFarol(entrada({ diasParado: 20 })).farol, Farol.AMARELO);
     assert.equal(calcularFarol(entrada({ diasParado: 40 })).farol, Farol.VERMELHO);
+  });
+
+  // Número dado pelo cliente em 09/09/2026, confirmado duas vezes: dez dias
+  // antes do vencimento acende o amarelo. Numa obra mensal, é o 20º dia.
+  it("medição a vencer em dez dias é amarela; em onze, ainda verde", () => {
+    assert.equal(calcularFarol(entrada({ diasParaMedicao: 10 })).farol, Farol.AMARELO);
+    assert.equal(calcularFarol(entrada({ diasParaMedicao: 11 })).farol, Farol.VERDE);
+  });
+
+  it("medição vencida é vermelha e diz há quantos dias", () => {
+    const r = calcularFarol(entrada({ diasParaMedicao: -3 }));
+    assert.equal(r.farol, Farol.VERMELHO);
+    assert.match(r.motivos.join(" "), /Medição vencida há 3 dia/);
+  });
+
+  it("medição vence hoje ainda é amarela, não vermelha", () => {
+    assert.equal(calcularFarol(entrada({ diasParaMedicao: 0 })).farol, Farol.AMARELO);
+  });
+
+  it("obra sem prazo de medição a cobrar não acende por isso", () => {
+    assert.equal(calcularFarol(entrada({ diasParaMedicao: null })).farol, Farol.VERDE);
   });
 
   it("sempre explica o motivo", () => {

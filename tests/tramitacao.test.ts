@@ -143,6 +143,11 @@ describe("dias parado da obra", () => {
 });
 
 describe("tramitação no farol e no painel", () => {
+  // Dez dias depois da ordem de início: a primeira medição da obra mensal
+  // vence em 09/02, então nada aqui acende por prazo de medição — o que este
+  // bloco testa é o critério de processo parado, isolado.
+  const AGORA = d("2026-01-20");
+
   const obra = {
     status: "EM_ANDAMENTO" as const,
     valorContratado: "1000000.00",
@@ -154,8 +159,8 @@ describe("tramitação no farol e no painel", () => {
   };
 
   it("processo parado acende o farol", () => {
-    const emDia = resumoDaObra(obra, [], null, d("2026-08-20"));
-    const parada = resumoDaObra(obra, [], 40, d("2026-08-20"));
+    const emDia = resumoDaObra(obra, [], null, AGORA);
+    const parada = resumoDaObra(obra, [], 40, AGORA);
 
     assert.equal(emDia.farol, "VERDE");
     assert.equal(parada.farol, "VERMELHO");
@@ -163,14 +168,14 @@ describe("tramitação no farol e no painel", () => {
   });
 
   it("o resumo carrega o tempo parado para a tela", () => {
-    assert.equal(resumoDaObra(obra, [], 12, d("2026-08-20")).diasParado, 12);
-    assert.equal(resumoDaObra(obra, [], null, d("2026-08-20")).diasParado, null);
+    assert.equal(resumoDaObra(obra, [], 12, AGORA).diasParado, 12);
+    assert.equal(resumoDaObra(obra, [], null, AGORA).diasParado, null);
   });
 
   it("conta processos parados a partir do limite do mockup", () => {
     const comDias = (dias: number | null) => ({
       status: "EM_ANDAMENTO" as const,
-      resumo: resumoDaObra(obra, [], dias, d("2026-08-20")),
+      resumo: resumoDaObra(obra, [], dias, AGORA),
     });
 
     const totais = totaisDoPainel([

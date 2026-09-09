@@ -11,11 +11,14 @@ import { diasEntre } from "@/lib/date-br";
  * é urgência, cinza é neutro (obra que ainda não começou).
  *
  * O critério de avanço físico contra tempo decorrido SAIU em 09/09/2026: o
- * dado deixou de existir no sistema (requisitos.md 1.4). Sobram proximidade do
- * término e processo parado.
+ * dado deixou de existir no sistema (requisitos.md 1.4). No lugar dele entrou
+ * o PRAZO DA PRÓXIMA MEDIÇÃO, e este é o único limite que o cliente fechou com
+ * número: **amarelo dez dias antes do vencimento**, vermelho quando vencer.
+ * Confirmado duas vezes na mesma conversa.
  *
- * OS LIMITES CONTINUAM PROVISÓRIOS. Ele confirmou a lógica, não os números —
- * quantos dias de prazo, quantos dias parado. Calibrar com a tela aberta.
+ * OS DEMAIS LIMITES CONTINUAM PROVISÓRIOS. Ele confirmou a lógica, não os
+ * números — quantos dias de prazo, quantos dias parado. Calibrar com a tela
+ * aberta.
  *
  * Todo o resto do sistema consome apenas `calcularFarol`, e o resultado nunca
  * é persistido: obra fica amarela pela passagem do tempo, sem ninguém salvar
@@ -30,6 +33,12 @@ export const LIMITES_PROVISORIOS = {
   diasParadoAlerta: 15,
   /** Dias sem movimentação de tramitação até VERMELHO. */
   diasParadoCritico: 30,
+  /**
+   * Dias de antecedência do vencimento da medição em que a obra passa a
+   * AMARELO. **Não é provisório**: número dado pelo cliente em 09/09/2026.
+   * Numa obra mensal (30 dias corridos), acende a partir do 20º dia.
+   */
+  diasAlertaMedicao: 10,
 } as const;
 
 export type EntradaFarol = {
@@ -38,6 +47,13 @@ export type EntradaFarol = {
   dataPrevistaTermino: Date | null;
   /** Dias desde a entrada no setor atual sem saída registrada. */
   diasParado: number | null;
+  /**
+   * Dias até o vencimento da próxima medição, negativo quando já venceu.
+   * `null` quando não há prazo a cobrar — obra sem ordem de início,
+   * finalizada, ou periodicidade personalizada sem intervalo.
+   * Vem de `modules/medicoes/periodicidade.ts`.
+   */
+  diasParaMedicao: number | null;
   agora?: Date;
 };
 
@@ -112,6 +128,15 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
       subir(2, `Processo parado há ${e.diasParado} dias.`);
     } else if (e.diasParado >= LIMITES_PROVISORIOS.diasParadoAlerta) {
       subir(1, `Processo parado há ${e.diasParado} dias.`);
+    }
+  }
+
+  // 3. Prazo da próxima medição.
+  if (e.diasParaMedicao !== null) {
+    if (e.diasParaMedicao < 0) {
+      subir(2, `Medição vencida há ${Math.abs(e.diasParaMedicao)} dia(s).`);
+    } else if (e.diasParaMedicao <= LIMITES_PROVISORIOS.diasAlertaMedicao) {
+      subir(1, `Medição vence em ${e.diasParaMedicao} dia(s).`);
     }
   }
 

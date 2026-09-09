@@ -162,7 +162,8 @@ async function seedDemo() {
       prazoDias: 160,
       dataPrevistaTermino: dias(20),
       status: StatusObra.EM_ANDAMENTO,
-      observacoes: "Obra de demonstração — término próximo, farol de atenção.",
+      observacoes:
+        "Obra de demonstração — término e medição próximos, farol de atenção.",
       // Assumida: mostra o bloco do operador com observação e o botão de
       // liberar, já que quem entra na demonstração é este mesmo usuário.
       operador: { assumidaHa: 3 } as AtribuicaoDemo,
@@ -211,13 +212,17 @@ async function seedDemo() {
       { diasAtras: 40, valor: "95000.00", status: StatusMedicao.APROVADA },
       { diasAtras: 10, valor: "95000.00", status: StatusMedicao.PROTOCOLADA },
     ],
-    // Ciclo vencido há 10 dias — aparece em "medições atrasadas".
+    // Última medição há 25 dias: numa obra mensal, a próxima vence em 5 —
+    // dentro dos dez dias de antecedência que acendem o amarelo. É o cartão
+    // que demonstra o critério novo do farol, e ele soma dois motivos, porque
+    // o término também está próximo.
     "OBR-DEMO-002": [
-      { diasAtras: 100, valor: "90000.00", status: StatusMedicao.PAGA },
-      { diasAtras: 70, valor: "110000.00", status: StatusMedicao.PAGA },
-      { diasAtras: 40, valor: "100000.00", status: StatusMedicao.PROTOCOLADA },
+      { diasAtras: 85, valor: "90000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 55, valor: "110000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 25, valor: "100000.00", status: StatusMedicao.PROTOCOLADA },
     ],
-    // Parada faz tempo: ciclo de medição vencido há 90 dias.
+    // Parada faz tempo: ciclo de medição vencido há 90 dias — é esta que
+    // aparece no indicador "medições atrasadas" do painel.
     "OBR-DEMO-003": [
       { diasAtras: 200, valor: "80000.00", status: StatusMedicao.PAGA },
       { diasAtras: 160, valor: "60000.00", status: StatusMedicao.PAGA },

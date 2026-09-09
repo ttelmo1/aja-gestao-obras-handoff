@@ -6,10 +6,12 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 - **Orçado por módulo:** 143h (folga negativa de 3h — ver
   [`escopo-e-orcamento.md`](escopo-e-orcamento.md)).
 - **Última atualização:** 09/09/2026 — **apresentação do sistema à diretoria**,
-  com o ambiente de homologação na mão do cliente. Abriu a **rodada de ajustes
-  pós-apresentação** (etapa 13), que remove o avanço físico do sistema e troca
-  o responsável técnico por atribuição momentânea de operador. Notas da reunião
-  em [`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md).
+  com o ambiente de homologação na mão do cliente, e os **quatro itens firmes
+  da etapa 13 já implementados no mesmo dia**: o avanço físico saiu do sistema,
+  o responsável técnico virou operador com atribuição momentânea, o farol passou
+  a acender dez dias antes do vencimento da medição e o seed exercita o desenho
+  novo. Notas da reunião em
+  [`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md).
 
 ## Legenda
 
@@ -34,7 +36,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 10 | Auditoria — telas de histórico | 5h | ✅ | 3, 4 |
 | 11 | Relatórios XLS/PDF | 12h | 🟡 | 5, 6, 8 |
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
-| 13 | Ajustes pós-apresentação à diretoria | ~5,5h | 🔵 | 4, 5, 7, 9 |
+| 13 | Ajustes pós-apresentação à diretoria | ~5,5h | 🟡 | 4, 5, 7, 9 |
 | 14 | Empacotamento e instalação on-premise | fora das 140h | ⬜ | 12 |
 
 A **etapa 14 está fora das 140h contratadas** (`README.md`, "Instalação no
@@ -44,7 +46,9 @@ trabalho não orçado.
 
 A **etapa 13 não estava no orçamento** — é retrabalho vindo da apresentação, e
 está lançada aqui para ficar visível. As ~5,5h saem da folga da etapa 12 e da
-folga negativa de 3h do orçamento; ver a nota de horas na própria seção.
+folga negativa de 3h do orçamento; ver a nota de horas na própria seção. Fica
+🟡 e não ✅ porque os quatro itens firmes estão prontos, mas três itens da
+mesma rodada seguem **bloqueados por falta de resposta do cliente**.
 
 **Marcos de validação com o cliente** (2 reuniões previstas em contrato,
 com dados fictícios — `npm run db:seed -- --demo`):
@@ -994,7 +998,7 @@ resposta do cliente ou de volume real de dados.
 validação e, aceito, para a instalação — que é serviço fora das 140h
 contratadas (ver [`escopo-e-orcamento.md`](escopo-e-orcamento.md) e o ponto #11).
 
-## Etapa 13 — Ajustes pós-apresentação à diretoria 🔵
+## Etapa 13 — Ajustes pós-apresentação à diretoria 🟡
 
 Aberta em 09/09/2026, depois da apresentação do sistema em homologação para o
 Júnior (diretor), o Diego (gestor de engenharia) e o Henrique. Notas em
@@ -1012,6 +1016,14 @@ para ganhar a nova.
 ajustes no mesmo dia e avisar o cliente para retestar; a instalação foi falada
 para sexta 11/09, com segunda 14/09 como cenário mais provável.
 
+**Feito em 09/09/2026, no mesmo dia da reunião**, em três commits — um por
+assunto: `7ff0eea` remove o avanço físico, `50f022c` troca o responsável
+técnico pelo operador, `342ca05` liga o prazo de medição ao farol. O item 4
+(seed) saiu distribuído nos dois últimos, porque cada um precisava do seu
+cenário de demonstração. O que **cada decisão de implementação** custou está
+descrito nos itens abaixo; o que **ficou diferente do planejado** está em
+"Desvios do plano".
+
 **Nota de horas:** ~5,5h estimadas, sem verba própria. Saem da folga da etapa 12
 (que lança ~3h no quadro e 7h no orçamento por módulo) e comem a folga negativa
 de 3h que já existia. Se o cliente trouxer mais ajustes depois do período de
@@ -1020,7 +1032,7 @@ conversa passa a ser de escopo, não de folga.
 
 ### Itens firmes
 
-1. **Remover o avanço físico do sistema** (~1,5h). Decisão do Júnior confirmada
+1. ✅ **Remover o avanço físico do sistema** (~1,5h). Decisão do Júnior confirmada
    pelo Diego: *"tanto do card principal quanto dos detalhes da obra"*. Alcance
    real, porque o campo se espalhou por cinco lugares:
    - o campo *"Avanço físico acumulado (%)"* do formulário de medição
@@ -1035,13 +1047,20 @@ conversa passa a ser de escopo, não de folga.
    - o seed de demonstração, que hoje encena progressão física (25% → 40% →
      48%) para mostrar a tela.
 
-   A coluna do banco pode ficar por uma migration só depois: remover da tela é
-   o que o cliente vai retestar. Decidir se cai também no schema — e o
-   histórico de medições já lançadas some com ela — vale registrar antes de
-   apagar. Ver ponto #5 de
-   [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
+   **Como ficou:** a coluna `percentualExecutado` **não** foi removida do
+   banco. Ela era `NOT NULL`, e sem o campo no formulário a criação de medição
+   quebraria, então a migration
+   `20260909120000_avanco_fisico_sai_do_sistema` faz só um `DROP NOT NULL`:
+   nenhum código lê ou escreve a coluna, o histórico das medições já lançadas
+   continua lá e a base de demonstração não precisou ser zerada — que era o
+   pedido do cliente. Apagar a coluna de vez continua sendo decisão para
+   depois; ver ponto #5 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
-2. **Responsável técnico vira operador, com atribuição momentânea** (~2,5h). O
+   **A coluna dos relatórios não existia.** O plano contava com ela vinda da
+   etapa 11, mas `modules/relatorios/` só tem a mecânica neutra de exportação —
+   as colunas concretas ainda dependem do ponto #10. Não havia o que remover.
+
+2. ✅ **Responsável técnico vira operador, com atribuição momentânea** (~2,5h). O
    maior item, e o único que constrói algo novo. O desenho fechado com o Diego:
    - o campo passa a se chamar **Operador** — o problema era a nomenclatura:
      *"quando fala responsável técnico ele imagina o responsável da obra"*;
@@ -1060,17 +1079,83 @@ conversa passa a ser de escopo, não de folga.
    Já existe e **não precisa ser construído**: o responsável por medição na aba
    Medições e a trilha de auditoria — foram conferidos ao vivo e aceitos.
 
-3. **Farol de medição: amarelo dez dias antes** (~0,5h). Confirmado duas vezes.
+   **Como ficou:** regra em `modules/obras/operador.ts`, com 12 testes; telas
+   em `obras/[id]/operador.tsx` e ações em `obras/[id]/operador-acoes.ts`, com
+   auditoria em toda atribuição e liberação. Três pontos do desenho que a
+   reunião não fechou e o código precisou fechar:
+
+   - **`operadorId` aponta para `Usuario`, não para `Responsavel`.** Quem
+     assume é quem está logado — auto-atribuição não funciona contra um
+     cadastro de pessoas sem login. O cadastro de Responsáveis continua
+     existindo, agora só ligado à medição ("Responsável AJA" do mockup), e a
+     tela dele passou a contar medições em vez de obras. A migration
+     `20260909130000_operador_com_atribuicao_momentanea` **remove
+     `Obra.responsavelId`**: o conceito foi descartado pelo cliente e o
+     ambiente ainda é de demonstração, sem dado real.
+   - **Três estados em quatro campos.** `operadorAssumidoEm` preenchido =
+     assumida; nulo com `operadorId` preenchido = liberada, e aí o nome aparece
+     como *"Último a mexer"*; ambos nulos = nunca tocada. É assim que o
+     *"pode estar lá como último responsável que modificou"* convive com o
+     campo não ser fila de tarefas.
+   - **A observação morre ao liberar, o nome não.** *"Aguardando foto"* era a
+     justificativa daquela atribuição; mantê-la deixaria a obra parecendo presa
+     a um motivo que já passou.
+
+3. ✅ **Farol de medição: amarelo dez dias antes** (~0,5h). Confirmado duas vezes.
    Mensal são 30 dias corridos, e o amarelo acende a partir do 20º. Vermelho
    quando vencer, como já é. `modules/medicoes/periodicidade.ts` já calcula o
    vencimento; é ligar o resultado ao motor do farol como mais um critério —
    sem trocar o escopo do farol, que continua sendo da obra inteira.
 
-4. **Atualizar o seed de demonstração** (~0,5h) para que as obras fictícias
+   **Como ficou:** `diasAlertaMedicao: 10` nos limites do farol, marcado como
+   **não provisório** — é o único número que o cliente deu. Medição que vence
+   *hoje* ainda é amarela: o prazo é hoje, não foi perdido. Vermelho a partir
+   do dia seguinte.
+
+4. ✅ **Atualizar o seed de demonstração** (~0,5h) para que as obras fictícias
    exercitem o que passou a existir: obra em atenção com operador atribuído e
    observação, obra crítica sem ninguém atribuído. O cliente **pediu para não
    zerar** a base — ela é o parâmetro de preenchimento deles, então precisa
    mostrar o desenho novo.
+
+   **Como ficou:** a DEMO-002 está assumida pelo próprio usuário da
+   demonstração, com observação, para dar para liberar e reassumir na tela; a
+   DEMO-003 está crítica e liberada, mostrando o *"último a mexer"*. As
+   medições da DEMO-002 foram puxadas de 40 para 25 dias atrás: com o critério
+   novo ela ficaria vermelha, e a demonstração perderia o único cartão amarelo
+   — agora ela acende amarelo por **dois** motivos somados (medição vencendo e
+   término próximo), o que também mostra o acúmulo de motivos no cartão.
+
+### Desvios do plano — decididos na implementação, a confirmar
+
+Três coisas que a reunião não fechou e o código não pôde deixar em aberto. Não
+são mudanças de escopo; são escolhas de desenho tomadas com a régua do "o que
+serve às três pessoas que usam isso todo dia", e cada uma pode ser revertida
+barato se o cliente discordar.
+
+1. **Assumir a obra exige `obra:ver`, não `obra:editar`.** O perfil Operacional
+   só lê obra na matriz atual — se a atribuição exigisse `editar`, justamente as
+   três pessoas para quem o campo existe ficariam de fora. Assumir não altera
+   nenhum dado do contrato, só diz quem está cuidando dele agora. Está
+   comentado no código e registrado no ponto #3, que é onde a matriz linha a
+   linha vai ser fechada com o Diego e o Henrique.
+2. **Ninguém toma a obra de quem está com ela.** Se outro operador já assumiu,
+   o botão recusa e pede para a pessoa liberar. O cliente disse que às vezes
+   duas pessoas mexem na mesma obra, mas não disse o que acontece no conflito —
+   escolhemos o caminho que força o combinado em vez do silencioso. Quem
+   assumiu pode reescrever a própria observação quantas vezes quiser.
+3. **O filtro "Responsável" do painel virou "Operador"**, listando usuários do
+   sistema. Era a única forma de "as minhas obras" continuar existindo depois
+   que o campo mudou de natureza; o requisito 1.9 previa filtro por
+   responsável, e a intenção segue servida. A busca livre do painel também
+   passou a olhar o nome do operador em vez do responsável.
+
+**Um teste passava por acidente e foi corrigido.** A fixture de tramitação
+avaliava o farol em 20/08 numa obra com ordem de início em 10/01 e nenhuma
+medição lançada — obra que, pelo critério novo, está com a medição vencida há
+seis meses. Ela era "verde" só porque o sistema ainda não olhava para isso. A
+avaliação passou para 20/01, dez dias depois da ordem de início, para o bloco
+continuar testando processo parado isolado.
 
 ### Decidido em contrário — não fazer
 

@@ -11,7 +11,11 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 - **Última atualização:** 09/09/2026 — **apresentação do sistema à diretoria**
   (Júnior, Diego e Henrique). Notas em
   [`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md). Fechou os
-  pontos #2, #5 e #8, avançou #1, #3, #11 e #13, e abriu #18, #19 e #20.
+  pontos #2, #5 e #8, avançou #1, #3, #11 e #13, e abriu #18, #19 e #20. Os
+  ajustes da etapa 13 **já estão implementados** no mesmo dia, e três escolhas
+  de desenho tomadas na implementação entraram como perguntas: a permissão de
+  assumir obra (#3), o conflito entre dois operadores (#21) e o filtro do
+  painel (#22).
 
 ## Índice
 
@@ -37,6 +41,8 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 18 | Quais são os documentos padrão da lista de conferência | 🔴 | Baixo |
 | 19 | Cards de totais no topo do painel: ficam ou saem | 🔴 | Baixo |
 | 20 | Empresa ou operador no cartão da obra | 🟡 | Baixo |
+| 21 | Dois operadores na mesma obra: quem manda | 🟡 | Baixo |
+| 22 | Filtro do painel: responsável virou operador | 🟡 | Baixo |
 
 ---
 
@@ -67,7 +73,11 @@ Declarado em aberto nos próprios requisitos (seção 3).
 |---|---|---|
 | Proximidade do término previsto | faltam ≤ 30 dias | prazo vencido |
 | Processo parado no mesmo setor | ≥ 15 dias | ≥ 30 dias |
-| Avanço físico atrás do tempo decorrido | ≥ 10 p.p. | ≥ 25 p.p. |
+| ~~Avanço físico atrás do tempo decorrido~~ | ~~≥ 10 p.p.~~ | ~~≥ 25 p.p.~~ |
+| Prazo da próxima medição *(entrou em 09/09)* | vence em ≤ 10 dias | vencida |
+
+A linha riscada saiu em 09/09/2026 com o avanço físico; a última entrou no mesmo
+dia, e é a única com número dado pelo cliente.
 
 Mais: obra paralisada é sempre 🔴; finalizada é 🟢; sem ordem de início fica
 ⚪ cinza (sem dados), não verde.
@@ -216,6 +226,17 @@ Ninguém edita ou apaga a auditoria — nem o administrador.
 > isso, te passo"*. Também em aberto se querem **renomear** os perfis (gestor
 > virar administrador, operacional virar gestor) — ajuste de rótulo, oferecido
 > e não pedido.
+
+**Uma linha da matriz já foi decidida no código, e precisa de confirmação:
+assumir uma obra exige `obra:ver`, não `obra:editar`.** O perfil Operacional só
+lê obra na matriz atual; se a atribuição de operador exigisse permissão de
+editar, justamente as três pessoas para quem o campo existe ficariam de fora
+dele. O argumento é que assumir não altera nenhum dado do contrato — só registra
+quem está cuidando dele agora. Está comentado em
+`src/app/(app)/obras/[id]/operador-acoes.ts`.
+
+**Perguntar:** o operacional pode assumir obra? Se a resposta for não, quem
+assume — e o que sobra para o operacional fazer com uma obra em atenção?
 
 **Perguntar:** quatro perfis bastam? Quem na empresa cai em cada um? Existe
 alguém que deva ver só as obras em que é responsável?
@@ -882,7 +903,60 @@ lados todo dia é o setor de engenharia. A auto-numeração quando o campo fica 
 branco continua servindo.
 
 **Custo de mudar:** baixo — é conteúdo de cartão.
-**Onde:** `src/components/obras/cartao-obra.tsx` (ou equivalente) e o painel.
+**Onde:** `src/app/(app)/obras/cartao.tsx` e o painel.
+
+**Já implementado (09/09/2026):** o cartão mostra o operador **só em atenção ou
+crítico** — em obra verde não aparece nada, porque não há o que atribuir e o
+rótulo vazio em quinze cartões verdes é ruído. O espaço veio da barra de avanço
+físico, que saiu. Quando ninguém assumiu, o rótulo vira *"Último a mexer"*.
+
+---
+
+## 21. Dois operadores na mesma obra: quem manda 🟡
+
+Nasceu da implementação da atribuição momentânea (ponto #20), de uma frase que
+ficou sem desdobramento na reunião: com três pessoas para 15–20 contratos,
+*"quem tiver, dependendo da urgência"* mexe — **e às vezes duas na mesma obra**.
+O cliente disse que isso acontece, mas não disse o que o sistema deve fazer
+quando acontece.
+
+**Assumimos** que **ninguém toma a obra de quem está com ela**: se outro
+operador já assumiu, o botão recusa e pede para a pessoa liberar primeiro. Quem
+assumiu pode reescrever a própria observação quantas vezes quiser. A escolha é
+pelo caminho que força o combinado entre as duas pessoas, em vez do que troca o
+nome em silêncio e faz as duas descobrirem depois.
+
+**O risco da escolha oposta:** se qualquer um puder assumir por cima, o campo
+deixa de responder "quem está cuidando disto" — que é a pergunta que ele existe
+para responder — e passa a mostrar apenas quem clicou por último.
+
+**O risco desta escolha:** operador que sai de férias sem liberar deixa a obra
+travada para os outros. Hoje só o administrador consegue destravar, editando a
+obra. Se isso incomodar na prática, a saída barata é um botão de liberar
+disponível ao administrador.
+
+**Perguntar:** quando duas pessoas pegam a mesma obra, elas se falam antes? Faz
+sentido o sistema exigir que a primeira libere, ou é atrito desnecessário?
+
+**Custo de mudar:** baixo — são as funções `podeAssumir` e `podeLiberar` em
+`src/modules/obras/operador.ts`, com teste.
+
+---
+
+## 22. Filtro do painel: responsável virou operador 🟡
+
+O requisito 1.9 prevê filtro do painel por **responsável**. Com o campo
+substituído por operador (ponto #20), o filtro passou a listar **usuários do
+sistema** e a filtrar por quem assumiu a obra ou por quem mexeu nela por último.
+A busca livre do painel também passou a olhar o nome do operador.
+
+**Assumimos** que a intenção do requisito era "as minhas obras" — a consulta que
+os três do setor fazem todo dia — e que ela continua servida pelo campo novo.
+
+**Perguntar:** o filtro por operador resolve? Falta um atalho de "só as minhas
+obras", que hoje exige escolher o próprio nome na lista?
+
+**Custo de mudar:** baixo — `src/modules/obras/filtros.ts` e a barra de filtros.
 
 ## Pontos já resolvidos 🟢
 
@@ -912,6 +986,10 @@ Registrados para não voltarem à mesa:
   reais ao lado.
 - **O engenheiro em campo não acessa o sistema**: levanta em obra, o escritório
   lança. Aplicativo de campo foi mencionado como ideia futura, sem escopo.
+- **Amarelo dez dias antes do vencimento da medição** (ponto #13, número dado
+  pelo cliente em 09/09/2026 e confirmado duas vezes). É o único limite do farol
+  que não é mais suposição nossa — já implementado, e medição que vence *hoje*
+  ainda é amarela.
 
 ## Pontos a levantar na reunião que não são de escopo
 

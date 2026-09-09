@@ -38,7 +38,11 @@ contratuais.
 - Fluxo de tramitação de processos é fixo (mesma sequência sempre); etapas podem ser
   marcadas como "não se aplica" por contrato, mas a ordem não muda.
 - Formatos de upload confirmados: PDF, XLSX, XLS, CSV, JPG, PNG. Formatos de engenharia
-  (DWG, RVT) **ainda não confirmados** — não implementar sem confirmação.
+  (DWG, RVT) **não entram no sistema** — decidido pelo dono da empresa em 09/09/2026:
+  projeto continua no compartilhamento de rede. A trava de formato não é provisória.
+- **Avanço físico não existe no sistema** (09/09/2026): só financeiro. A obra não tem
+  responsável fixo — tem **operador**, que se atribui na aba resumo enquanto a obra
+  está em atenção ou crítico.
 - Exportação de relatórios: XLS e PDF.
 - Stack fixada: Next.js + Prisma + PostgreSQL — não trocar de framework/ORM/banco no meio
   do projeto sem alinhar antes.

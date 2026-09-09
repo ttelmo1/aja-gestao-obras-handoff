@@ -18,13 +18,20 @@
 ### 1.2 Gestão de Obras — [VALIDADO, com ajuste em 09/09]
 - CRUD completo de obras (contratante, contrato, datas, responsável).
 - Cadastro de responsáveis/equipe, separado do cadastro de usuários do sistema.
-- **[AJUSTADO 09/09] Não existe responsável fixo por obra.** São 15 a 20
-  contratos para três pessoas no setor: quem estiver disponível trata, e às
-  vezes duas pessoas tratam a mesma obra. O "responsável técnico" do cadastro do
-  contrato passa a ser **operador**, atribuído pelo próprio usuário na aba
+- **[AJUSTADO 09/09 — implementado] Não existe responsável fixo por obra.** São
+  15 a 20 contratos para três pessoas no setor: quem estiver disponível trata, e
+  às vezes duas pessoas tratam a mesma obra. O "responsável técnico" do cadastro
+  do contrato passa a ser **operador**, atribuído pelo próprio usuário na aba
   resumo, apenas enquanto a obra estiver em atenção ou crítico — e o nome fica
   registrado como o último que mexeu. Qualquer regra que amarre uma pessoa a um
   contrato está errada.
+  - O operador é um **usuário do sistema** (quem assume é quem está logado), não
+    o cadastro de responsáveis técnicos — que continua existindo, vinculado à
+    medição ("Responsável AJA").
+  - A atribuição carrega **observação em texto livre** (a justificativa do
+    atraso), que é apagada ao liberar; o nome, não.
+  - **Ninguém toma a obra de quem está com ela**: é preciso liberar antes. Ponto
+    #21 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md), a confirmar.
 - **[AJUSTADO 09/09] Código da obra fica**, no cadastro e no cartão do painel: o
   cliente padroniza nomenclatura de obra na rede e quer o mesmo código nos dois
   lugares — é a chave que liga a obra no sistema à pasta dela na rede.
@@ -33,14 +40,16 @@
 - Cor do farol é calculada automaticamente (ex.: proximidade de prazo, dias parado).
 - O farol é da **obra inteira**, e basta um critério para acender (validação de
   07/09). São três faixas mais o cinza de obra não iniciada.
-- **[AJUSTADO 09/09]** Sai o critério de **avanço físico atrás do tempo
-  decorrido** — o dado deixa de existir (ver 1.4). Entra o **prazo da próxima
-  medição**, com número já definido pelo cliente: **amarelo dez dias antes** do
-  vencimento, vermelho quando vencer.
+- **[AJUSTADO 09/09 — implementado]** Saiu o critério de **avanço físico atrás
+  do tempo decorrido** — o dado deixou de existir (ver 1.4). Entrou o **prazo da
+  próxima medição**, com número já definido pelo cliente: **amarelo dez dias
+  antes** do vencimento, vermelho quando vencer. Medição que vence no próprio
+  dia ainda é amarela — o prazo é hoje, não foi perdido.
 - Os demais limites numéricos seguem sem confirmação do cliente.
 
 ### 1.4 Medições e financeiro — [AJUSTADO 09/09 — IMPORTANTE]
-- **O acompanhamento de avanço físico sai do sistema.** Só financeiro: %
+- **[implementado em 09/09] O acompanhamento de avanço físico sai do sistema.**
+  Só financeiro: %
   medido, saldo a medir, valor contratado × medido — tudo calculado. O "%
   executado" físico deixa de ser pedido, some do formulário de medição, do
   resumo da obra, do cartão e dos relatórios.
@@ -106,7 +115,10 @@ apresentado ao órgão público.
 - Indicadores agregados (obras em andamento, valor contratado, valor medido, processos
   parados, medições atrasadas).
 - **Exportação de relatórios: formatos confirmados = XLS e PDF.** (antes estava em aberto)
-- Busca e filtros no painel por obra, contrato, protocolo, responsável e status (farol).
+- Busca e filtros no painel por obra, contrato, protocolo, **operador** e status
+  (farol). **[AJUSTADO 09/09]** O filtro por responsável virou filtro por
+  operador, junto com o campo (ver 1.2) — ponto #22 de
+  [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
 ## 2. Requisitos Não Funcionais
 
@@ -129,12 +141,15 @@ apresentado ao órgão público.
 ## 3. Pontos ainda em aberto (levar para próxima conversa com o cliente)
 
 - Limites numéricos de cada cor do farol (o desenho e as cores estão fechados;
-  faltam os números, exceto os dez dias do prazo de medição).
+  faltam os números, exceto os dez dias do prazo de medição, que já vieram do
+  cliente e estão implementados).
 - ~~Upload de arquivos de engenharia (DWG/RVT)~~ — **resolvido em 09/09: não
   entram.**
 - Detalhamento fino das permissões por perfil de usuário (o que cada perfil vê/edita).
   Os quatro perfis ficam; falta a matriz linha a linha e a decisão de deixar
-  **só o administrador apagar** qualquer registro.
+  **só o administrador apagar** qualquer registro. Uma linha já foi decidida no
+  código e precisa de confirmação: **assumir uma obra exige apenas permissão de
+  ver**, para que o perfil operacional consiga fazê-lo.
 - **Quais são os documentos padrão** da lista de conferência (item 1.6), se ela
   é a mesma para todo contratante, e como marcar documento que não se aplica.
 - **Se os cards de totais do topo do painel ficam** — pedido de remoção pela

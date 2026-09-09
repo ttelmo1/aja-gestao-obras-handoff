@@ -13,7 +13,17 @@ import { COOKIE_SESSAO } from "@/modules/auth/constantes";
  * tela vazia.
  */
 
-const ROTAS_PUBLICAS = ["/login", "/esqueci-senha", "/redefinir-senha"];
+const ROTAS_PUBLICAS = [
+  "/login",
+  "/esqueci-senha",
+  "/redefinir-senha",
+  /**
+   * Saúde do serviço, sem login: quem consulta é o script de atualização na
+   * máquina do cliente, que não tem sessão nem como fazer login. O corpo da
+   * resposta não traz dado de obra nenhum — só versão e se o banco respondeu.
+   */
+  "/api/health",
+];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;

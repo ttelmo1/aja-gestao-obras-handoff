@@ -2,6 +2,9 @@
   "name": "aja-gestao-obras",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=24.16.0 <25"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

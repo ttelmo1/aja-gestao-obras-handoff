@@ -32,6 +32,12 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 9 | Motor do farol | 6h | ✅ | 5, 6 |
 | 10 | Auditoria — telas de histórico | 5h | ✅ | 3, 4 |
 | 11 | Relatórios XLS/PDF | 12h | 🟡 | 5, 6, 8 |
+| 14 | Empacotamento e instalação on-premise | fora das 140h | ⬜ | 12 |
+
+A **etapa 14 está fora das 140h contratadas** (`README.md`, "Instalação no
+cliente"): é *"a definir após visita técnica"*. Está no quadro porque **nada
+dela existe** e sem ela não há o que instalar — não é trabalho opcional, é
+trabalho não orçado.
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
 
 **Marcos de validação com o cliente** (2 reuniões previstas em contrato,
@@ -980,4 +986,77 @@ resposta do cliente ou de volume real de dados.
 
 **Encerramento:** com a etapa 12 fechada o sistema vai para a 2ª reunião de
 validação e, aceito, para a instalação — que é serviço fora das 140h
+
+## Etapa 14 — Empacotamento e instalação on-premise ⬜
+
+**Fora das 140h contratadas.** Plano completo, com o desenho físico e o
+raciocínio de cada decisão, em
+[`instalacao-on-premise.md`](instalacao-on-premise.md). Aqui fica só o estado.
+
+**Nada disto existe no repositório hoje.** Não há `.github/`, não há
+`scripts/`, não há nenhuma rota em `src/app/api/`, e o `next.config.ts` não
+tem `output: "standalone"`.
+
+> ### O ambiente mudou em 09/09/2026 — releia o plano antes de codar
+>
+> As premissas anteriores estavam erradas. O Júnior confirmou:
+>
+> | Assumíamos | Realidade |
+> | --- | --- |
+> | Servidor | **Estação de trabalho.** Sem disco/fonte redundante |
+> | Windows Server ou Linux | **Windows comercial (10/11)** |
+> | Com saída para a internet | **Isolada, por decisão.** *"Tudo aqui é estanque"* |
+>
+> O que isso muda em código, e é fácil errar por hábito: o workflow do Actions
+> roda em **`windows-latest`**, não `ubuntu-latest`. O binário do CLI do Prisma
+> é por plataforma; `ubuntu-latest` produziria o binário errado tão certamente
+> quanto um build feito no Mac.
+
+### Itens a construir, em ordem de dependência
+
+| # | Item | Onde | Estado |
+| --- | --- | --- | --- |
+| 1 | `output: "standalone"` | `next.config.ts` | ⬜ |
+| 2 | Endpoint de saúde `/api/health` | `src/app/api/health/` | ⬜ |
+| 3 | Workflow de release (`windows-latest`) | `.github/workflows/release.yml` | ⬜ |
+| 4 | Script de empacotamento | `scripts/empacotar.ps1` | ⬜ |
+| 5 | Script de atualização | dentro do pacote, `.ps1` | ⬜ |
+| 6 | Script de instalação inicial | `.ps1` + roteiro | ⬜ |
+| 7 | Serviço do Windows via NSSM | fora do repo | ⬜ |
+| 8 | Procedimento de backup + tarefa agendada | doc + `.ps1` | ⬜ |
+| 9 | Versão do Node fixada (Actions e máquina) | workflow + doc | ⬜ |
+
+Os itens **1 e 2 bloqueiam todo o resto**: sem `standalone` o pacote não é
+autocontido — e a máquina não tem internet para rodar `npm install`; sem
+`/api/health` o passo de verificação do script de atualização não existe, e
+"subiu" vira palpite.
+
+### Riscos registrados
+
+- **Não existe atualização automática.** Sem internet, toda atualização depende
+  de alguém levando um arquivo até a máquina. Correção urgente de bug fica
+  presa à disponibilidade do cliente — consequência a declarar, não a esconder.
+- **Migration destrutiva não tem rollback barato.** A junction devolve a
+  aplicação em segundos, o banco não volta junto. Migrations que removem ou
+  renomeiam coluna precisam ser quebradas em duas versões.
+- 🔴 **`storage\` não pode virar pasta compartilhada.** O cliente organiza a
+  rede inteira por compartilhamento com permissão por departamento, e aplicar
+  a mesma lógica aos documentos do sistema faria qualquer pessoa daquele
+  compartilhamento abrir qualquer contrato pelo Explorer, sem passar por
+  nenhuma verificação de permissão. Precisa ser dito na instalação.
+- **Sem redundância de hardware.** É uma estação de trabalho: o backup deixa de
+  ser boa prática e passa a ser a única rede de segurança.
+
+### Bloqueado por falta de resposta do cliente
+
+O checklist da máquina foi enviado ao Júnior em **09/09/2026** e está na
+**seção 9** de [`instalacao-on-premise.md`](instalacao-on-premise.md).
+Aguardando: edição do Windows, **IP fixo ou DHCP**, espaço em disco,
+PostgreSQL preexistente, antivírus, nobreak, e se a máquina é usada para
+trabalhar. Ver ponto #11 de
+[`pontos-para-reuniao.md`](pontos-para-reuniao.md).
+
+**Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
+cenário mais provável. Como os nove itens acima não existem, o prazo depende
+de eles serem construídos antes — e do retorno do checklist.
 contratadas (ver [`escopo-e-orcamento.md`](escopo-e-orcamento.md) e o ponto #11).

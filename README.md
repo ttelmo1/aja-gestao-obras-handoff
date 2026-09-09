@@ -88,3 +88,14 @@ fluxo de tramitação e permissões são funções puras, testáveis sem subir o
 
 Fora do escopo das 140h contratadas, a definir após visita técnica.
 Backup, energia e disponibilidade do servidor são responsabilidade do cliente.
+
+**Ambiente real, confirmado em 09/09/2026:** não é um servidor, é uma
+**estação de trabalho Windows 10/11 comercial**, **sem acesso à internet** por
+decisão do cliente. A entrega do pacote é por mídia removível; não há
+atualização automática.
+
+Plano completo — desenho físico, ciclo de atualização, backup, o que ainda
+precisa ser construído e o checklist da máquina:
+[`docs/instalacao-on-premise.md`](docs/instalacao-on-premise.md).
+Estado do que falta construir: etapa 14 de
+[`docs/etapas-e-status.md`](docs/etapas-e-status.md).

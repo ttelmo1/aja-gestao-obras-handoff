@@ -11,6 +11,19 @@ fora.
   à internet. O atacante relevante é um **usuário autenticado** do próprio
   cliente tentando ir além do seu perfil, não um anônimo da internet.
 
+> **Ampliação do modelo — 09/09/2026, após conhecer o ambiente real.** A
+> máquina é uma estação Windows numa rede organizada por **compartilhamentos
+> com permissão por departamento**. Isso acrescenta um vetor que esta revisão
+> não considerou, e que **não é de código**: se a pasta `storage\` for
+> compartilhada na rede — passo natural para quem organiza o resto assim —
+> qualquer pessoa com acesso ao compartilhamento lê qualquer documento pelo
+> Explorer, **contornando inteiramente** a verificação de permissão de
+> `src/app/documentos/[id]/route.ts`. O controle de acesso a documentos do
+> sistema não sobrevive a um erro de configuração de pasta. Registrado como
+> item de instalação em
+> [`instalacao-on-premise.md`](instalacao-on-premise.md) §1 e na etapa 14 de
+> [`etapas-e-status.md`](etapas-e-status.md).
+
 ## Resultado
 
 **1 achado de severidade alta — corrigido em 07/09/2026.** Nada de médio ou

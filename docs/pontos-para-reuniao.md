@@ -318,23 +318,66 @@ ela não depende da resposta. O que a resposta define são as colunas e as
 consultas. Vale levar um relatório impresso à reunião: é mais fácil o cliente
 dizer o que falta olhando uma folha do que descrevendo do zero.
 
-## 11. Como o sistema será instalado no servidor 🔴
+## 11. Como o sistema será instalado no servidor 🟡
 
 O contrato diz que a instalação é *"a definir após visita técnica à
-infraestrutura do cliente"* e está fora das 140h. Ainda não sabemos nem o
-sistema operacional do servidor.
+infraestrutura do cliente"* e está fora das 140h.
+
+> ### ✅ Respondido pelo Júnior em 09/09/2026 — o ambiente é outro
+>
+> As três premissas principais do plano de instalação mudaram:
+>
+> | Assumíamos | Realidade |
+> | --- | --- |
+> | "Servidor" | **Estação de trabalho robusta.** Sem disco/fonte redundante |
+> | Windows Server ou Linux | **Windows comercial (10/11)** |
+> | Acesso de saída à internet, confirmado | **Sem internet, por decisão.** *"Tudo aqui é estanque"* |
+>
+> Contexto adicional dele: a rede já tem compartilhamentos por departamento
+> com permissão por área (engenharia, DP), montados por ele com ajuda de
+> terceiro. A ideia é publicar um atalho para o sistema numa pasta comum.
+>
+> **Consequências, todas absorvidas em
+> [`instalacao-on-premise.md`](instalacao-on-premise.md):**
+>
+> - Entrega do pacote por **mídia removível**. O Júnior propôs receber um
+>   **link de download**, baixar numa máquina com internet e levar o arquivo
+>   à máquina isolada. Cai o download direto e cai o PAT do GitHub.
+> - **Não existe atualização automática.** Toda atualização exige uma pessoa
+>   levando um arquivo. Correção urgente depende de disponibilidade dele.
+> - Build do Actions passa de `ubuntu-latest` para **`windows-latest`** — o
+>   binário do CLI do Prisma é por plataforma, e o destino mudou.
+> - `systemd` → **NSSM**; `/opt/aja-obras` → `C:\aja-obras`; cron → Agendador
+>   de Tarefas.
+> - **Tudo vai no pen drive**: instaladores do Node e do PostgreSQL, NSSM,
+>   release e scripts. Nada pode ser baixado no local.
+> - 🔴 **`storage\` não pode virar pasta compartilhada.** Pela lógica de
+>   organização que ele já usa seria o passo natural, e desmontaria todo o
+>   controle de permissão de documentos do sistema — qualquer um abriria
+>   qualquer contrato pelo Explorer.
+>
+> **Ainda em aberto, no checklist da seção 9 daquele documento:** edição exata
+> do Windows, **IP fixo ou DHCP** (quebra o atalho se mudar), nobreak,
+> suspensão desligada, antivírus, e quem executa a atualização.
+**Plano detalhado da instalação e do ciclo de atualização:**
+[`instalacao-on-premise.md`](instalacao-on-premise.md) — desenho físico (onde
+ficam banco, arquivos e aplicação), entrega por GitHub Actions + Release, e o
+que ainda precisa ser construído. Ele depende das respostas deste ponto.
 
 **Assumimos** — provisoriamente, para o desenvolvimento: PostgreSQL nativo e a
 aplicação Node rodando como serviço do sistema, sem Docker. Isso segue o
 espírito declarado no `CLAUDE.md`, que escolheu a stack por "menos peças
 móveis" e "um único processo Node, sem serviços extras".
 
-**Perguntar na visita técnica:**
+**Perguntar na visita técnica** — a lista completa, com *como o cliente
+descobre cada resposta*, está na **seção 9 de
+[`instalacao-on-premise.md`](instalacao-on-premise.md)**. As que interessam
+a decisões de código:
 
-- Qual o sistema operacional do servidor — Windows Server ou Linux?
+- ~~Qual o sistema operacional do servidor~~ → **Windows 10/11 comercial.**
 - Quem administra a máquina, e essa pessoa tem experiência com o quê?
 - Existe rotina de backup? O que ela cobre hoje?
-- O servidor reinicia sozinho após queda de energia, e os serviços sobem junto?
+- A máquina reinicia sozinha após queda de energia, e os serviços sobem junto?
 - **O sistema vai atender em HTTP ou HTTPS?** Muda uma variável de ambiente
   (`COOKIE_SEGURO`) e não é detalhe estético: com a flag `Secure` ligada em
   servidor HTTP o navegador descarta o cookie de sessão e **ninguém consegue

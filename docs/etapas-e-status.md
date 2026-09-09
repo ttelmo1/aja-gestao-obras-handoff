@@ -37,7 +37,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 11 | Relatórios XLS/PDF | 12h | 🟡 | 5, 6, 8 |
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
 | 13 | Ajustes pós-apresentação à diretoria | ~5,5h | 🟡 | 4, 5, 7, 9 |
-| 14 | Empacotamento e instalação on-premise | fora das 140h | ⬜ | 12 |
+| 14 | Empacotamento e instalação on-premise | fora das 140h | 🟡 | 12 |
 
 A **etapa 14 está fora das 140h contratadas** (`README.md`, "Instalação no
 cliente"): é *"a definir após visita técnica"*. Está no quadro porque **nada
@@ -1200,15 +1200,17 @@ continuar testando processo parado isolado.
   físico-financeiro** — levantados e descartados na conversa que removeu o
   físico.
 
-## Etapa 14 — Empacotamento e instalação on-premise ⬜
+## Etapa 14 — Empacotamento e instalação on-premise 🟡
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o
 raciocínio de cada decisão, em
 [`instalacao-on-premise.md`](instalacao-on-premise.md). Aqui fica só o estado.
 
-**Nada disto existe no repositório hoje.** Não há `.github/`, não há
-`scripts/`, não há nenhuma rota em `src/app/api/`, e o `next.config.ts` não
-tem `output: "standalone"`.
+**As nove peças do plano existem** desde 09/09/2026, na branch `prod`. O que
+falta não é código: é a máquina do cliente e as respostas do checklist. Um
+pacote foi montado e **subiu de verdade** em teste local — `/api/health`
+respondendo `200` com a versão, o CSS servido e o CLI do Prisma empacotado
+conversando com o banco.
 
 > ### O ambiente mudou em 09/09/2026 — releia o plano antes de codar
 >
@@ -1229,20 +1231,45 @@ tem `output: "standalone"`.
 
 | # | Item | Onde | Estado |
 | --- | --- | --- | --- |
-| 1 | `output: "standalone"` | `next.config.ts` | ⬜ |
-| 2 | Endpoint de saúde `/api/health` | `src/app/api/health/` | ⬜ |
-| 3 | Workflow de release (`windows-latest`) | `.github/workflows/release.yml` | ⬜ |
-| 4 | Script de empacotamento | `scripts/empacotar.ps1` | ⬜ |
-| 5 | Script de atualização | dentro do pacote, `.ps1` | ⬜ |
-| 6 | Script de instalação inicial | `.ps1` + roteiro | ⬜ |
-| 7 | Serviço do Windows via NSSM | fora do repo | ⬜ |
-| 8 | Procedimento de backup + tarefa agendada | doc + `.ps1` | ⬜ |
-| 9 | Versão do Node fixada (Actions e máquina) | workflow + doc | ⬜ |
+| 1 | `output: "standalone"` | `next.config.ts` | ✅ |
+| 2 | Endpoint de saúde `/api/health` | `src/app/api/health/route.ts` | ✅ |
+| 3 | Workflow de release (`windows-latest`) | `.github/workflows/release.yml` | ✅ |
+| 4 | Script de empacotamento | `scripts/empacotar.mjs` | ✅ |
+| 5 | Script de atualização | `scripts/instalacao/atualizar.ps1` | ✅ |
+| 6 | Script de instalação inicial | `scripts/instalacao/instalar.ps1` | ✅ |
+| 7 | Serviço do Windows via NSSM | dentro do `instalar.ps1` | ✅ |
+| 8 | Procedimento de backup + tarefa agendada | `scripts/instalacao/backup.ps1` | ✅ |
+| 9 | Versão do Node fixada (Actions e máquina) | `.nvmrc`, conferida na instalação | ✅ |
 
-Os itens **1 e 2 bloqueiam todo o resto**: sem `standalone` o pacote não é
-autocontido — e a máquina não tem internet para rodar `npm install`; sem
-`/api/health` o passo de verificação do script de atualização não existe, e
-"subiu" vira palpite.
+Item 10, que o plano não previa e a implementação exigiu: **criar o primeiro
+usuário** (`scripts/instalacao/criar-admin.mjs`). Sem ele a instalação termina
+numa tela de login por onde ninguém entra — o seed do repositório é TypeScript
+e roda com `tsx`, que é dependência de desenvolvimento e não vai no pacote.
+
+### Desvios do plano, decididos na implementação
+
+1. **O empacotador é Node (`empacotar.mjs`), não PowerShell.** Ele roda no
+   runner, onde o Node é garantido — acabamos de compilar com ele —, e em Node
+   dá para testá-lo na máquina de quem desenvolve antes de depender de um
+   workflow que só falha depois do push. Foi assim que os três problemas abaixo
+   apareceram. Os scripts que rodam **na máquina do cliente** continuam em
+   PowerShell, onde o assunto é serviço, junction e `pg_dump`.
+2. **O `.env` da máquina de build entrava no pacote.** O Next copia o arquivo
+   para `.next/standalone` de propósito, e a exclusão de tracing não o alcança
+   — testado. Num pacote montado localmente, `SESSION_SECRET` e `DATABASE_URL`
+   viajariam dentro do `.zip` e sobrescreveriam o `.env` do cliente. O
+   empacotador apaga e **aborta** se o arquivo continuar lá.
+3. **`storage/` também entrava.** O rastreador copiava a pasta inteira dos
+   documentos. No runner ela está vazia, mas a exclusão não é sobre o runner: é
+   para ninguém empacotar de uma máquina com dados de cliente e descobrir
+   depois. Saiu junto `docs/`, `tests/` e `scripts/` — o último porque o
+   empacotador estava vazando para dentro do próprio pacote.
+4. **O CLI do Prisma vai numa pasta `ferramentas\`, com config em JavaScript.**
+   O `prisma7.config.ts` do repositório importa `dotenv` e precisa de carregador
+   de TypeScript, e nenhum dos dois vai no pacote. A pasta tem `node_modules`
+   próprio, com o CLI, `bcryptjs` e `pg` — `bcryptjs` porque o Next o embute nos
+   chunks do servidor e o criador do primeiro admin precisa dele solto, para
+   gerar a senha no mesmo formato (custo 12) que o login confere.
 
 ### Riscos registrados
 
@@ -1270,5 +1297,22 @@ trabalhar. Ver ponto #11 de
 [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
 **Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
-cenário mais provável. Como os nove itens acima não existem, o prazo depende
-de eles serem construídos antes — e do retorno do checklist.
+cenário mais provável. O código não é mais o gargalo: o prazo depende do
+retorno do checklist e do acesso à máquina.
+
+### O que ainda não foi testado, e só a máquina real testa
+
+O pacote foi validado em macOS — a aplicação sobe, responde e serve os
+estáticos. **Nada do que é Windows foi executado**, porque não há Windows aqui:
+
+- os quatro `.ps1` nunca rodaram; foram escritos e revisados, não testados;
+- o binário do `schema-engine` do pacote é o de macOS. O do Windows só existe
+  quando o workflow rodar no `windows-latest` — é o próprio motivo de o build
+  sair de lá;
+- junction, NSSM, `pg_dump` e regra de firewall são todos comportamento de
+  Windows.
+
+**Primeiro passo sugerido:** criar a tag e deixar o Actions montar o pacote de
+verdade. Um pacote real na mão permite ensaiar a instalação numa máquina
+Windows qualquer antes de encostar na do cliente — e é o ensaio que separa
+"escrito" de "funciona".

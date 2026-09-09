@@ -1,9 +1,11 @@
 # Instalação on-premise — plano
 
-**Status: plano, nada implementado.** Nenhuma das peças descritas aqui existe no
-repositório hoje — a lista do que falta construir está na seção 6. O documento
-serve para levar decisões fechadas à visita técnica, não para ser executado
-como está.
+**Status: implementado em 09/09/2026, não ensaiado em Windows.** As peças da
+seção 6 existem no repositório (branch `prod`); o que falta é rodá-las numa
+máquina Windows. O pacote foi montado e a aplicação subiu em teste local, mas
+**nenhum dos `.ps1` jamais executou** — não há Windows no ambiente de
+desenvolvimento. Ver "O que ainda não foi testado" na etapa 14 de
+[`etapas-e-status.md`](etapas-e-status.md).
 
 A instalação está **fora das 140h contratadas** (`README.md`, "Instalação no
 cliente"): é *"a definir após visita técnica"*. As perguntas ainda sem resposta
@@ -320,17 +322,22 @@ vez, em máquina separada, antes do aceite.
 
 Nada disto existe hoje. Em ordem de dependência:
 
+**Todos existem desde 09/09/2026** — a coluna "por quê" fica como registro da
+razão de cada peça, e os caminhos abaixo foram atualizados para onde as coisas
+realmente ficaram.
+
 | # | Item | Onde | Por quê |
 | --- | --- | --- | --- |
-| 1 | `output: "standalone"` | `next.config.ts` | Sem isso o pacote não é autocontido e a máquina precisaria de `npm install` com acesso ao registry — impossível, ela não tem internet. |
-| 2 | Endpoint de saúde | `src/app/api/health/` | Passo 7 do script. Não há nenhuma rota de API no projeto hoje. |
-| 3 | Workflow de release | `.github/workflows/release.yml` | Build em **`windows-latest`** + publicação do Release. Não há `.github/` no repositório. |
-| 4 | Script de empacotamento | `scripts/empacotar.ps1` | Monta o `.zip` e o `.sha256`. |
-| 5 | Script de atualização | entregue dentro do pacote, `.ps1` | Seção 4. |
-| 6 | Script de instalação inicial | `.ps1` + roteiro | Máquina zerada até tela de login. Só roda uma vez, mas é o de maior risco. |
-| 7 | Serviço NSSM | `nssm install AjaObras` | Sobe no boot, antes de login. NSSM levado no pen drive. |
-| 8 | Procedimento de backup | doc + tarefa agendada | Seção 5. |
-| 9 | Versão do Node fixada | Actions e máquina | Precisam ser a mesma versão maior; `standalone` traz dependências, **não traz o runtime**. Instalador MSI do Node levado no pen drive. |
+| 1 | `output: "standalone"` ✅ | `next.config.ts` | Sem isso o pacote não é autocontido e a máquina precisaria de `npm install` com acesso ao registry — impossível, ela não tem internet. |
+| 2 | Endpoint de saúde ✅ | `src/app/api/health/route.ts` | Passo 7 do script. Consulta o banco de propósito: 200 só com Postgres respondendo, 503 quando não. |
+| 3 | Workflow de release ✅ | `.github/workflows/release.yml` | Build em **`windows-latest`** + publicação do Release, com typecheck, lint e testes antes de empacotar. |
+| 4 | Script de empacotamento ✅ | `scripts/empacotar.mjs` (Node, não `.ps1` — roda no runner e dá para testar aqui) | Monta o `.zip` e o `.sha256`. |
+| 5 | Script de atualização ✅ | `scripts/instalacao/atualizar.ps1`, entregue no pacote | Seção 4. |
+| 6 | Script de instalação inicial ✅ | `scripts/instalacao/instalar.ps1` + `LEIAME.txt` | Máquina zerada até tela de login. Só roda uma vez, mas é o de maior risco. |
+| 7 | Serviço NSSM ✅ | registrado pelo `instalar.ps1` | Sobe no boot, antes de login. NSSM levado no pen drive. |
+| 8 | Procedimento de backup ✅ | `scripts/instalacao/backup.ps1` + tarefa agendada | Seção 5. |
+| 9 | Versão do Node fixada ✅ | `.nvmrc` → `node-versao.txt` no pacote, conferido na instalação | Precisam ser a mesma versão maior; `standalone` traz dependências, **não traz o runtime**. Instalador MSI do Node levado no pen drive. |
+| 10 | Criação do primeiro usuário ✅ | `scripts/instalacao/criar-admin.mjs`, dentro de `ferramentas\` | **Não estava no plano.** Sem ele a instalação termina numa tela de login por onde ninguém entra: o seed do repositório é TypeScript e roda com `tsx`, dependência de desenvolvimento que não vai no pacote. |
 
 ### O pen drive de instalação
 

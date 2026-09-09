@@ -10,8 +10,8 @@ import type { ResumoObra } from "@/modules/obras/resumo";
 
 /**
  * Cartão de obra do painel — a tela que o cliente já viu no mockup. A faixa
- * navio na lateral esquerda e o par de barras (físico em navio, financeiro em
- * dourado) vêm de lá.
+ * navio na lateral esquerda e as barras de progresso vêm de lá. A barra de
+ * execução física saiu em 09/09/2026 junto com o dado (requisitos.md 1.4).
  */
 export type ObraNoPainel = {
   id: string;
@@ -98,10 +98,6 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
       {prazo && (
         <Progresso rotulo="Prazo transcorrido" percentual={prazo.percentualTranscorrido} />
       )}
-      <Progresso
-        rotulo="Execução física"
-        percentual={financeiro.percentualExecutado.toNumber()}
-      />
       <Progresso
         rotulo="Financeiro medido"
         percentual={financeiro.percentualMedido.toNumber()}

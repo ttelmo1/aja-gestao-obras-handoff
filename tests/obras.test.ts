@@ -142,29 +142,24 @@ describe("resumo da obra", () => {
     intervaloMedicaoDias: null,
   };
 
-  it("sem medição, não inventa avanço físico nem acusa atraso de execução", () => {
+  it("sem medição, o saldo é o contrato inteiro", () => {
     const r = resumoDaObra(base, [], null, d("2026-09-04"));
     assert.equal(r.financeiro.quantidadeMedicoes, 0);
     assert.equal(r.financeiro.valorMedidoTotal.toString(), "0");
     assert.equal(r.financeiro.saldoAMedir.toString(), "1200000");
-    assert.equal(
-      r.motivosFarol.some((m) => m.includes("atrás do previsto")),
-      false,
-    );
   });
 
-  it("soma as medições e usa o maior percentual executado", () => {
+  it("soma as medições e calcula o percentual medido", () => {
     const r = resumoDaObra(
       base,
       [
-        { valorMedido: "300000", percentualExecutado: "25", competencia: d("2026-06-30") },
-        { valorMedido: "348000", percentualExecutado: "58", competencia: d("2026-07-31") },
+        { valorMedido: "300000", competencia: d("2026-06-30") },
+        { valorMedido: "348000", competencia: d("2026-07-31") },
       ],
       null,
       d("2026-09-04"),
     );
     assert.equal(r.financeiro.valorMedidoTotal.toString(), "648000");
-    assert.equal(r.financeiro.percentualExecutado.toString(), "58");
     assert.equal(r.financeiro.saldoAMedir.toString(), "552000");
     assert.equal(r.financeiro.percentualMedido.toString(), "54");
   });
@@ -201,7 +196,7 @@ describe("totais do painel", () => {
       },
       medido === "0"
         ? []
-        : [{ valorMedido: medido, percentualExecutado: "50", competencia: d("2026-06-30") }],
+        : [{ valorMedido: medido, competencia: d("2026-06-30") }],
       null,
       d("2026-07-01"),
     ),

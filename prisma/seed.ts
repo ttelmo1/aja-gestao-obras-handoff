@@ -180,27 +180,27 @@ async function seedDemo() {
   // vencido: é o que acende o indicador "medições atrasadas" no painel.
   const medicoesPorObra: Record<
     string,
-    Array<{ diasAtras: number; valor: string; executado: string; status: StatusMedicao }>
+    Array<{ diasAtras: number; valor: string; status: StatusMedicao }>
   > = {
     // Em dia: última medição há 10 dias, próxima cai daqui a 20.
     "OBR-DEMO-001": [
-      { diasAtras: 130, valor: "120000.00", executado: "12.00", status: StatusMedicao.PAGA },
-      { diasAtras: 100, valor: "140000.00", executado: "24.00", status: StatusMedicao.PAGA },
-      { diasAtras: 70, valor: "150000.00", executado: "36.00", status: StatusMedicao.PAGA },
-      { diasAtras: 40, valor: "95000.00", executado: "44.00", status: StatusMedicao.APROVADA },
-      { diasAtras: 10, valor: "95000.00", executado: "52.00", status: StatusMedicao.PROTOCOLADA },
+      { diasAtras: 130, valor: "120000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 100, valor: "140000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 70, valor: "150000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 40, valor: "95000.00", status: StatusMedicao.APROVADA },
+      { diasAtras: 10, valor: "95000.00", status: StatusMedicao.PROTOCOLADA },
     ],
     // Ciclo vencido há 10 dias — aparece em "medições atrasadas".
     "OBR-DEMO-002": [
-      { diasAtras: 100, valor: "90000.00", executado: "20.00", status: StatusMedicao.PAGA },
-      { diasAtras: 70, valor: "110000.00", executado: "42.00", status: StatusMedicao.PAGA },
-      { diasAtras: 40, valor: "100000.00", executado: "60.00", status: StatusMedicao.PROTOCOLADA },
+      { diasAtras: 100, valor: "90000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 70, valor: "110000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 40, valor: "100000.00", status: StatusMedicao.PROTOCOLADA },
     ],
-    // Parada faz tempo: ciclo vencido há 90 dias e execução atrás do prazo.
+    // Parada faz tempo: ciclo de medição vencido há 90 dias.
     "OBR-DEMO-003": [
-      { diasAtras: 200, valor: "80000.00", executado: "25.00", status: StatusMedicao.PAGA },
-      { diasAtras: 160, valor: "60000.00", executado: "40.00", status: StatusMedicao.PAGA },
-      { diasAtras: 120, valor: "40000.00", executado: "48.00", status: StatusMedicao.REJEITADA },
+      { diasAtras: 200, valor: "80000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 160, valor: "60000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 120, valor: "40000.00", status: StatusMedicao.REJEITADA },
     ],
   };
 
@@ -231,7 +231,6 @@ async function seedDemo() {
           periodoInicio: dias(-m.diasAtras - 29),
           periodoFim: data,
           valorMedido: m.valor,
-          percentualExecutado: m.executado,
           protocolo:
             m.status === StatusMedicao.RASCUNHO
               ? null

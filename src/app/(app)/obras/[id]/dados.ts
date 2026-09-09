@@ -22,7 +22,6 @@ export const carregarObra = cache(async (id: string) => {
         orderBy: { competencia: "asc" },
         select: {
           valorMedido: true,
-          percentualExecutado: true,
           competencia: true,
           dataMedicao: true,
         },

@@ -11,7 +11,6 @@ import {
   dinheiro,
   dinheiroOpcionalPositivo,
   inteiroOpcional,
-  percentualObrigatorio,
   percentualOpcional,
   textoOpcional,
 } from "@/lib/campos";
@@ -32,7 +31,6 @@ const medicaoSchema = z
     periodoInicio: dataOpcional,
     periodoFim: dataOpcional,
     valorMedido: dinheiro,
-    percentualExecutado: percentualObrigatorio,
     protocolo: textoOpcional,
     dataProtocolo: dataOpcional,
     notaFiscalNumero: textoOpcional,
@@ -71,7 +69,6 @@ const CAMPOS = [
   "periodoInicio",
   "periodoFim",
   "valorMedido",
-  "percentualExecutado",
   "protocolo",
   "dataProtocolo",
   "notaFiscalNumero",

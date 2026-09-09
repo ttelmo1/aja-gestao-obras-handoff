@@ -88,12 +88,6 @@ export function resumoDaObra(
     status: obra.status,
     dataOrdemInicio: obra.dataOrdemInicio,
     dataPrevistaTermino: obra.dataPrevistaTermino,
-    // Sem medição não há avanço físico informado. Zero seria mentira — diria
-    // "0% executado" e acenderia o alerta de atraso numa obra recém-iniciada.
-    percentualExecutado:
-      financeiro.quantidadeMedicoes > 0
-        ? financeiro.percentualExecutado.toNumber()
-        : null,
     diasParado,
     agora,
   });

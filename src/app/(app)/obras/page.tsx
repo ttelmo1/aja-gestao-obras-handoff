@@ -56,7 +56,6 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
         medicoes: {
           select: {
             valorMedido: true,
-            percentualExecutado: true,
             competencia: true,
             dataMedicao: true,
           },

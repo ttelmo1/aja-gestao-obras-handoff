@@ -124,7 +124,6 @@ describe("data de referência da medição", () => {
   it("usa a data do boletim quando existe", () => {
     const m = {
       valorMedido: "1",
-      percentualExecutado: "1",
       competencia: d("2026-07-01"),
       dataMedicao: d("2026-07-31"),
     };
@@ -134,7 +133,6 @@ describe("data de referência da medição", () => {
   it("cai na competência quando o boletim não foi datado", () => {
     const m = {
       valorMedido: "1",
-      percentualExecutado: "1",
       competencia: d("2026-07-01"),
       dataMedicao: null,
     };
@@ -156,13 +154,11 @@ describe("resumo da obra com medições", () => {
   const medicoes = [
     {
       valorMedido: "300000",
-      percentualExecutado: "25",
       competencia: d("2026-06-01"),
       dataMedicao: d("2026-06-30"),
     },
     {
       valorMedido: "348000",
-      percentualExecutado: "58",
       competencia: d("2026-07-01"),
       dataMedicao: d("2026-07-31"),
     },

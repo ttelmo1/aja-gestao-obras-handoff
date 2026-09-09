@@ -1,5 +1,5 @@
 import { Farol, StatusObra } from "@/generated/prisma/enums";
-import { diasDesde, diasEntre } from "@/lib/date-br";
+import { diasEntre } from "@/lib/date-br";
 
 /**
  * Motor do farol (requisitos.md 1.3).
@@ -10,9 +10,12 @@ import { diasDesde, diasEntre } from "@/lib/date-br";
  * trabalha em cima". São três faixas mais o cinza: amarelo é atenção, vermelho
  * é urgência, cinza é neutro (obra que ainda não começou).
  *
+ * O critério de avanço físico contra tempo decorrido SAIU em 09/09/2026: o
+ * dado deixou de existir no sistema (requisitos.md 1.4). Sobram proximidade do
+ * término e processo parado.
+ *
  * OS LIMITES CONTINUAM PROVISÓRIOS. Ele confirmou a lógica, não os números —
- * quantos dias de prazo, quantos dias parado, quantos pontos percentuais de
- * atraso. Calibrar na apresentação, com a tela aberta.
+ * quantos dias de prazo, quantos dias parado. Calibrar com a tela aberta.
  *
  * Todo o resto do sistema consome apenas `calcularFarol`, e o resultado nunca
  * é persistido: obra fica amarela pela passagem do tempo, sem ninguém salvar
@@ -27,20 +30,12 @@ export const LIMITES_PROVISORIOS = {
   diasParadoAlerta: 15,
   /** Dias sem movimentação de tramitação até VERMELHO. */
   diasParadoCritico: 30,
-  /**
-   * Distância aceitável entre avanço físico e tempo decorrido do prazo, em
-   * pontos percentuais, antes de acender o alerta de execução atrasada.
-   */
-  desvioExecucaoAlerta: 10,
-  desvioExecucaoCritico: 25,
 } as const;
 
 export type EntradaFarol = {
   status: StatusObra;
   dataOrdemInicio: Date | null;
   dataPrevistaTermino: Date | null;
-  /** Avanço físico acumulado (0–100), da última medição. */
-  percentualExecutado: number | null;
   /** Dias desde a entrada no setor atual sem saída registrada. */
   diasParado: number | null;
   agora?: Date;
@@ -120,16 +115,6 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
     }
   }
 
-  // 3. Avanço físico contra tempo decorrido.
-  const desvio = desvioExecucao(e, agora);
-  if (desvio !== null) {
-    if (desvio >= LIMITES_PROVISORIOS.desvioExecucaoCritico) {
-      subir(2, `Execução ${desvio} p.p. atrás do previsto pelo prazo.`);
-    } else if (desvio >= LIMITES_PROVISORIOS.desvioExecucaoAlerta) {
-      subir(1, `Execução ${desvio} p.p. atrás do previsto pelo prazo.`);
-    }
-  }
-
   if (motivos.length === 0) {
     motivos.push("Dentro do prazo e sem pendências.");
     niveis.push(0);
@@ -139,27 +124,6 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
     motivos,
     motivoPrincipal: motivos[niveis.indexOf(nivel)] ?? null,
   };
-}
-
-/**
- * Quantos pontos percentuais o avanço físico está atrás do tempo decorrido.
- * Devolve null quando falta dado para comparar.
- */
-function desvioExecucao(e: EntradaFarol, agora: Date): number | null {
-  if (
-    !e.dataOrdemInicio ||
-    !e.dataPrevistaTermino ||
-    e.percentualExecutado === null
-  ) {
-    return null;
-  }
-  const prazoTotal = diasEntre(e.dataOrdemInicio, e.dataPrevistaTermino);
-  if (prazoTotal <= 0) return null;
-
-  const decorrido = diasDesde(e.dataOrdemInicio, agora);
-  const percentualEsperado = Math.min(100, (decorrido / prazoTotal) * 100);
-  const desvio = percentualEsperado - e.percentualExecutado;
-  return desvio > 0 ? Math.round(desvio) : null;
 }
 
 export const ROTULOS_FAROL: Record<Farol, string> = {

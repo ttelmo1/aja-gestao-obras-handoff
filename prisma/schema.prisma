@@ -246,8 +246,11 @@ model Medicao {
   dataMedicao   DateTime?
 
   valorMedido         Decimal @db.Decimal(15, 2)
-  /// Avanço físico acumulado da obra, informado pelo usuário (não calculável).
-  percentualExecutado Decimal @db.Decimal(5, 2)
+  /// Avanço físico acumulado, informado pelo usuário até 09/09/2026, quando o
+  /// acompanhamento físico saiu do sistema (requisitos.md 1.4). Nenhuma tela
+  /// escreve nem lê esta coluna: ela sobrevive só para não apagar o histórico
+  /// das medições já lançadas. Ver etapa 13 e ponto #5.
+  percentualExecutado Decimal? @db.Decimal(5, 2)
 
   protocolo     String?
   dataProtocolo DateTime?

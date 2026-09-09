@@ -20,7 +20,6 @@ export type MedicaoNoFormulario = {
   periodoInicio: string | null;
   periodoFim: string | null;
   valorMedido: string;
-  percentualExecutado: string;
   protocolo: string | null;
   dataProtocolo: string | null;
   notaFiscalNumero: string | null;
@@ -139,22 +138,6 @@ export function FormularioMedicao({
               inputMode="decimal"
               defaultValue={padrao?.valorMedido}
               placeholder="219.000,00"
-              className={`${classeInput} tabular`}
-            />
-          </Campo>
-
-          <Campo
-            id="percentualExecutado"
-            rotulo="Avanço físico acumulado (%)"
-            dica="Acumulado da obra, não o do mês. É o único número que o sistema não calcula."
-          >
-            <input
-              id="percentualExecutado"
-              name="percentualExecutado"
-              required
-              inputMode="decimal"
-              defaultValue={padrao?.percentualExecutado}
-              placeholder="58,00"
               className={`${classeInput} tabular`}
             />
           </Campo>

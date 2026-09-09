@@ -82,7 +82,6 @@ export default async function EditarMedicaoPage({
             periodoInicio: paraCampoData(medicao.periodoInicio),
             periodoFim: paraCampoData(medicao.periodoFim),
             valorMedido: paraCampoDinheiro(medicao.valorMedido) ?? "",
-            percentualExecutado: medicao.percentualExecutado.toFixed(2).replace(".", ","),
             protocolo: medicao.protocolo,
             dataProtocolo: paraCampoData(medicao.dataProtocolo),
             notaFiscalNumero: medicao.notaFiscalNumero,

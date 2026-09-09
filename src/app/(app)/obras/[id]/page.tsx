@@ -38,9 +38,6 @@ export default async function ResumoObraPage({
           <Dado rotulo="Prazo transcorrido">
             {prazo ? `${prazo.percentualTranscorrido}%` : "—"}
           </Dado>
-          <Dado rotulo="Execução física">
-            {formatarPercentual(financeiro.percentualExecutado)}
-          </Dado>
           <Dado rotulo="% medido">
             {formatarPercentual(financeiro.percentualMedido)}
           </Dado>
@@ -81,10 +78,6 @@ export default async function ResumoObraPage({
             percentual={prazo.percentualTranscorrido}
           />
         )}
-        <Progresso
-          rotulo="Execução física"
-          percentual={financeiro.percentualExecutado.toNumber()}
-        />
         <Progresso
           rotulo="Financeiro medido"
           percentual={financeiro.percentualMedido.toNumber()}

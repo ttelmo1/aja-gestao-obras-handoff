@@ -132,7 +132,6 @@ export default async function MedicoesPage({
               "Período",
               "Data",
               "Valor",
-              "% exec.",
               "Protocolo",
               "NF",
               "ISS",
@@ -165,7 +164,6 @@ export default async function MedicoesPage({
                 </Celula>
                 <Celula>{formatarData(m.dataMedicao)}</Celula>
                 <Celula tabular>{formatarBRL(m.valorMedido)}</Celula>
-                <Celula tabular>{formatarPercentual(m.percentualExecutado)}</Celula>
                 <Celula apagada>{m.protocolo ?? "—"}</Celula>
                 <Celula apagada>{m.notaFiscalNumero ?? "—"}</Celula>
                 <Celula tabular apagada>

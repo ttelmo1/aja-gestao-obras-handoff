@@ -120,7 +120,7 @@ describe("numeração das rerratificações", () => {
 describe("aditivo dentro do cálculo financeiro da obra", () => {
   it("o aditivo aprovado aumenta o saldo a medir", () => {
     const medicoes = [
-      { valorMedido: "500000.00", percentualExecutado: "40", competencia: new Date() },
+      { valorMedido: "500000.00", competencia: new Date() },
     ];
     const semAditivo = resumoFinanceiro("1000000.00", "0", medicoes);
     const comAditivo = resumoFinanceiro(
@@ -140,7 +140,7 @@ describe("aditivo dentro do cálculo financeiro da obra", () => {
     const r2 = resumoFinanceiro(
       "1000000.00",
       impactoDasRerratificacoes([r("APROVADA", "-200000.00")]).valorAprovado,
-      [{ valorMedido: "500000.00", percentualExecutado: "40", competencia: new Date() }],
+      [{ valorMedido: "500000.00", competencia: new Date() }],
     );
     assert.equal(r2.valorContratadoAtual.toString(), "800000");
     assert.equal(r2.saldoAMedir.toString(), "300000");

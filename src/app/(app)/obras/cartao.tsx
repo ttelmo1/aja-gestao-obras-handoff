@@ -91,7 +91,7 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
         {/* Operador só em atenção ou crítico: obra em dia não tem o que
             atribuir, e o rótulo vazio em quinze cartões verdes é ruído. */}
         {alerta && (
-          <Dado rotulo={operador.assumida ? "Operador" : "Último a mexer"}>
+          <Dado rotulo={operador.assumida ? "Operador" : "Último operador"}>
             {operador.nome ?? "a assumir"}
           </Dado>
         )}

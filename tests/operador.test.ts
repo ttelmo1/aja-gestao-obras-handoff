@@ -54,7 +54,7 @@ describe("situação do operador", () => {
     const s = situacaoDoOperador(livre);
     assert.equal(s.assumida, false);
     assert.equal(s.nome, null);
-    assert.equal(s.ultimoQueMexeu, false);
+    assert.equal(s.ehUltimoOperador, false);
   });
 
   it("obra assumida mostra desde quando e a justificativa", () => {
@@ -67,11 +67,11 @@ describe("situação do operador", () => {
 
   // O pedido do cliente, em 09/09/2026: "pode estar lá como último
   // responsável que modificou". Liberar não apaga o nome.
-  it("liberada, o nome fica como último que mexeu", () => {
+  it("liberada, o nome fica como último operador", () => {
     const s = situacaoDoOperador(liberadaPor(EU, "Ana"));
     assert.equal(s.assumida, false);
     assert.equal(s.nome, "Ana");
-    assert.equal(s.ultimoQueMexeu, true);
+    assert.equal(s.ehUltimoOperador, true);
     assert.ok(s.liberadaEm);
   });
 

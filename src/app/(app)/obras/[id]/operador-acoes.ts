@@ -166,5 +166,5 @@ export async function liberarObra(
 
   revalidatePath("/obras");
   revalidatePath(`/obras/${obraId}`);
-  return { sucesso: "Obra liberada. Seu nome fica como o último que mexeu." };
+  return { sucesso: "Obra liberada. Seu nome fica registrado como último operador." };
 }

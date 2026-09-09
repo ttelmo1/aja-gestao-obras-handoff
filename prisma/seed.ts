@@ -180,7 +180,7 @@ async function seedDemo() {
       dataPrevistaTermino: dias(-80),
       status: StatusObra.EM_ANDAMENTO,
       observacoes: "Obra de demonstração — prazo vencido, farol crítico.",
-      // Crítica e sem ninguém: o nome fica como último a mexer, que é o
+      // Crítica e sem ninguém: o nome fica como último operador, que é o
       // desenho pedido — registro, não fila de tarefas.
       operador: { liberadaHa: 5 } as AtribuicaoDemo,
     },

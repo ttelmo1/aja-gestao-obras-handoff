@@ -64,10 +64,10 @@ export function BlocoOperador({
       ) : (
         <p className="text-sm text-[var(--muted)]">
           Ninguém assumiu esta obra.
-          {situacao.ultimoQueMexeu && (
+          {situacao.ehUltimoOperador && (
             <>
               {" "}
-              Último a mexer: <strong>{situacao.nome}</strong>
+              Último operador: <strong>{situacao.nome}</strong>
               {situacao.liberadaEm && `, em ${formatarData(situacao.liberadaEm)}`}.
             </>
           )}

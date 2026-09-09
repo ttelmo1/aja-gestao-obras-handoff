@@ -1094,7 +1094,7 @@ conversa passa a ser de escopo, não de folga.
      ambiente ainda é de demonstração, sem dado real.
    - **Três estados em quatro campos.** `operadorAssumidoEm` preenchido =
      assumida; nulo com `operadorId` preenchido = liberada, e aí o nome aparece
-     como *"Último a mexer"*; ambos nulos = nunca tocada. É assim que o
+     como *"Último operador"*; ambos nulos = nunca tocada. É assim que o
      *"pode estar lá como último responsável que modificou"* convive com o
      campo não ser fila de tarefas.
    - **A observação morre ao liberar, o nome não.** *"Aguardando foto"* era a
@@ -1120,7 +1120,7 @@ conversa passa a ser de escopo, não de folga.
 
    **Como ficou:** a DEMO-002 está assumida pelo próprio usuário da
    demonstração, com observação, para dar para liberar e reassumir na tela; a
-   DEMO-003 está crítica e liberada, mostrando o *"último a mexer"*. As
+   DEMO-003 está crítica e liberada, mostrando o *"último operador"*. As
    medições da DEMO-002 foram puxadas de 40 para 25 dias atrás: com o critério
    novo ela ficaria vermelha, e a demonstração perderia o único cartão amarelo
    — agora ela acende amarelo por **dois** motivos somados (medição vencendo e

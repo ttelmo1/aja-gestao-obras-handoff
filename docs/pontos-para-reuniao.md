@@ -908,7 +908,10 @@ branco continua servindo.
 **Já implementado (09/09/2026):** o cartão mostra o operador **só em atenção ou
 crítico** — em obra verde não aparece nada, porque não há o que atribuir e o
 rótulo vazio em quinze cartões verdes é ruído. O espaço veio da barra de avanço
-físico, que saiu. Quando ninguém assumiu, o rótulo vira *"Último a mexer"*.
+físico, que saiu. Quando ninguém assumiu, o rótulo vira *"Último operador"* —
+"último a mexer" foi descartado por soar a bagunça justamente onde o campo diz o
+contrário, e "último responsável" está fora por reintroduzir a palavra que o
+Diego pediu para sair.
 
 ---
 

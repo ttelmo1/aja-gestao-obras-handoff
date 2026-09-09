@@ -37,7 +37,7 @@ export type AtribuicaoOperador = {
 export type SituacaoOperador = {
   /** A obra está assumida por alguém agora. */
   assumida: boolean;
-  /** Nome a exibir — de quem assumiu, ou do último que mexeu. */
+  /** Nome a exibir — de quem assumiu, ou do último operador. */
   nome: string | null;
   /** Desde quando está assumida; nulo quando ninguém assumiu. */
   desde: Date | null;
@@ -45,7 +45,7 @@ export type SituacaoOperador = {
   liberadaEm: Date | null;
   observacao: string | null;
   /** `true` quando o nome é histórico, não atribuição viva. */
-  ultimoQueMexeu: boolean;
+  ehUltimoOperador: boolean;
 };
 
 /**
@@ -65,7 +65,7 @@ export function situacaoDoOperador(a: AtribuicaoOperador): SituacaoOperador {
     // atribuição ("aguardando foto"), e mantê-la na tela faria a obra parecer
     // presa a um motivo que já passou.
     observacao: assumida ? a.operadorObservacao : null,
-    ultimoQueMexeu: !assumida && a.operadorId !== null,
+    ehUltimoOperador: !assumida && a.operadorId !== null,
   };
 }
 

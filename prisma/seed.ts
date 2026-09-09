@@ -86,7 +86,22 @@ async function seedBase() {
  * o cliente precisa ver funcionando na reunião. As datas são relativas a hoje,
  * então a demonstração não envelhece.
  */
+/**
+ * Atribuição de operador nas obras de demonstração: assumida agora, ou
+ * liberada há alguns dias — quando o nome fica só como o último que mexeu.
+ */
+type AtribuicaoDemo =
+  | { assumidaHa: number; liberadaHa?: undefined }
+  | { liberadaHa: number; assumidaHa?: undefined };
+
 async function seedDemo() {
+  // O operador das obras de demonstração é o próprio usuário que entra na
+  // demonstração: assim dá para liberar a obra e assumir de volta na tela.
+  const operadorDemo = await prisma.usuario.findFirstOrThrow({
+    where: { perfil: Perfil.ADMINISTRADOR },
+    orderBy: { criadoEm: "asc" },
+  });
+
   const contratante = await prisma.contratante.upsert({
     // CNPJ válido de verdade: o cadastro valida dígito verificador, e um
     // número inventado seria recusado pela própria tela na demonstração.
@@ -148,6 +163,9 @@ async function seedDemo() {
       dataPrevistaTermino: dias(20),
       status: StatusObra.EM_ANDAMENTO,
       observacoes: "Obra de demonstração — término próximo, farol de atenção.",
+      // Assumida: mostra o bloco do operador com observação e o botão de
+      // liberar, já que quem entra na demonstração é este mesmo usuário.
+      operador: { assumidaHa: 3 } as AtribuicaoDemo,
     },
     {
       codigo: "OBR-DEMO-003",
@@ -161,6 +179,9 @@ async function seedDemo() {
       dataPrevistaTermino: dias(-80),
       status: StatusObra.EM_ANDAMENTO,
       observacoes: "Obra de demonstração — prazo vencido, farol crítico.",
+      // Crítica e sem ninguém: o nome fica como último a mexer, que é o
+      // desenho pedido — registro, não fila de tarefas.
+      operador: { liberadaHa: 5 } as AtribuicaoDemo,
     },
     {
       codigo: "OBR-DEMO-004",
@@ -206,13 +227,28 @@ async function seedDemo() {
 
   let totalMedicoes = 0;
   for (const obra of obras) {
+    const { operador, ...dadosDaObra } = obra;
     const registro = await prisma.obra.upsert({
       where: { codigo: obra.codigo },
       update: {},
       create: {
-        ...obra,
+        ...dadosDaObra,
         contratanteId: contratante.id,
-        responsavelId: responsavel.id,
+        // Atribuição momentânea de operador: só as obras em atenção e crítica
+        // têm, porque só nelas o campo aparece (requisitos.md 1.2).
+        ...(operador
+          ? {
+              operadorId: operadorDemo.id,
+              operadorAssumidoEm:
+                operador.assumidaHa === undefined ? null : dias(-operador.assumidaHa),
+              operadorLiberadoEm:
+                operador.liberadaHa === undefined ? null : dias(-operador.liberadaHa),
+              operadorObservacao:
+                operador.assumidaHa === undefined
+                  ? null
+                  : "Aguardando a foto da obra para protocolar a medição.",
+            }
+          : {}),
       },
     });
 

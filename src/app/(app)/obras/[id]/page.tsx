@@ -7,9 +7,11 @@ import { formatarData } from "@/lib/date-br";
 import { exigirPermissao } from "@/lib/guarda";
 import { formatarBRL, formatarPercentual } from "@/lib/money";
 import { ROTULOS_ESFERA } from "@/modules/cadastros/rotulos";
+import { exigeOperador, situacaoDoOperador } from "@/modules/obras/operador";
 import { resumoDaObra } from "@/modules/obras/resumo";
 
 import { carregarObra, diasParadoDe } from "./dados";
+import { BlocoOperador } from "./operador";
 
 export const metadata = { title: "Resumo da obra" };
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ export default async function ResumoObraPage({
   params,
   searchParams,
 }: PageProps<"/obras/[id]">) {
-  await exigirPermissao("obra", "ver");
+  const usuario = await exigirPermissao("obra", "ver");
   const { id } = await params;
   const { criada } = await searchParams;
 
@@ -28,6 +30,14 @@ export default async function ResumoObraPage({
   const agora = new Date();
   const { financeiro, prazo, medicao, diasParado, farol, motivosFarol } =
     resumoDaObra(obra, obra.medicoes, diasParadoDe(obra, agora), agora);
+
+  const operador = situacaoDoOperador({
+    operadorId: obra.operadorId,
+    operadorNome: obra.operador?.nome ?? null,
+    operadorAssumidoEm: obra.operadorAssumidoEm,
+    operadorLiberadoEm: obra.operadorLiberadoEm,
+    operadorObservacao: obra.operadorObservacao,
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -89,16 +99,23 @@ export default async function ResumoObraPage({
         </div>
       </Card>
 
+      {/* Só em atenção ou crítico: obra em dia não tem o que atribuir
+          (requisitos.md 1.2). */}
+      {exigeOperador(farol) && (
+        <Card titulo="Operador">
+          <BlocoOperador
+            obraId={obra.id}
+            situacao={operador}
+            souEu={obra.operadorId === usuario.id}
+          />
+        </Card>
+      )}
+
       <Card titulo="Informações gerais">
         <Dados colunas={3}>
           <Dado rotulo="Contratante">{obra.contratante.nome}</Dado>
           <Dado rotulo="Esfera">
             {obra.contratante.esfera ? ROTULOS_ESFERA[obra.contratante.esfera] : "—"}
-          </Dado>
-          <Dado rotulo="Responsável técnico">
-            {obra.responsavel
-              ? `${obra.responsavel.nome}${obra.responsavel.registro ? ` (${obra.responsavel.registro})` : ""}`
-              : "—"}
           </Dado>
           <Dado rotulo="Assinatura">{formatarData(obra.dataAssinatura) || "—"}</Dado>
           <Dado rotulo="Ordem de início">

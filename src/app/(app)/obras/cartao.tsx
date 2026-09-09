@@ -6,12 +6,18 @@ import type { StatusObra } from "@/generated/prisma/enums";
 import { formatarData } from "@/lib/date-br";
 import { formatarBRL } from "@/lib/money";
 import { ROTULOS_STATUS } from "@/modules/obras/filtros";
+import {
+  situacaoDoOperador,
+  type AtribuicaoOperador,
+} from "@/modules/obras/operador";
 import type { ResumoObra } from "@/modules/obras/resumo";
 
 /**
  * Cartão de obra do painel — a tela que o cliente já viu no mockup. A faixa
  * navio na lateral esquerda e as barras de progresso vêm de lá. A barra de
- * execução física saiu em 09/09/2026 junto com o dado (requisitos.md 1.4).
+ * execução física saiu em 09/09/2026 junto com o dado (requisitos.md 1.4), e é
+ * o espaço dela que o operador ocupa. O código continua aqui: é a chave que
+ * liga a obra no sistema à pasta dela na rede.
  */
 export type ObraNoPainel = {
   id: string;
@@ -20,7 +26,11 @@ export type ObraNoPainel = {
   numeroContrato: string;
   status: StatusObra;
   contratante: { nome: string };
-  responsavel: { nome: string } | null;
+  operadorId: string | null;
+  operador: { nome: string } | null;
+  operadorAssumidoEm: Date | null;
+  operadorLiberadoEm: Date | null;
+  operadorObservacao: string | null;
   dataOrdemInicio: Date | null;
   dataPrevistaTermino: Date | null;
   resumo: ResumoObra;
@@ -29,6 +39,7 @@ export type ObraNoPainel = {
 export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
   const { financeiro, prazo, medicao, farol, motivosFarol, motivoPrincipalFarol } =
     obra.resumo;
+  const operador = situacaoDoOperador(atribuicaoDe(obra));
   // O cliente quer o farol para "chamar a atenção e o responsável trabalhar em
   // cima" — então o motivo fica escrito no cartão, e não só no hover, que não
   // existe em tablet. Verde e cinza não precisam: a ausência de alerta é o
@@ -77,7 +88,13 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
 
       <Dados>
         <Dado rotulo="Código">{obra.codigo}</Dado>
-        <Dado rotulo="Responsável">{obra.responsavel?.nome}</Dado>
+        {/* Operador só em atenção ou crítico: obra em dia não tem o que
+            atribuir, e o rótulo vazio em quinze cartões verdes é ruído. */}
+        {alerta && (
+          <Dado rotulo={operador.assumida ? "Operador" : "Último a mexer"}>
+            {operador.nome ?? "a assumir"}
+          </Dado>
+        )}
         <Dado rotulo="Início">{formatarData(obra.dataOrdemInicio) || "—"}</Dado>
         <Dado rotulo="Término previsto">
           {formatarData(obra.dataPrevistaTermino) || "—"}
@@ -117,4 +134,15 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
       </div>
     </Link>
   );
+}
+
+/** Os quatro campos do operador, do jeito que o módulo os lê. */
+function atribuicaoDe(obra: ObraNoPainel): AtribuicaoOperador {
+  return {
+    operadorId: obra.operadorId,
+    operadorNome: obra.operador?.nome ?? null,
+    operadorAssumidoEm: obra.operadorAssumidoEm,
+    operadorLiberadoEm: obra.operadorLiberadoEm,
+    operadorObservacao: obra.operadorObservacao,
+  };
 }

@@ -35,7 +35,7 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
   const filtros = lerFiltros(await searchParams);
   const agora = new Date();
 
-  const [registros, responsaveis, contratantes] = await Promise.all([
+  const [registros, operadores, contratantes] = await Promise.all([
     prisma.obra.findMany({
       where: condicaoDeBusca(filtros),
       orderBy: [{ dataPrevistaTermino: "asc" }, { criadoEm: "desc" }],
@@ -52,7 +52,11 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
         periodicidadeMedicao: true,
         intervaloMedicaoDias: true,
         contratante: { select: { nome: true } },
-        responsavel: { select: { nome: true } },
+        operadorId: true,
+        operador: { select: { nome: true } },
+        operadorAssumidoEm: true,
+        operadorLiberadoEm: true,
+        operadorObservacao: true,
         medicoes: {
           select: {
             valorMedido: true,
@@ -72,7 +76,9 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
         },
       },
     }),
-    prisma.responsavel.findMany({
+    // Operadores são usuários do sistema, não o cadastro de responsáveis:
+    // quem assume a obra é quem está logado.
+    prisma.usuario.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
       select: { id: true, nome: true },
@@ -122,7 +128,7 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
 
       <BarraDeFiltros
         filtros={filtros}
-        responsaveis={responsaveis}
+        operadores={operadores}
         contratantes={contratantes}
       />
 

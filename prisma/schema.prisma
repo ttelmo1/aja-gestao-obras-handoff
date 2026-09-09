@@ -32,11 +32,12 @@ model Usuario {
   criadoEm     DateTime  @default(now())
   atualizadoEm DateTime  @updatedAt
 
-  tokensSenha  TokenSenha[]
-  sessoes      Sessao[]
-  obrasCriadas Obra[]                @relation("ObraCriadaPor")
-  documentos   Documento[]
-  movimentos   TramitacaoMovimento[]
+  tokensSenha   TokenSenha[]
+  sessoes       Sessao[]
+  obrasCriadas  Obra[]                @relation("ObraCriadaPor")
+  obrasOperadas Obra[]                @relation("ObraOperador")
+  documentos    Documento[]
+  movimentos    TramitacaoMovimento[]
 
   @@index([ativo])
 }
@@ -90,7 +91,9 @@ model Responsavel {
   criadoEm     DateTime @default(now())
   atualizadoEm DateTime @updatedAt
 
-  obras    Obra[]
+  /// Sem `obras`: o responsável técnico deixou de existir por obra em
+  /// 09/09/2026 (requisitos.md 1.2). Continua ligado à medição, onde o
+  /// "Responsável AJA" é de quem assinou aquele boletim.
   medicoes Medicao[]
 
   @@index([ativo])
@@ -175,9 +178,24 @@ model Obra {
   numeroProcesso String? // protocolo no órgão
 
   contratanteId String
-  contratante   Contratante  @relation(fields: [contratanteId], references: [id])
-  responsavelId String?
-  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
+  contratante   Contratante @relation(fields: [contratanteId], references: [id])
+
+  /// Operador que assumiu a obra — atribuição momentânea, feita pelo próprio
+  /// usuário na aba Resumo, não no cadastro do contrato (requisitos.md 1.2).
+  ///
+  /// São 15 a 20 contratos para três pessoas: quem está disponível assume, e o
+  /// nome fica como o último que mexeu depois de liberada. Não é responsável
+  /// fixo pela obra nem fila de tarefas — é registro de quem cuidou por
+  /// último. Aponta para `Usuario`, e não para `Responsavel`, porque quem
+  /// assume é quem está logado.
+  operadorId         String?
+  operador           Usuario?  @relation("ObraOperador", fields: [operadorId], references: [id])
+  /// Quando a atribuição atual começou. Nulo = ninguém assumiu agora, mesmo
+  /// que `operadorId` ainda guarde o último que mexeu.
+  operadorAssumidoEm DateTime?
+  operadorLiberadoEm DateTime?
+  /// Justificativa em texto livre — "aguardando foto", "aguardando relatório".
+  operadorObservacao String?
 
   /// Valor original do contrato.
   valorContratado Decimal @db.Decimal(15, 2)
@@ -213,7 +231,7 @@ model Obra {
 
   @@index([status])
   @@index([contratanteId])
-  @@index([responsavelId])
+  @@index([operadorId])
   @@index([dataPrevistaTermino])
 }
 
@@ -245,7 +263,7 @@ model Medicao {
   /// competência (mês) e do protocolo (quando entrou no órgão).
   dataMedicao   DateTime?
 
-  valorMedido         Decimal @db.Decimal(15, 2)
+  valorMedido         Decimal  @db.Decimal(15, 2)
   /// Avanço físico acumulado, informado pelo usuário até 09/09/2026, quando o
   /// acompanhamento físico saiu do sistema (requisitos.md 1.4). Nenhuma tela
   /// escreve nem lê esta coluna: ela sobrevive só para não apagar o histórico
@@ -395,7 +413,7 @@ model Rerratificacao {
   protocolo String?
 
   /// "Ajuste de quantitativos e serviços" — a coluna Descrição do mockup.
-  descricao String?
+  descricao       String?
   /// Quantos itens a planilha alterou. É contagem, não detalhamento: o
   /// item a item fica no Excel apresentado ao órgão (requisitos.md 1.7).
   quantidadeItens Int?
@@ -463,18 +481,18 @@ model Documento {
   descricao String?
 
   obraId           String?
-  obra             Obra?           @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  obra             Obra?                @relation(fields: [obraId], references: [id], onDelete: Cascade)
   medicaoId        String?
-  medicao          Medicao?        @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+  medicao          Medicao?             @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
   etapaObraId      String?
-  etapaObra        EtapaObra?      @relation(fields: [etapaObraId], references: [id], onDelete: Cascade)
+  etapaObra        EtapaObra?           @relation(fields: [etapaObraId], references: [id], onDelete: Cascade)
   /// Passagem por um setor específico. No mockup cada passo do fluxo tem seus
   /// próprios anexos ("Documentos da etapa": despacho, parecer, checklist), e
   /// a central de documentos mostra em que setor o arquivo entrou.
   movimentoId      String?
   movimento        TramitacaoMovimento? @relation(fields: [movimentoId], references: [id], onDelete: Cascade)
   rerratificacaoId String?
-  rerratificacao   Rerratificacao? @relation(fields: [rerratificacaoId], references: [id], onDelete: Cascade)
+  rerratificacao   Rerratificacao?      @relation(fields: [rerratificacaoId], references: [id], onDelete: Cascade)
 
   enviadoPorId String?
   enviadoPor   Usuario? @relation(fields: [enviadoPorId], references: [id])

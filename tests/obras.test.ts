@@ -104,7 +104,7 @@ describe("filtros do painel", () => {
     assert.equal(temFiltroAtivo(f), true);
   });
 
-  it("a busca cobre código, objeto, contrato, protocolo, contratante e responsável", () => {
+  it("a busca cobre código, objeto, contrato, protocolo, contratante e operador", () => {
     const onde = condicaoDeBusca(lerFiltros({ busca: "015/2026" })) as {
       OR: Array<Record<string, unknown>>;
     };
@@ -116,7 +116,7 @@ describe("filtros do painel", () => {
       "numeroContrato",
       "numeroProcesso",
       "contratante",
-      "responsavel",
+      "operador",
     ]) {
       assert.ok(campos.includes(campo), campo);
     }

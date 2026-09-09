@@ -20,11 +20,11 @@ import {
  */
 export function BarraDeFiltros({
   filtros,
-  responsaveis,
+  operadores,
   contratantes,
 }: {
   filtros: Filtros;
-  responsaveis: Array<{ id: string; nome: string }>;
+  operadores: Array<{ id: string; nome: string }>;
   contratantes: Array<{ id: string; nome: string }>;
 }) {
   return (
@@ -78,19 +78,19 @@ export function BarraDeFiltros({
         ))}
       </select>
 
-      <label className="sr-only" htmlFor="responsavel">
-        Responsável
+      <label className="sr-only" htmlFor="operador">
+        Operador
       </label>
       <select
-        id="responsavel"
-        name="responsavel"
-        defaultValue={filtros.responsavelId ?? ""}
+        id="operador"
+        name="operador"
+        defaultValue={filtros.operadorId ?? ""}
         className={`${classeCampo} min-w-44`}
       >
-        <option value="">Todos os responsáveis</option>
-        {responsaveis.map((r) => (
-          <option key={r.id} value={r.id}>
-            {r.nome}
+        <option value="">Todos os operadores</option>
+        {operadores.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.nome}
           </option>
         ))}
       </select>

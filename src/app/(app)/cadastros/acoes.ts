@@ -285,7 +285,9 @@ async function contarVinculos(
     return prisma.obra.count({ where: { contratanteId: id } });
   }
   if (entidade === "Responsavel") {
-    return prisma.obra.count({ where: { responsavelId: id } });
+    // Só medições: o responsável deixou de existir por obra em 09/09/2026,
+    // quando entrou o operador com atribuição momentânea.
+    return prisma.medicao.count({ where: { responsavelId: id } });
   }
   const [entradas, saidas] = await Promise.all([
     prisma.tramitacaoMovimento.count({ where: { setorDestinoId: id } }),

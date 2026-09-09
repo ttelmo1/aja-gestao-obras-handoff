@@ -13,18 +13,11 @@ export const dynamic = "force-dynamic";
 export default async function NovaObraPage() {
   await exigirPermissao("obra", "criar");
 
-  const [contratantes, responsaveis] = await Promise.all([
-    prisma.contratante.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
-    prisma.responsavel.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
-  ]);
+  const contratantes = await prisma.contratante.findMany({
+    where: { ativo: true },
+    orderBy: { nome: "asc" },
+    select: { id: true, nome: true },
+  });
 
   return (
     <div className="max-w-3xl">
@@ -41,7 +34,7 @@ export default async function NovaObraPage() {
         </Alerta>
       ) : (
         <Card>
-          <FormularioObra contratantes={contratantes} responsaveis={responsaveis} />
+          <FormularioObra contratantes={contratantes} />
         </Card>
       )}
     </div>

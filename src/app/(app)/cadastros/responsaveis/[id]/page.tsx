@@ -29,7 +29,7 @@ export default async function ResponsavelPage({
       email: true,
       telefone: true,
       ativo: true,
-      _count: { select: { obras: true } },
+      _count: { select: { medicoes: true } },
     },
   });
   if (!responsavel) notFound();
@@ -47,9 +47,9 @@ export default async function ResponsavelPage({
         <Card titulo="Excluir">
           <div className="flex flex-col gap-3 text-sm">
             <p className="text-[var(--muted)]">
-              {_count.obras === 0
-                ? "Este responsável não está vinculado a nenhuma obra."
-                : `Vinculado a ${_count.obras} obra(s) — não pode ser apagado, só desativado.`}
+              {_count.medicoes === 0
+                ? "Este responsável não está vinculado a nenhuma medição."
+                : `Vinculado a ${_count.medicoes} medição(ões) — não pode ser apagado, só desativado.`}
             </p>
             <BotaoExcluir id={responsavel.id} entidade="Responsavel" />
           </div>

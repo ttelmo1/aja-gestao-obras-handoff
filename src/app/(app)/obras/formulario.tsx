@@ -20,7 +20,6 @@ export type ObraNoFormulario = {
   numeroContrato: string;
   numeroProcesso: string | null;
   contratanteId: string;
-  responsavelId: string | null;
   valorContratado: string;
   dataAssinatura: string | null;
   dataOrdemInicio: string | null;
@@ -47,11 +46,9 @@ type Opcao = { id: string; nome: string };
 export function FormularioObra({
   padrao,
   contratantes,
-  responsaveis,
 }: {
   padrao?: ObraNoFormulario;
   contratantes: Opcao[];
-  responsaveis: Opcao[];
 }) {
   const [estado, acao, pendente] = useActionState<EstadoObra, FormData>(
     salvarObra,
@@ -118,7 +115,7 @@ export function FormularioObra({
           </Campo>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <Campo id="contratanteId" rotulo="Contratante">
             <select
               id="contratanteId"
@@ -131,22 +128,6 @@ export function FormularioObra({
               {contratantes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nome}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <Campo id="responsavelId" rotulo="Responsável técnico">
-            <select
-              id="responsavelId"
-              name="responsavelId"
-              defaultValue={padrao?.responsavelId ?? ""}
-              className={classeInput}
-            >
-              <option value="">Não definido</option>
-              {responsaveis.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nome}
                 </option>
               ))}
             </select>

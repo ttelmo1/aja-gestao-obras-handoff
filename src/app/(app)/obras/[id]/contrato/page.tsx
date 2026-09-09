@@ -36,27 +36,17 @@ export default async function ContratoPage({
     );
   }
 
-  const [contratantes, responsaveis] = await Promise.all([
-    prisma.contratante.findMany({
-      where: { OR: [{ ativo: true }, { id: obra.contratanteId }] },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
-    prisma.responsavel.findMany({
-      where: obra.responsavelId
-        ? { OR: [{ ativo: true }, { id: obra.responsavelId }] }
-        : { ativo: true },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
-  ]);
+  const contratantes = await prisma.contratante.findMany({
+    where: { OR: [{ ativo: true }, { id: obra.contratanteId }] },
+    orderBy: { nome: "asc" },
+    select: { id: true, nome: true },
+  });
 
   return (
     <div className="flex max-w-3xl flex-col gap-4">
       <Card titulo="Dados contratuais">
         <FormularioObra
           contratantes={contratantes}
-          responsaveis={responsaveis}
           padrao={{
             id: obra.id,
             codigo: obra.codigo,
@@ -64,7 +54,6 @@ export default async function ContratoPage({
             numeroContrato: obra.numeroContrato,
             numeroProcesso: obra.numeroProcesso,
             contratanteId: obra.contratanteId,
-            responsavelId: obra.responsavelId,
             valorContratado: paraCampoDinheiro(obra.valorContratado) ?? "",
             dataAssinatura: paraCampoData(obra.dataAssinatura),
             dataOrdemInicio: paraCampoData(obra.dataOrdemInicio),

@@ -16,7 +16,7 @@ export const carregarObra = cache(async (id: string) => {
     where: { id },
     include: {
       contratante: { select: { id: true, nome: true, cnpj: true, esfera: true } },
-      responsavel: { select: { id: true, nome: true, cargo: true, registro: true } },
+      operador: { select: { id: true, nome: true } },
       criadoPor: { select: { nome: true } },
       medicoes: {
         orderBy: { competencia: "asc" },

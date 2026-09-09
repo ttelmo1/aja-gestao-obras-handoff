@@ -12,8 +12,13 @@ export const dynamic = "force-dynamic";
 
 /**
  * Responsáveis técnicos são cadastro à parte dos usuários do sistema
- * (requisitos.md 1.2): o engenheiro responsável por uma obra não precisa ter
- * login, e quem tem login não é necessariamente responsável por nada.
+ * (requisitos.md 1.2): o engenheiro que assina um boletim de medição não
+ * precisa ter login, e quem tem login não é necessariamente responsável por
+ * nada.
+ *
+ * Desde 09/09/2026 eles não são mais vinculados à obra — ali o campo virou
+ * operador, que é usuário do sistema e se atribui sozinho. O vínculo que resta
+ * é com a medição, o "Responsável AJA" do mockup.
  */
 export default async function ResponsaveisPage() {
   const usuario = await exigirPermissao("cadastro", "ver");
@@ -26,7 +31,7 @@ export default async function ResponsaveisPage() {
       registro: true,
       telefone: true,
       ativo: true,
-      _count: { select: { obras: true } },
+      _count: { select: { medicoes: true } },
     },
   });
 
@@ -51,7 +56,7 @@ export default async function ResponsaveisPage() {
       {responsaveis.length === 0 ? (
         <Vazio mensagem="Nenhum responsável cadastrado." />
       ) : (
-        <Tabela colunas={["Nome", "Cargo", "Registro", "Telefone", "Obras", "Situação"]}>
+        <Tabela colunas={["Nome", "Cargo", "Registro", "Telefone", "Medições", "Situação"]}>
           {responsaveis.map((r) => (
             <Linha key={r.id}>
               <Celula>
@@ -69,7 +74,7 @@ export default async function ResponsaveisPage() {
               <Celula apagada tabular>
                 {r.telefone ?? "—"}
               </Celula>
-              <Celula tabular>{r._count.obras}</Celula>
+              <Celula tabular>{r._count.medicoes}</Celula>
               <Celula>
                 <Situacao ativo={r.ativo} />
               </Celula>

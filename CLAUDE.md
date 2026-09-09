@@ -17,6 +17,9 @@ contratuais.
   `docs/raw/mockup.html`
 - Notas da chamada de validação técnica com o engenheiro do cliente (só consultar se precisar
   entender o porquê de uma decisão de escopo): `docs/raw/validacao-engenheiro.md`
+- Notas da apresentação do sistema à diretoria (09/09/2026), origem dos ajustes da etapa 13 —
+  **o avanço físico saiu do sistema** e arquivos de projeto não entram:
+  `docs/raw/apresentacao-diretoria.md`
 
 ## Stack
 

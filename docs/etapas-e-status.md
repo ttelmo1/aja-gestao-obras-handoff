@@ -5,10 +5,11 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 - **Contrato:** R$ 10.000,00 / 140h (R$70/h), 4 parcelas.
 - **Orçado por módulo:** 143h (folga negativa de 3h — ver
   [`escopo-e-orcamento.md`](escopo-e-orcamento.md)).
-- **Última atualização:** 07/09/2026 — etapas 7, 8 e 10 concluídas e a
-  mecânica dos relatórios pronta. As respostas do engenheiro em 07/09
-  (ponto #1 e #10 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md))
-  **destravaram as etapas 9 e 11**.
+- **Última atualização:** 09/09/2026 — **apresentação do sistema à diretoria**,
+  com o ambiente de homologação na mão do cliente. Abriu a **rodada de ajustes
+  pós-apresentação** (etapa 13), que remove o avanço físico do sistema e troca
+  o responsável técnico por atribuição momentânea de operador. Notas da reunião
+  em [`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md).
 
 ## Legenda
 
@@ -32,13 +33,18 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 9 | Motor do farol | 6h | ✅ | 5, 6 |
 | 10 | Auditoria — telas de histórico | 5h | ✅ | 3, 4 |
 | 11 | Relatórios XLS/PDF | 12h | 🟡 | 5, 6, 8 |
+| 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
+| 13 | Ajustes pós-apresentação à diretoria | ~5,5h | 🔵 | 4, 5, 7, 9 |
 | 14 | Empacotamento e instalação on-premise | fora das 140h | ⬜ | 12 |
 
 A **etapa 14 está fora das 140h contratadas** (`README.md`, "Instalação no
 cliente"): é *"a definir após visita técnica"*. Está no quadro porque **nada
 dela existe** e sem ela não há o que instalar — não é trabalho opcional, é
 trabalho não orçado.
-| 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
+
+A **etapa 13 não estava no orçamento** — é retrabalho vindo da apresentação, e
+está lançada aqui para ficar visível. As ~5,5h saem da folga da etapa 12 e da
+folga negativa de 3h do orçamento; ver a nota de horas na própria seção.
 
 **Marcos de validação com o cliente** (2 reuniões previstas em contrato,
 com dados fictícios — `npm run db:seed -- --demo`):
@@ -986,6 +992,128 @@ resposta do cliente ou de volume real de dados.
 
 **Encerramento:** com a etapa 12 fechada o sistema vai para a 2ª reunião de
 validação e, aceito, para a instalação — que é serviço fora das 140h
+contratadas (ver [`escopo-e-orcamento.md`](escopo-e-orcamento.md) e o ponto #11).
+
+## Etapa 13 — Ajustes pós-apresentação à diretoria 🔵
+
+Aberta em 09/09/2026, depois da apresentação do sistema em homologação para o
+Júnior (diretor), o Diego (gestor de engenharia) e o Henrique. Notas em
+[`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md).
+
+**O escopo desta rodada é deliberadamente curto: duas mudanças.** Remover o
+avanço físico de onde ele aparece — inclusive a **barra de percentual do
+cartão**, que fica sem dado — e trocar o responsável técnico pelo **operador com
+atribuição momentânea**. O código **continua no cartão**: o espaço para o
+operador vem da barra de físico que sai, então o cartão não perde informação
+para ganhar a nova.
+
+**Não estava no orçamento** — é retrabalho de requisito, e a maior parte dele é
+*remoção*, não construção. O compromisso assumido na reunião foi subir os
+ajustes no mesmo dia e avisar o cliente para retestar; a instalação foi falada
+para sexta 11/09, com segunda 14/09 como cenário mais provável.
+
+**Nota de horas:** ~5,5h estimadas, sem verba própria. Saem da folga da etapa 12
+(que lança ~3h no quadro e 7h no orçamento por módulo) e comem a folga negativa
+de 3h que já existia. Se o cliente trouxer mais ajustes depois do período de
+teste — e vai trazer, porque foi para isso que o ambiente foi liberado — a
+conversa passa a ser de escopo, não de folga.
+
+### Itens firmes
+
+1. **Remover o avanço físico do sistema** (~1,5h). Decisão do Júnior confirmada
+   pelo Diego: *"tanto do card principal quanto dos detalhes da obra"*. Alcance
+   real, porque o campo se espalhou por cinco lugares:
+   - o campo *"Avanço físico acumulado (%)"* do formulário de medição
+     (obrigatório hoje) e `percentualExecutado` no schema;
+   - o resumo da obra e o cartão do painel, que mostram execução física — no
+     cartão sai a **barra de percentual**, e é o espaço dela que recebe o
+     operador do item 2;
+   - **o farol perde um dos três critérios** — o de avanço físico atrás do
+     tempo decorrido, em `src/modules/farol/regras.ts` e nos
+     `LIMITES_PROVISORIOS`. Sobram proximidade do término e processo parado;
+   - os relatórios que trazem a coluna (etapa 11);
+   - o seed de demonstração, que hoje encena progressão física (25% → 40% →
+     48%) para mostrar a tela.
+
+   A coluna do banco pode ficar por uma migration só depois: remover da tela é
+   o que o cliente vai retestar. Decidir se cai também no schema — e o
+   histórico de medições já lançadas some com ela — vale registrar antes de
+   apagar. Ver ponto #5 de
+   [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
+
+2. **Responsável técnico vira operador, com atribuição momentânea** (~2,5h). O
+   maior item, e o único que constrói algo novo. O desenho fechado com o Diego:
+   - o campo passa a se chamar **Operador** — o problema era a nomenclatura:
+     *"quando fala responsável técnico ele imagina o responsável da obra"*;
+   - **sai a atribuição no cadastro do contrato**; entra a auto-atribuição pelo
+     próprio operador, na **aba resumo** da obra;
+   - ao concluir, **o nome permanece** como último que mexeu — registro, não
+     fila de tarefas: *"pode estar lá como último responsável que modificou"*;
+   - a atribuição vem com **observação em texto livre** — a justificativa do
+     atraso, *"aguardando foto, relatório"*;
+   - **só aparece em atenção ou crítico. Em verde, nada.**
+
+   Por que não é responsável fixo por obra: 15 a 20 contratos para três
+   pessoas, *"quem tiver, dependendo da urgência"* mexe, às vezes duas na mesma
+   obra. Qualquer desenho que amarre uma pessoa a um contrato está errado.
+
+   Já existe e **não precisa ser construído**: o responsável por medição na aba
+   Medições e a trilha de auditoria — foram conferidos ao vivo e aceitos.
+
+3. **Farol de medição: amarelo dez dias antes** (~0,5h). Confirmado duas vezes.
+   Mensal são 30 dias corridos, e o amarelo acende a partir do 20º. Vermelho
+   quando vencer, como já é. `modules/medicoes/periodicidade.ts` já calcula o
+   vencimento; é ligar o resultado ao motor do farol como mais um critério —
+   sem trocar o escopo do farol, que continua sendo da obra inteira.
+
+4. **Atualizar o seed de demonstração** (~0,5h) para que as obras fictícias
+   exercitem o que passou a existir: obra em atenção com operador atribuído e
+   observação, obra crítica sem ninguém atribuído. O cliente **pediu para não
+   zerar** a base — ela é o parâmetro de preenchimento deles, então precisa
+   mostrar o desenho novo.
+
+### Decidido em contrário — não fazer
+
+- **O código não sai do cartão.** O Júnior pediu (*"esse código não tem
+  necessidade"*), mas ele é a chave que liga a obra no sistema à pasta dela na
+  rede, e o Diego vai padronizar as duas pontas: *"o que tiver aqui vai estar na
+  rede também, é fundamental para a gente"*. Quem usa os dois lados todo dia é o
+  setor de engenharia. O lugar do operador no cartão sai da barra de físico, que
+  perde o dado de qualquer forma.
+- **O nome da empresa no cartão fica em aberto**, não implementado: era o outro
+  pedido do Júnior para esse espaço, e o desenho do Diego (operador) passou por
+  cima dele sem que fosse retirado. Ver ponto #20 de
+  [`pontos-para-reuniao.md`](pontos-para-reuniao.md) — é pergunta para a próxima
+  conversa, com a tela aberta.
+
+### Bloqueado por falta de resposta do cliente
+
+5. **Checklist de documentos padrão** (~1,5h, não começa). A aba Documentos
+   deve listar o que se espera de cada obra — *não anexado* ou *anexado em tal
+   data* — com espaço livre no fim para o resto. Motivo do Júnior: *"acaba, não
+   tem erro da pessoa esquecer"*. **Falta a lista dos documentos**, que ficou
+   com eles; ver ponto #18 de
+   [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
+
+6. **Matriz de permissões linha a linha.** Os quatro perfis ficam (fechado na
+   reunião), mas a devolutiva da matriz ficou com o Diego e o Henrique, junto
+   com o pedido do Júnior de que **só o administrador apague qualquer coisa**.
+   Ver pontos #3 e #8.
+
+7. **Cards de totais no topo do painel.** Pedido de remoção pelo Júnior e
+   defendido por Diego e Henrique na mesma reunião; o Diego assumiu resolver
+   internamente. **Nada a fazer até a devolutiva** — ver ponto #19.
+
+### Fora de escopo, confirmado nesta reunião
+
+- **Arquivos de projeto (DWG/RVT) não entram** — continuam na rede. Este
+  sistema administra processo, não a obra: eles já têm outro sistema para isso.
+  Encerra o ponto #2 e, com ele, o risco de pré-visualização e versionamento de
+  projeto virarem escopo.
+- **Sem aplicativo de campo.** O engenheiro em obra não acessa o sistema.
+- **Sem carga de planilha de quantitativos nem de cronograma
+  físico-financeiro** — levantados e descartados na conversa que removeu o
+  físico.
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 
@@ -1059,4 +1187,3 @@ trabalhar. Ver ponto #11 de
 **Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
 cenário mais provável. Como os nove itens acima não existem, o prazo depende
 de eles serem construídos antes — e do retorno do checklist.
-contratadas (ver [`escopo-e-orcamento.md`](escopo-e-orcamento.md) e o ponto #11).

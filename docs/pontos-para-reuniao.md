@@ -8,29 +8,35 @@ imediato, não retrabalho.
 Ordenados por custo de mudar, do mais caro para o mais barato.
 
 - **Status:** `🔴 aberto` · `🟡 assumido, a confirmar` · `🟢 confirmado`
-- **Última atualização:** 07/09/2026
+- **Última atualização:** 09/09/2026 — **apresentação do sistema à diretoria**
+  (Júnior, Diego e Henrique). Notas em
+  [`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md). Fechou os
+  pontos #2, #5 e #8, avançou #1, #3, #11 e #13, e abriu #18, #19 e #20.
 
 ## Índice
 
 | # | Ponto | Status | Custo de mudar |
 |---|---|---|---|
 | 1 | Critérios de cor do farol — escopo e cores confirmados, limites em aberto | 🟡 | Baixo |
-| 2 | Upload de DWG/RVT | 🔴 | Baixo a alto |
-| 3 | Permissões por perfil | 🟡 | Baixo |
+| 2 | Upload de DWG/RVT — não entram, projeto fica na rede | 🟢 | ~~Baixo a alto~~ — resolvido |
+| 3 | Permissões por perfil — quatro perfis mantidos, matriz pendente | 🟡 | Baixo |
 | 4 | Obra ↔ contrato é 1:1 | 🟢 | ~~Alto~~ — resolvido |
-| 5 | Percentual executado é digitado | 🟡 | Médio |
+| 5 | Percentual executado — avanço físico sai do sistema | 🟢 | ~~Médio~~ — resolvido |
 | 6 | Setores de tramitação | 🟡 | Baixo |
 | 7 | Numeração de medições e rerratificações | 🟡 | Médio |
-| 8 | Exclusão de registros | 🟡 | Médio |
+| 8 | Exclusão de registros — cascata reversa aceita, só administrador apaga | 🟢 | ~~Médio~~ — resolvido |
 | 9 | Retenções além do ISS | 🔴 | Médio |
 | 10 | Conteúdo dos relatórios — público e layout confirmados | 🟡 | Médio |
 | 11 | Forma de instalação no servidor | 🔴 | Médio |
 | 12 | Recuperação de senha sem servidor de e-mail | 🟡 | Baixo |
-| 13 | Periodicidade da medição e o que conta como atrasada | 🟡 | Baixo |
+| 13 | Periodicidade da medição — mensal e amarelo 10 dias antes confirmados | 🟡 | Baixo |
 | 14 | Consórcio: contrato com duas empresas | 🟡 | Baixo |
 | 15 | Contratos de manutenção não são obras — parcela fixa em Nilópolis | 🟡 | Baixo |
 | 16 | Onde a tramitação mora: por medição ou por etapa | 🟡 | Médio |
 | 17 | Limite legal de acréscimo contratual | 🟡 | Baixo |
+| 18 | Quais são os documentos padrão da lista de conferência | 🔴 | Baixo |
+| 19 | Cards de totais no topo do painel: ficam ou saem | 🔴 | Baixo |
+| 20 | Empresa ou operador no cartão da obra | 🟡 | Baixo |
 
 ---
 
@@ -92,6 +98,23 @@ são três faixas mais o cinza, confirmadas.
 `LIMITES_PROVISORIOS`, e calibrar é editar constante. A hipótese cara (trocar
 o escopo do farol) está descartada.
 
+**Atualização (apresentação, 09/09/2026): o farol perde um dos três
+critérios.** Com o avanço físico fora do sistema (ponto
+[#5](#5-o-percentual-executado-é-digitado-pelo-usuário--resolvido-por-remoção)),
+o critério *"avanço físico atrás do tempo decorrido"* deixa de ter dado de
+entrada e sai da tabela acima. Sobram **proximidade do término** e **processo
+parado no mesmo setor** — mais os status (paralisada, finalizada, sem ordem de
+início). A lógica "basta um critério acender" continua valendo, e calibrar
+ficou mais simples: são dois pares de números, não três.
+
+Confirmado também o **prazo de medição como sinal**, que o mockup sugeria e o
+engenheiro havia descartado como escopo do farol: o Júnior pediu, e o Diego
+confirmou na recapitulação, **amarelo dez dias antes** do vencimento da próxima
+medição e vermelho quando vencida. Isso não recoloca o farol da obra sobre
+prazo de medição — o farol segue sendo da obra inteira; o que entra é o prazo de
+medição como mais um critério dele, com número já definido pelo cliente (ver
+ponto [#13](#13-periodicidade-da-medição-e-o-que-conta-como-atrasada-)).
+
 **Atualização (etapa 9, 07/09/2026):** o motor foi fechado com o escopo
 confirmado, e o painel passou a **escrever no cartão** o motivo do alerta, não
 só no hover. Nos dados de demonstração as quatro cores aparecem, e duas obras
@@ -111,7 +134,23 @@ medição, virar a chave é ligar esse resultado ao motor — trabalho de minuto
 não de reescrita.
 **Onde:** `src/modules/farol/regras.ts` e `src/components/ui/badge-farol.tsx`.
 
-## 2. Upload de arquivos de engenharia (DWG/RVT) 🔴
+## 2. Upload de arquivos de engenharia (DWG/RVT) 🟢 RESOLVIDO
+
+> **Respondido na apresentação à diretoria, 09/09/2026: os arquivos de projeto
+> não entram no sistema.** *"Não tem, continua na rede."* Perguntado
+> diretamente se DWG e RVT entrariam, o Júnior respondeu que projeto é para
+> consulta técnica e continua no compartilhamento de rede.
+>
+> O raciocínio dele vale mais que a resposta, porque decide casos futuros:
+> **este sistema administra processo, não a obra** — *"isso é para administrar
+> processo, de atraso, prazo"*, e para gerir obra *"a gente já tem outro
+> sistema"*. Pedido de funcionalidade que sirva à execução da obra, e não ao
+> processo dela, está fora de escopo por definição do cliente.
+>
+> **Consequência:** a trava fica como está, permanentemente.
+> `ENGENHARIA_HABILITADA` continua `false` e passa a ser decisão registrada, não
+> pendência. Nada de pré-visualização, versionamento de projeto ou controle de
+> revisão — as três coisas que poderiam ter estourado o orçamento aqui.
 
 > **Atualização (etapa 7, 07/09/2026):** o módulo documental está pronto e a
 > trava continua de pé. Quem tenta enviar um `.dwg` recebe *"Formato .dwg
@@ -151,6 +190,33 @@ Declarado em aberto nos requisitos (seção 3).
 
 Ninguém edita ou apaga a auditoria — nem o administrador.
 
+> **Parcialmente respondido na apresentação, 09/09/2026.**
+>
+> **Os quatro perfis ficam.** O Júnior leu a operação como tendo só dois níveis
+> — quem administra e quem opera — e chegou a dizer que gestor e visualizador
+> não existem. Fechou-se com o Diego mantendo os quatro, pelo argumento de que
+> perfil sem usuário não custa nada e o dia que precisarem de alguém que só
+> visualize, existe: *"tá excelente, vamos trabalhar dessa forma"*. Não há
+> mudança de código aqui.
+>
+> **Quem cai em cada um:** Diego e Henrique são **administradores** e cadastram
+> as obras (são 15 a 20 contratos, não 15 obras por semana — cadastrar cabe a
+> eles). Quem for **operacional** alimenta a obra depois de cadastrada. O
+> Júnior é diretor e só olha: na prática o perfil dele é o de visualização, com
+> a ressalva de que ele não vai lidar com autorizar exclusão nem gerir usuário.
+>
+> **Ninguém deve ver só as obras em que é responsável** — e a pergunta perdeu
+> sentido: com três pessoas para 15–20 contratos, *"quem tiver, dependendo da
+> urgência"* mexe, às vezes duas pessoas na mesma obra. É a mesma razão que
+> produziu a atribuição momentânea do ponto
+> [#20](#20-o-que-ocupa-o-lugar-do-código-no-cartão-da-obra-).
+>
+> **Segue pendente:** a **matriz linha a linha**. Foi enviada por WhatsApp e a
+> devolutiva ficou com o Diego e o Henrique — *"a gente vai ter com Henrique
+> isso, te passo"*. Também em aberto se querem **renomear** os perfis (gestor
+> virar administrador, operacional virar gestor) — ajuste de rótulo, oferecido
+> e não pedido.
+
 **Perguntar:** quatro perfis bastam? Quem na empresa cai em cada um? Existe
 alguém que deva ver só as obras em que é responsável?
 
@@ -186,7 +252,33 @@ Dois assuntos novos saíram desta mesma conversa e viraram os pontos
 
 **Onde:** `prisma/schema.prisma`, model `Obra`.
 
-## 5. O percentual executado é digitado pelo usuário 🟡
+## 5. O percentual executado é digitado pelo usuário 🟢 RESOLVIDO POR REMOÇÃO
+
+> **Decidido na apresentação à diretoria, 09/09/2026: o avanço físico sai do
+> sistema.** *"Tira o físico, deixa só o financeiro"* — e, na recapitulação com
+> o Diego, *"tanto do card principal quanto dos detalhes da obra"*.
+>
+> **O motivo não é desinteresse pelo dado, é desconfiança nele.** Sem alguém
+> alimentando semanalmente, o percentual não é verdadeiro, e um físico falso ao
+> lado de um financeiro correto estraga a leitura das duas coisas: *"para eu
+> bater o físico, eu tinha que ter alguém alimentando essa porra todo dia"*.
+> Eles têm casos reais nos dois sentidos — uma obra com financeiro à frente do
+> físico, outra 100% executada e sem medir. Ou seja: a informação **importa**
+> para eles, mas não neste sistema, alimentada deste jeito.
+>
+> **Duas alternativas foram levantadas e descartadas na mesma conversa**, e
+> ficam registradas porque são a porta de entrada se um dia quiserem o físico de
+> volta: subir a **planilha de quantitativos** com o executado item a item
+> (descartada por exigir alguém em obra toda semana) e subir o **cronograma
+> físico-financeiro** para acompanhar **por categoria** em vez de item unitário
+> (defendida pelo Henrique, encerrada pelo Júnior). Nenhuma das duas está
+> orçada, e o que as barrou foi processo, não tecnologia.
+>
+> **Consequência:** sai o campo do formulário de medição, sai do resumo e do
+> cartão da obra, sai dos relatórios, e o farol perde o critério de atraso
+> físico (ponto [#1](#1-critérios-exatos-de-cada-cor-do-farol-)). O que o
+> sistema calcula sozinho — % medido, saldo a medir, contratado × medido —
+> continua igual: é tudo financeiro.
 
 Os requisitos pedem cálculo automático de "% executado", mas avanço **físico**
 não sai de dado financeiro: 40% do valor medido não significa 40% de obra
@@ -257,6 +349,26 @@ medição anterior à instalação.
 - **Contratantes, responsáveis e setores:** exclusão física só quando ninguém
   os referencia. Em uso, o sistema recusa e oferece desativar — some das
   listas de seleção sem reescrever o histórico de contratos já assinados.
+
+> **Respondido na apresentação, 09/09/2026 — testado ao vivo e aceito.**
+>
+> O Diego tentou apagar uma obra como administrador, bateu na trava e o caminho
+> foi explicado na tela: **cancelar não é excluir** (a obra cancelada continua
+> no painel, com status), e para excluir de fato apaga-se **de trás para
+> frente** — documentos, medições, depois a obra. Ele completou a exclusão e
+> aceitou a regra com atrito consciente: *"caso seja necessário depois eu faço
+> de trás pra frente, porque aqui tem um trabalho danado"*.
+>
+> Então **não há cascata automática**, e é isso que eles querem: a obra criada
+> por engano se resolve pelo status *Cancelada*, e apagar de verdade é raro e
+> deliberado. Nada de "arquivar e recuperar" — o status já cobre o caso.
+>
+> **O Júnior pediu um aperto:** *"o único que tem possibilidade de apagar
+> alguma coisa, o administrador"*. Hoje o gestor apaga medição, tramitação,
+> documento e rerratificação. Isso entra na devolutiva da matriz de permissões
+> (ponto [#3](#3-detalhamento-das-permissões-por-perfil-)) — vale confirmar com
+> o Diego antes de mexer, porque ele opera junto com a equipe e é quem sente o
+> custo de ter que apagar tudo em nome deles.
 
 **Perguntar:** apagar uma obra deve mesmo levar junto medições, documentos e
 tramitação? Ou obra encerrada por engano deveria ser "arquivada" e
@@ -359,6 +471,22 @@ infraestrutura do cliente"* e está fora das 140h.
 > **Ainda em aberto, no checklist da seção 9 daquele documento:** edição exata
 > do Windows, **IP fixo ou DHCP** (quebra o atalho se mudar), nobreak,
 > suspensão desligada, antivírus, e quem executa a atualização.
+
+> **Reforçado na apresentação, 09/09/2026 — e com prazo na mesa.** Ao saber que
+> o ambiente de teste está numa hospedagem pública, o Júnior reagiu: *"eu não
+> queria que isso fosse público, não queria essa informação"*, e perguntou se
+> não dava para rodar na rede interna já. Aceitou seguir público **durante o
+> período de teste**, com a ressalva — dita na reunião — de que ajuste em
+> ambiente interno exige ir ao local.
+>
+> **Duas consequências práticas.** A primeira: **dado real não sobe ao ambiente
+> de teste**. Eles vão cadastrar obras reais lá para testar, e o combinado
+> assumido é que essa base é descartável e não vira a base de produção. A
+> segunda: a instalação foi falada para **sexta, 11/09**, com **segunda, 14/09**
+> como cenário mais provável — reconhecido na própria reunião que eles não
+> fecham todas as definições até sexta. O que depende deles para a instalação
+> está nos pontos #3, #18 e #19.
+
 **Plano detalhado da instalação e do ciclo de atualização:**
 [`instalacao-on-premise.md`](instalacao-on-premise.md) — desenho físico (onde
 ficam banco, arquivos e aplicação), entrega por GitHub Actions + Release, e o
@@ -470,6 +598,28 @@ então ela virou campo da obra na etapa 5.
 4. "Medição atrasada" é sobre **fazer** a medição, ou sobre o **processo dela
    estar parado** no órgão? São coisas diferentes, e a segunda depende da
    tramitação (etapa 6).
+
+> **Parcialmente respondido na apresentação, 09/09/2026.**
+>
+> **Mensal, 30 dias, contados da ordem de início** — é como o Júnior descreveu
+> a rotina: *"eu faço a cada 30 dias (…) do prazo que eu boto lá ordem de
+> início, daqui a 30 dias eu tenho que fazer a medição"*. Confirma o padrão
+> mensal e a contagem em dias corridos. Não confirma se a periodicidade varia
+> entre contratos, então o campo continua na tela.
+>
+> **Amarelo dez dias antes, vermelho quando vencer** — pedido pelo Júnior e
+> confirmado pelo Diego na recapitulação. O propósito declarado do amarelo é
+> ser gatilho de trabalho, não decoração: *"já pra pessoa começar a se
+> programar, aí tem que começar a pedir relatório"*. É o número que faltava para
+> ligar prazo de medição ao farol.
+>
+> **Continua em aberto:** se a periodicidade varia por órgão, se existe
+> carência entre ordem de início e primeira medição, e a pergunta 4 abaixo —
+> "atrasada" é sobre *fazer* a medição ou sobre o *processo dela* estar parado.
+> A atribuição momentânea do operador (ponto
+> [#20](#20-o-que-ocupa-o-lugar-do-código-no-cartão-da-obra-)) reduz a urgência
+> dessa última: quando o processo estiver parado por algo externo, o operador
+> escreve o motivo no card.
 
 **Atualização (07/09/2026):** a manutenção de Nilópolis é medida em parcela
 mensal fixa (ver ponto [#15](#15-contratos-de-manutenção-não-são-obras-)) — um
@@ -631,6 +781,109 @@ aditivado — é assim que o limite legal é apurado.
 
 ---
 
+## 18. Quais são os documentos padrão da lista de conferência 🔴
+
+**Pedido novo, surgido na apresentação de 09/09/2026.** A aba Documentos hoje
+lista o que foi anexado. O Júnior quer o inverso: que ela liste **o que se
+espera** de cada obra, dizendo *não anexado* ou *anexado em tal data*, com um
+espaço livre no fim para o que não está na lista.
+
+O motivo é o que interessa: *"acaba, não tem erro da pessoa esquecer"*. A lista
+não é catálogo — é conferência, e serve para o operador saber o que falta sem
+depender de memória. Encaixa no requisito transversal que ele repetiu a reunião
+toda, de que o sistema tem que entregar a informação sem exigir esforço.
+
+**Assumimos:** nada ainda. **Não implementado** — falta o insumo.
+
+**Perguntar — é a pergunta que trava o item:** qual é a lista? Ele citou de
+exemplo **contrato, ordem de início, ART, publicação e empenho**, e disse que a
+documentação é *"quase que padrão"*. Faltam três respostas:
+
+1. A **lista completa**, com o nome que eles usam para cada documento.
+2. A lista é a **mesma para todo contrato**, ou varia por contratante? Se
+   variar, é lista por contratante e não constante no código.
+3. Documento da lista que não se aplica a uma obra: fica marcado *"não se
+   aplica"* — como nas etapas de tramitação — ou fica pendente para sempre?
+
+**Custo de mudar:** baixo. Se a lista é fixa, é constante mais uma consulta que
+cruza o esperado com o anexado — a estrutura documental já guarda tipo de
+documento. Vira médio se a lista variar por contratante (cadastro novo) ou se
+pedirem que a pendência documental **acenda no farol**, que é decisão de regra,
+não de tela.
+**Onde:** `src/modules/documentos/` e a aba Documentos da obra.
+
+## 19. Cards de totais no topo do painel: ficam ou saem 🔴
+
+**Aberto na apresentação de 09/09/2026, e ainda em disputa do lado do cliente.**
+
+O Júnior pediu para remover os cards de resumo do topo do painel — valor
+contratado, valor medido, saldo a medir somados de todos os contratos: *"isso aí
+eu pedi para você tirasse"*. Na recapitulação, **Diego e Henrique defenderam o
+oposto**: *"quanto que nós temos em contrato hoje é algo que ele me pergunta com
+frequência"*, e mover para outra tela *"deixa de ser prático"*.
+
+**Assumimos: não mexer.** O Diego assumiu resolver internamente — *"nós
+explicamos e ele não falou mais, talvez ele tenha entendido que é necessário"* —
+e a leitura mais provável é que os cards ficam, já que quem pede o número ao
+Diego hoje é justamente o Júnior. Mexer antes da devolutiva é o pior dos
+mundos: é o único item da reunião que custaria retrabalho de layout.
+
+**Perguntar:** o Júnior confirma que os totais ficam? Se ele insistir em tirar,
+a saída é um **painel-resumo separado** — o que ele mesmo sugeriu ao falar de
+*"um geralzão"* — e aí vale perguntar se esse painel é a tela de entrada dele,
+diferente da tela de entrada de quem opera. Isso seria escopo novo, não ajuste.
+
+**Custo de mudar:** baixo para tirar, médio para virar tela própria com
+navegação por perfil.
+**Onde:** painel de obras, `src/app/(app)/obras/`.
+
+## 20. Empresa ou operador no cartão da obra 🟡
+
+**Aberto na apresentação de 09/09/2026.** Duas soluções diferentes foram
+pedidas para o mesmo lugar do cartão, por pessoas diferentes, e a segunda
+passou por cima da primeira sem que a primeira fosse retirada.
+
+O ponto de partida comum às duas é a saída do **responsável técnico**, porque
+*"geralmente são sempre os mesmos"* e informação que nunca muda não ajuda a
+decidir nada.
+
+**O espaço vem da barra de avanço físico, não do código.** O Júnior sugeriu
+tirar o código (*"esse código não tem necessidade"*), mas isso foi decidido em
+contrário: **o código fica no cartão**. Com o físico fora do sistema (ponto
+[#5](#5-o-percentual-executado-é-digitado-pelo-usuário--resolvido-por-remoção)),
+a barra de percentual do cartão deixa de ter dado e é ela que abre lugar para o
+operador — o cartão não perde informação nenhuma para ganhar a nova.
+
+**O que o Júnior pediu**, na primeira parte da reunião: que o campo mostre o
+**nome da empresa**, porque trabalham com várias e é isso que ele quer
+identificar de relance — *"o nome da empresa barra o nome do responsável"*.
+
+**O que o Diego fechou**, na recapitulação: que o campo mostre o **operador** —
+quem está tratando aquela obra agora. Aqui o problema era **nomenclatura, não o
+campo**: *"quando fala responsável técnico ele imagina o responsável da obra"*.
+
+**Assumimos** o desenho do Diego, porque é o que resolve o pedido de origem do
+Júnior (olhar um card vencido e saber que já tem alguém trabalhando nele) e
+porque foi o combinado explícito do fim da reunião. Ele está detalhado como
+item firme da rodada pós-apresentação em
+[`etapas-e-status.md`](etapas-e-status.md).
+
+**Perguntar:** o nome da **empresa** ainda é necessário no cartão? Cabe ao lado
+do operador sem transformar o cartão na parede de informação que o Júnior não
+quer — mas é ele quem tem que dizer se quer os dois. Vale perguntar com a tela
+aberta, mostrando o cartão já com operador.
+
+**Já resolvido dentro deste ponto:** o **código da obra fica** — no cadastro e
+no cartão. O Diego usa nomenclatura própria por obra na rede e vai padronizar:
+*"o que tiver aqui vai estar na rede também, é fundamental para a gente"*. Isso
+contraria o pedido do Júnior de tirá-lo do cartão, e a decisão foi manter: é a
+chave que liga a obra no sistema à pasta dela na rede, e quem vai usar os dois
+lados todo dia é o setor de engenharia. A auto-numeração quando o campo fica em
+branco continua servindo.
+
+**Custo de mudar:** baixo — é conteúdo de cartão.
+**Onde:** `src/components/obras/cartao-obra.tsx` (ou equivalente) e o painel.
+
 ## Pontos já resolvidos 🟢
 
 Registrados para não voltarem à mesa:
@@ -646,6 +899,19 @@ Registrados para não voltarem à mesa:
   04/09/2026): sem lotes, sem contratos complementares, sem guarda-chuva.
 - **Banco novo**, sem migração de dados legados.
 - **Exportação em XLS e PDF.**
+- **Arquivos de projeto (DWG/RVT) não entram no sistema** (ponto #2, confirmado
+  em 09/09/2026): continuam na rede. O sistema administra **processo**, não a
+  obra — eles já têm outro sistema para gerir obra.
+- **Avanço físico sai do sistema** (ponto #5, decidido em 09/09/2026): só
+  financeiro. Planilha de quantitativos e cronograma físico-financeiro foram
+  levantados e descartados na mesma conversa.
+- **Auditoria aprovada como está**, incluindo o registro de entrada e saída de
+  sessão, que havia sido oferecido como removível: *"não, pode deixar"*.
+- **A base de demonstração não é zerada** para a entrega de teste: o Diego
+  preferiu manter as obras fictícias como parâmetro de preenchimento e criar as
+  reais ao lado.
+- **O engenheiro em campo não acessa o sistema**: levanta em obra, o escritório
+  lança. Aplicativo de campo foi mencionado como ideia futura, sem escopo.
 
 ## Pontos a levantar na reunião que não são de escopo
 

@@ -52,3 +52,6 @@ next-env.d.ts
 
 # client gerado pelo Prisma
 /src/generated
+
+# pacotes de instalação gerados por scripts/empacotar.mjs
+/dist

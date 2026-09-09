@@ -30,9 +30,12 @@ const nextConfig: NextConfig = {
    * empacote de uma máquina com dados e descubra depois.
    *
    * `docs/` e `tests/` são só peso: 480KB que a aplicação nunca lê em runtime.
+   * `scripts/` sai porque o pacote monta a própria pasta `scripts\` com os
+   * `.ps1` da instalação — sem a exclusão, as duas se misturam e o cliente
+   * recebe o empacotador junto.
    */
   outputFileTracingExcludes: {
-    "/*": ["storage/**/*", "docs/**/*", "tests/**/*"],
+    "/*": ["storage/**/*", "docs/**/*", "tests/**/*", "scripts/**/*"],
   },
   /*
    * `.env` NÃO sai por aqui — foi testado: o Next o copia para

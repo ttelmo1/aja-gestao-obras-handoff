@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Pacotes gerados por scripts/empacotar.mjs: é build compilado, com
+    // node_modules dentro. Lintar isso são milhares de avisos sobre código
+    // que não é nosso.
+    "dist/**",
   ]),
 ]);
 

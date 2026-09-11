@@ -5,9 +5,10 @@
 $ErrorActionPreference = "Stop"
 
 # Padrões da instalação. Ver docs/instalacao-on-premise.md, seção 2.
-$script:RaizPadrao   = "C:\aja-obras"
+$script:RaizPadrao   = "D:\aja-obras"
 $script:NomeServico  = "AjaObras"
 $script:PortaPadrao  = 3000
+$script:TarefaBackup = "AJA Obras - backup"
 
 function Escrever-Passo([string]$Texto) {
   Write-Host ""
@@ -143,7 +144,7 @@ function Apontar-Current([string]$Raiz, [string]$Destino) {
   Liga o .env da raiz dentro da release.
 
   A aplicação lê o .env do diretório de trabalho, que é `current`. O arquivo de
-  verdade mora em C:\aja-obras\.env — fora das releases, para sobreviver a
+  verdade mora em D:\aja-obras\.env — fora das releases, para sobreviver a
   qualquer atualização: ele guarda o SESSION_SECRET, e sobrescrevê-lo derruba a
   sessão de todos os usuários ao mesmo tempo.
 

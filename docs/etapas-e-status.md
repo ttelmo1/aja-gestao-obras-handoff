@@ -1291,10 +1291,24 @@ e roda com `tsx`, que é dependência de desenvolvimento e não vai no pacote.
 
 O checklist da máquina foi enviado ao Júnior em **09/09/2026** e está na
 **seção 9** de [`instalacao-on-premise.md`](instalacao-on-premise.md).
-Aguardando: edição do Windows, **IP fixo ou DHCP**, espaço em disco,
-PostgreSQL preexistente, antivírus, nobreak, e se a máquina é usada para
-trabalhar. Ver ponto #11 de
-[`pontos-para-reuniao.md`](pontos-para-reuniao.md).
+**Respondido em parte pelo Henrique em 11/09/2026:** Windows 10 Pro 64 bits,
+IP fixo 192.168.1.222, D: com 3,5 TB livres (instalar em `D:\aja-obras`),
+ligada 24x7, sem nobreak, ninguém trabalha nela.
+
+**Checklist encerrado em 11/09/2026.** O resto é infraestrutura do cliente
+(antivírus, energia, suspensão), com o risco registrado por escrito. Na mesma
+data:
+
+- `D:\aja-obras` virou o padrão dos três scripts;
+- o `instalar.ps1` ganhou o passo 9: agenda o backup diário e roda o primeiro
+  pela própria tarefa, como SYSTEM;
+- o `backup.ps1` passou a manter **uma** cópia acumulada dos documentos. Antes
+  eram 30 cópias inteiras no mesmo disco das pastas da empresa;
+- o empacotador passou a gravar **BOM nos `.ps1`**. Sem ele, o Windows
+  PowerShell 5.1 lê o arquivo como ANSI, o "—" vira aspas curvas e os scripts
+  quebram na leitura.
+
+Ver ponto #11 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
 **Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
 cenário mais provável. O código não é mais o gargalo: o prazo depende do

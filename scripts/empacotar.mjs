@@ -19,6 +19,7 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -59,7 +60,7 @@ const versao = argumento("versao");
 if (!versao) {
   abortar("informe a versão: --versao 2026.09.15");
 }
-// A versão vira nome de pasta em C:\aja-obras\releases\ e nome de arquivo.
+// A versão vira nome de pasta em D:\aja-obras\releases\ e nome de arquivo.
 if (!/^[0-9A-Za-z._-]+$/.test(versao)) {
   abortar(`versão inválida: "${versao}". Use apenas letras, números, ponto, hífen e underscore.`);
 }
@@ -284,6 +285,22 @@ cpSync(instalacao, path.join(pacote, "scripts"), {
   // resolvem; uma segunda cópia em scripts/ só daria para rodar errado.
   filter: (origem) => path.basename(origem) !== "criar-admin.mjs",
 });
+
+// O Windows PowerShell 5.1, o que vem no Windows 10 do cliente, lê .ps1 sem BOM
+// na página de código ANSI. Em Windows-1252 o "—" em UTF-8 (E2 80 94) vira
+// "â€" seguido de 0x94, que é aspas curvas — e o PowerShell aceita aspas
+// curvas como fim de string: o script quebra antes de rodar a primeira linha.
+// Com o BOM ele lê como UTF-8. Posto aqui, e não confiado ao editor de quem
+// mexer nos scripts, porque BOM some sem ninguém ver.
+const BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+for (const nome of readdirSync(path.join(pacote, "scripts"))) {
+  if (!nome.endsWith(".ps1")) continue;
+  const arquivo = path.join(pacote, "scripts", nome);
+  const bytes = readFileSync(arquivo);
+  if (!bytes.subarray(0, 3).equals(BOM)) {
+    writeFileSync(arquivo, Buffer.concat([BOM, bytes]));
+  }
+}
 
 // ---------------------------------------------------------------- zip
 

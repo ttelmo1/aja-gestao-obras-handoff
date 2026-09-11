@@ -493,6 +493,23 @@ infraestrutura do cliente"* e está fora das 140h.
 > do Windows, **IP fixo ou DHCP** (quebra o atalho se mudar), nobreak,
 > suspensão desligada, antivírus, e quem executa a atualização.
 
+> ### Checklist respondido em parte pelo Henrique — 11/09/2026
+>
+> Windows 10 Pro 22H2 64 bits, Xeon com 16 GB, **IP fixo 192.168.1.222**,
+> disco D: com 3,5 TB livres, ligada 24x7, **sem nobreak**, ninguém trabalha
+> nela, antivírus desconhecido. Detalhe e consequências na seção 9 de
+> [`instalacao-on-premise.md`](instalacao-on-premise.md).
+>
+> Os prints mostram a máquina **com internet**, o que contradiz o *"tudo aqui
+> é estanque"*. Para o projeto é neutro: nada depende de internet em runtime.
+>
+> **Decidido em 11/09:** o checklist para aqui. Antivírus (o Henrique não vai
+> investigar), suspensão, energia e faixa de DHCP são infraestrutura do
+> cliente. O risco fica com eles, **registrado por escrito em e-mail de
+> ressalva**. Instalação em **`D:\aja-obras`**, com o backup diário agendado
+> pelo próprio `instalar.ps1` no mesmo disco. A cópia para fora da máquina é
+> do cliente.
+
 > **Reforçado na apresentação, 09/09/2026 — e com prazo na mesa.** Ao saber que
 > o ambiente de teste está numa hospedagem pública, o Júnior reagiu: *"eu não
 > queria que isso fosse público, não queria essa informação"*, e perguntou se

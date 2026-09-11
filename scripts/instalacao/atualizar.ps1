@@ -22,12 +22,12 @@
   janela de manutenção combinada.
 
 .EXEMPLO
-  .\atualizar.ps1 -Pacote D:\aja-obras-2026.09.15.zip
+  .\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-2026.09.15.zip
 #>
 param(
   # O .zip da release. O .sha256 tem que estar na mesma pasta.
   [Parameter(Mandatory = $true)][string]$Pacote,
-  [string]$Raiz = "C:\aja-obras",
+  [string]$Raiz = "D:\aja-obras",
   [int]$Porta = 3000,
   # Só para emergência: aplica sem dump. Não use em operação normal.
   [switch]$SemBackup

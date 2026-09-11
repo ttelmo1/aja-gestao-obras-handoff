@@ -4,16 +4,16 @@
 
 .DESCRIÇÃO
   Roda uma vez. É o script de maior risco do conjunto, porque cria o que os
-  outros assumem existir: a árvore em C:\aja-obras, o .env com o segredo de
-  sessão, o banco, o schema, o primeiro administrador e o serviço do Windows.
+  outros assumem existir: a árvore em D:\aja-obras, o .env com o segredo de
+  sessão, o banco, o schema, o primeiro administrador, o serviço do Windows e
+  a tarefa diária de backup.
 
   O que ele NÃO faz, de propósito:
     - não instala Node nem PostgreSQL. Os dois têm instalador próprio, com
       telas e opções que não vale a pena automatizar numa instalação única;
       ele apenas confere se estão presentes e para com instrução clara.
     - não configura IP fixo nem firewall. São mudanças na rede do cliente, e
-      quem responde por elas é quem administra a rede — estão no checklist da
-      seção 9 do plano.
+      quem responde por elas é quem administra a rede.
 
   Pré-requisitos na máquina (levados no pen drive, seção 6 do plano):
     Node.js (mesma versão maior do .nvmrc), PostgreSQL, NSSM.
@@ -22,7 +22,9 @@
   .\instalar.ps1 -SenhaPostgres "..." -EmailAdmin admin@empresa.local -SenhaAdmin "..."
 #>
 param(
-  [string]$Raiz = "C:\aja-obras",
+  # D: e não C:: na máquina do cliente o C: tem 118 GB e o D: tem 3,6 TB, e
+  # os documentos só crescem. O Postgres fica no C:, onde o instalador põe.
+  [string]$Raiz = "D:\aja-obras",
   [int]$Porta = 3000,
   # Senha do superusuário postgres, para criar banco e usuário da aplicação.
   [Parameter(Mandatory = $true)][string]$SenhaPostgres,
@@ -32,7 +34,11 @@ param(
   [string]$UsuarioBanco = "aja",
   [string]$NomeBanco = "aja_obras",
   # Onde está o nssm.exe, se não estiver no PATH.
-  [string]$Nssm = "nssm"
+  [string]$Nssm = "nssm",
+  # Onde o backup diário grava. Padrão: <raiz>\backups (mesmo disco — ver o
+  # limite no cabeçalho do backup.ps1).
+  [string]$DestinoBackup = "",
+  [string]$HorarioBackup = "22:00"
 )
 
 . "$PSScriptRoot\comum.ps1"
@@ -44,13 +50,14 @@ if (-not (Test-Path (Join-Path $pacote "server.js"))) {
   Parar "rode este script de dentro do pacote extraído (a pasta que tem server.js)."
 }
 $versao = (Get-Content (Join-Path $pacote "versao.txt") -Raw).Trim()
+if (-not $DestinoBackup) { $DestinoBackup = Join-Path $Raiz "backups" }
 
 Write-Host "Instalação inicial — versão $versao" -ForegroundColor White
 Write-Host "  raiz: $Raiz"
 
 # ------------------------------------------------------- 1. pré-requisitos
 
-Escrever-Passo "1/8 Conferindo o que precisa estar instalado"
+Escrever-Passo "1/9 Conferindo o que precisa estar instalado"
 
 $node = Get-Command node -ErrorAction SilentlyContinue
 if (-not $node) { Parar "Node.js não está instalado (ou não está no PATH). Instale o MSI do pen drive e abra um PowerShell novo." }
@@ -76,9 +83,14 @@ if (Get-Service $NomeServico -ErrorAction SilentlyContinue) {
   Parar "o serviço $NomeServico já existe. Esta máquina já foi instalada — use atualizar.ps1."
 }
 
+$unidade = Split-Path -Qualifier $Raiz
+if (-not (Test-Path "$unidade\")) {
+  Parar "a unidade $unidade não existe nesta máquina. Passe -Raiz com outro caminho."
+}
+
 # ------------------------------------------------------------ 2. diretórios
 
-Escrever-Passo "2/8 Criando a árvore de diretórios"
+Escrever-Passo "2/9 Criando a árvore de diretórios"
 foreach ($pasta in @("releases", "storage", "backups", "logs", "pacotes")) {
   New-Item -ItemType Directory -Force -Path (Join-Path $Raiz $pasta) | Out-Null
 }
@@ -86,7 +98,7 @@ Escrever-Ok "$Raiz criado."
 
 # ------------------------------------------------------------------ 3. env
 
-Escrever-Passo "3/8 Escrevendo o .env"
+Escrever-Passo "3/9 Escrevendo o .env"
 $arquivoEnv = Join-Path $Raiz ".env"
 if (Test-Path $arquivoEnv) {
   Escrever-Aviso ".env já existe — mantido como está (não sobrescrevo segredo de sessão)."
@@ -133,7 +145,7 @@ $partes = Partes-Da-Url $urlBanco
 
 # ----------------------------------------------------------------- 4. banco
 
-Escrever-Passo "4/8 Criando o banco e o usuário da aplicação"
+Escrever-Passo "4/9 Criando o banco e o usuário da aplicação"
 $env:PGPASSWORD = $SenhaPostgres
 try {
   $existeUsuario = & $psql -h localhost -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$($partes.Usuario)'"
@@ -161,7 +173,7 @@ try {
 
 # --------------------------------------------------------------- 5. release
 
-Escrever-Passo "5/8 Instalando a release $versao"
+Escrever-Passo "5/9 Instalando a release $versao"
 $destino = Join-Path $Raiz "releases\$versao"
 if (Test-Path $destino) { Parar "$destino já existe." }
 New-Item -ItemType Directory -Force -Path $destino | Out-Null
@@ -172,7 +184,7 @@ Escrever-Ok "release em $destino, current apontando para ela."
 
 # -------------------------------------------------------------- 6. migrar
 
-Escrever-Passo "6/8 Criando o schema (migrate deploy)"
+Escrever-Passo "6/9 Criando o schema (migrate deploy)"
 $ferramentas = Join-Path $destino "ferramentas"
 $env:DATABASE_URL = $urlBanco
 try {
@@ -183,7 +195,7 @@ try {
   if ($codigo -ne 0) { Parar "migrate deploy falhou (código $codigo)." }
   Escrever-Ok "schema criado."
 
-  Escrever-Passo "7/8 Criando o primeiro administrador"
+  Escrever-Passo "7/9 Criando o primeiro administrador"
   Push-Location $ferramentas
   node (Join-Path $ferramentas "criar-admin.mjs") --email $EmailAdmin --senha $SenhaAdmin --nome "Administrador"
   $codigo = $LASTEXITCODE
@@ -195,7 +207,7 @@ try {
 
 # -------------------------------------------------------------- 8. serviço
 
-Escrever-Passo "8/8 Registrando o serviço do Windows"
+Escrever-Passo "8/9 Registrando o serviço do Windows"
 $exeNode = $node.Source
 & $Nssm install $NomeServico $exeNode "$Raiz\current\server.js" | Out-Null
 & $Nssm set $NomeServico AppDirectory "$Raiz\current" | Out-Null
@@ -218,6 +230,46 @@ if (-not (Esperar-Saude -Porta $Porta)) {
   Parar "instalação incompleta."
 }
 
+# --------------------------------------------------------------- 9. backup
+
+Escrever-Passo "9/9 Agendando o backup diário"
+# Aponta para current, não para a release de hoje: cada atualização traz o
+# backup.ps1 da versão nova sem precisar reagendar.
+$scriptBackup = Join-Path $Raiz "current\scripts\backup.ps1"
+$logBackup = Join-Path $Raiz "logs\backup.log"
+# -Command em vez de -File por causa do log: como SYSTEM e sem janela, saída que
+# não vai para arquivo se perde. O `exit` repassa o código do backup.ps1 para o
+# "Último resultado" do Agendador de Tarefas.
+$comando = "& '$scriptBackup' -Raiz '$Raiz' -Destino '$DestinoBackup' *>> '$logBackup'; exit `$LASTEXITCODE"
+$acao = New-ScheduledTaskAction -Execute "powershell.exe" `
+  -Argument "-NoProfile -ExecutionPolicy Bypass -Command `"$comando`""
+$gatilho = New-ScheduledTaskTrigger -Daily -At $HorarioBackup
+# StartWhenAvailable: se a máquina estiver desligada no horário, roda quando
+# voltar, em vez de pular o dia.
+$ajustes = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 6)
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName $TarefaBackup -Action $acao -Trigger $gatilho `
+  -Settings $ajustes -Principal $principal -Force | Out-Null
+Escrever-Ok "tarefa `"$TarefaBackup`" diária às $HorarioBackup, destino $DestinoBackup."
+
+# Roda uma vez agora, pela própria tarefa e não chamando o script direto: o que
+# precisa ser provado é que ele funciona como SYSTEM, sem a sessão de quem
+# instala — achar o pg_dump, ler o .env, escrever no destino.
+Start-ScheduledTask -TaskName $TarefaBackup
+# 267009 = em execução, 267011 = ainda não rodou. Os dois significam "espere".
+$limite = (Get-Date).AddMinutes(5)
+do {
+  Start-Sleep -Seconds 3
+  $resultadoBackup = (Get-ScheduledTaskInfo -TaskName $TarefaBackup).LastTaskResult
+  $estado = (Get-ScheduledTask -TaskName $TarefaBackup).State
+} while (($estado -eq "Running" -or $resultadoBackup -in 267009, 267011) -and (Get-Date) -lt $limite)
+$backupOk = $resultadoBackup -eq 0
+if ($backupOk) {
+  Escrever-Ok "primeiro backup feito."
+} else {
+  Write-Host "   o primeiro backup NÃO funcionou (resultado $resultadoBackup). Veja $logBackup" -ForegroundColor Red
+}
+
 $ip = (Get-NetIPAddress -AddressFamily IPv4 |
   Where-Object { $_.IPAddress -ne "127.0.0.1" -and $_.PrefixOrigin -ne "WellKnown" } |
   Select-Object -First 1).IPAddress
@@ -227,10 +279,12 @@ Write-Host "Instalado." -ForegroundColor Green
 Write-Host "  Nesta máquina:  http://localhost:$Porta"
 if ($ip) { Write-Host "  Na rede:        http://${ip}:$Porta" }
 Write-Host "  Login:          $EmailAdmin"
+Write-Host "  Backup:         diário às $HorarioBackup em $DestinoBackup"
 Write-Host ""
 Write-Host "Falta fazer, fora deste script:" -ForegroundColor Yellow
 Write-Host "  1. Liberar a porta $Porta no firewall do Windows (perfil de rede privada)."
 Write-Host "     New-NetFirewallRule -DisplayName 'AJA Obras' -Direction Inbound -LocalPort $Porta -Protocol TCP -Action Allow -Profile Private"
-Write-Host "  2. Garantir IP fixo nesta máquina — em DHCP o atalho quebra sozinho um dia."
-Write-Host "  3. Desligar suspensão/hibernação: se a máquina dorme, o sistema some para todos."
-Write-Host "  4. Agendar o backup: scripts\backup.ps1 (veja o LEIAME)."
+Write-Host "  2. Abrir o endereço da rede em OUTRO computador antes de ir embora."
+if (-not $backupOk) {
+  Write-Host "  3. Corrigir o backup: rode a tarefa `"$TarefaBackup`" de novo depois de ver o log." -ForegroundColor Red
+}

@@ -102,11 +102,11 @@ jobs:
             **Instalação nova:** extraia o `.zip` e siga `scripts\LEIAME.txt`.
 
             **Atualização:** copie o `.zip` **e o `.sha256`** para
-            `C:\aja-obras\pacotes\` na máquina do sistema e rode, como
+            `D:\aja-obras\pacotes\` na máquina do sistema e rode, como
             Administrador:
 
             ```
-            C:\aja-obras\current\scripts\atualizar.ps1 -Pacote C:\aja-obras\pacotes\aja-obras-${{ steps.versao.outputs.versao }}.zip
+            D:\aja-obras\current\scripts\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-${{ steps.versao.outputs.versao }}.zip
             ```
 
             O script confere a integridade, faz dump do banco, aplica as

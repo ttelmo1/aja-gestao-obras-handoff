@@ -14,8 +14,7 @@ scripts\comum.ps1                   funções usadas pelos três
 
 ANTES DE COMEÇAR
 ----------------
-Esta máquina não tem internet, e é assim de propósito. Tudo que a instalação
-precisa vem no pen drive:
+A instalação não baixa nada. Tudo que ela precisa vem no pen drive:
 
   [ ] Node.js — a MESMA linha de versão que está em node-versao.txt
   [ ] PostgreSQL para Windows (instalador EDB)
@@ -31,47 +30,53 @@ INSTALAÇÃO INICIAL
   .\scripts\instalar.ps1 -SenhaPostgres "senha do postgres" `
       -EmailAdmin "admin@empresa.local" -SenhaAdmin "senha do admin"
 
-Ao final ele imprime o endereço de acesso e o que falta fazer fora do script
-(firewall, IP fixo, suspensão, backup agendado). Esses quatro itens não são
-opcionais: sem o firewall o sistema só abre na própria máquina, e sem IP fixo o
-atalho da rede quebra sozinho um dia.
+Instala em D:\aja-obras, registra o serviço, agenda o backup diário e faz o
+primeiro backup. Ao final imprime o endereço de acesso e o que falta fazer
+fora do script. O firewall não é opcional: sem ele o sistema só abre na
+própria máquina.
 
 ATUALIZAÇÃO
 -----------
 O pacote novo chega por pen drive ou pela pasta de rede, sempre com o .sha256.
 
-  copie os dois arquivos para C:\aja-obras\pacotes\
-  .\C:\aja-obras\current\scripts\atualizar.ps1 -Pacote C:\aja-obras\pacotes\aja-obras-<versao>.zip
+  copie os dois arquivos para D:\aja-obras\pacotes\
+  D:\aja-obras\current\scripts\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-<versao>.zip
 
 O script confere a integridade, faz dump do banco, para o serviço, aplica as
 migrations, troca a versão e confirma que o sistema respondeu. Se qualquer passo
 falhar, ele volta para a versão anterior sozinho.
 
-Use o atualizar.ps1 da instalação (C:\aja-obras\current\scripts), não o do
+Use o atualizar.ps1 da instalação (D:\aja-obras\current\scripts), não o do
 pacote novo ainda não extraído.
 
 BACKUP
 ------
-  .\C:\aja-obras\current\scripts\backup.ps1 -Destino E:\backups-aja
+Agendado pela instalação: tarefa "AJA Obras - backup", todo dia às 22:00.
 
-Precisa ir para OUTRO disco ou outra máquina, e precisa ser agendado no
-Agendador de Tarefas — o comando está no cabeçalho do backup.ps1.
+  onde fica    D:\aja-obras\backups\
+  log          D:\aja-obras\logs\backup.log
+  rodar agora  Start-ScheduledTask "AJA Obras - backup"
+
+O backup fica no MESMO disco dos documentos. Protege contra exclusão acidental
+e erro de operação; NÃO protege contra falha do disco, perda da máquina ou vírus
+que criptografa arquivos. Copiar D:\aja-obras\backups\ para fora desta máquina
+(outro computador ou HD externo) é responsabilidade da empresa.
 
 Backup nunca restaurado não é backup. Teste a restauração uma vez antes do
 aceite, em máquina separada.
 
 SE ALGO DER ERRADO
 ------------------
-  logs do serviço      C:\aja-obras\logs\servico-erro.log
+  logs do serviço      D:\aja-obras\logs\servico-erro.log
   saúde do sistema     http://localhost:3000/api/health
   estado do serviço    Get-Service AjaObras
-  voltar de versão     trocar a junction C:\aja-obras\current e reiniciar
+  voltar de versão     trocar a junction D:\aja-obras\current e reiniciar
 
 O QUE NUNCA FAZER
 -----------------
-  - Compartilhar a pasta C:\aja-obras\storage\ na rede. Quem abrir a pasta pelo
+  - Compartilhar a pasta D:\aja-obras\storage\ na rede. Quem abrir a pasta pelo
     Explorer baixa qualquer contrato sem passar pela permissão do sistema.
-  - Apagar ou sobrescrever C:\aja-obras\.env. Ele guarda o segredo de sessão e a
+  - Apagar ou sobrescrever D:\aja-obras\.env. Ele guarda o segredo de sessão e a
     senha do banco; perdê-lo derruba o acesso de todos.
   - Rodar "prisma migrate dev" ou "db push". A atualização usa migrate deploy, e
     só ele aplica exatamente o que falta sem inventar nem apagar.

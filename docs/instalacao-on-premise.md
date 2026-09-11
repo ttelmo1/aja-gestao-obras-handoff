@@ -48,7 +48,7 @@ São **três peças**, todas na mesma máquina:
 Máquina do cliente (Windows, rede interna, sem internet)
 │
 ├── Processo Node — a aplicação inteira              :3000
-│     C:\aja-obras\current\server.js
+│     D:\aja-obras\current\server.js
 │     Rodando como Serviço do Windows (NSSM).
 │     Serve as telas E executa a regra de negócio.
 │     Fala com o Postgres por localhost.
@@ -57,7 +57,7 @@ Máquina do cliente (Windows, rede interna, sem internet)
 │     Obras, medições, usuários, auditoria
 │     e os METADADOS dos documentos.
 │
-└── C:\aja-obras\storage\ — os arquivos
+└── D:\aja-obras\storage\ — os arquivos
       <obraId>\<uuid>.pdf
       Os BYTES dos documentos, em disco.
 ```
@@ -141,7 +141,7 @@ auditoria — ver ponto #11.
 ## 2. Layout de diretórios
 
 ```
-C:\aja-obras\
+D:\aja-obras\                ← D:, não C: — o C: tem 118 GB, o D: 3,6 TB
 ├── releases\
 │   ├── 2026.09.01\          ← versão anterior, mantida para rollback
 │   └── 2026.09.15\          ← nova
@@ -309,9 +309,31 @@ precisa ser escrito por nós — senão não vai existir.
 **Ordem segura: dump primeiro, `storage\` depois.** Um documento novo sem
 registro é lixo inofensivo; um registro sem arquivo é erro na tela do usuário.
 
-Agendamento pelo **Agendador de Tarefas do Windows** (não cron). O destino do
-backup precisa ser **outra máquina ou outro disco** — backup no mesmo disco não
-protege contra a falha mais provável, que é o disco.
+**Como ficou (11/09/2026).** O `instalar.ps1` registra a tarefa `AJA Obras -
+backup` no **Agendador de Tarefas do Windows**: diária às 22:00, como SYSTEM,
+com log em `D:\aja-obras\logs\backup.log`. Antes de terminar, ele roda a tarefa
+uma vez, **pela própria tarefa**. O que precisa ser provado é que o backup
+funciona sem a sessão de quem instalou.
+
+```
+D:\aja-obras\backups\
+├── 20260914-220000\banco.dump     um por dia, apagado depois de 30 dias
+├── antes-de-<versão>-….dump       da atualização, nunca apagado
+└── documentos\                    UMA cópia, acumulada
+```
+
+**Os documentos não têm cópia por dia.** O sistema nunca sobrescreve arquivo
+(grava com `wx`) e o excluir da tela é lógico, então basta copiar os novos
+(`robocopy /E`, sem `/MIR`: nada sai do backup). A primeira versão do script
+fazia uma cópia inteira por dia e guardava 30. No disco D:, que é o mesmo das
+pastas da empresa, isso ocuparia **30 vezes o volume dos documentos**. Qualquer
+dump restaura com essa pasta: arquivo que entrou depois dele é lixo inofensivo.
+
+**O limite, e de quem ele é.** O destino padrão está no mesmo disco dos
+documentos. Protege contra exclusão acidental e erro de operação, **não contra
+falha do disco, perda da máquina ou vírus que criptografa**. A cópia para fora
+da máquina é responsabilidade do cliente: basta passar `-Destino` com outro
+disco ou pasta de rede. Isso está no LEIAME e no e-mail de ressalva.
 
 Um backup nunca restaurado não é backup: a restauração precisa ser testada uma
 vez, em máquina separada, antes do aceite.
@@ -365,16 +387,22 @@ Fechadas pela conversa de 09/09/2026:
 - ~~Token do GitHub na máquina~~ → **não se aplica.**
 - ~~Manual ou timer automático~~ → **manual, obrigatoriamente.**
 
+Fechadas pelas respostas do Henrique, 11/09/2026 (detalhe na seção 9):
+
+- ~~Edição do Windows~~ → **Windows 10 Pro 22H2, 64 bits.**
+- ~~IP fixo ou DHCP~~ → **fixo, 192.168.1.222.**
+- ~~Existe nobreak?~~ → **não.**
+- ~~Alguém usa a máquina?~~ → **não**.
+- ~~Antivírus, suspensão, energia, faixa de DHCP~~ → **infraestrutura do
+  cliente, fora do nosso escopo.** Risco registrado por escrito.
+- ~~Onde fica o backup~~ → **`D:\aja-obras\backups`, agendado na instalação.**
+  A cópia para fora da máquina é do cliente.
+
 Ainda abertas:
 
-- **Edição exata do Windows** (10 ou 11; Home ou Pro) e se é 64 bits.
-- **IP fixo ou DHCP.** Se DHCP, precisa virar reserva no roteador ou IP estático
-  antes de publicar o atalho.
-- **Quem executa a atualização** — o Júnior, ou você presencialmente?
+- **Quem executa a atualização**: o Júnior, ou você presencialmente?
 - **Qual a janela de manutenção aceitável**, já que a atualização derruba o
   serviço por alguns minutos e migrations destrutivas não têm rollback barato.
-- **Existe nobreak?** Ver seção 5.
-- **Alguém usa a máquina para trabalhar**, ou ela só serve?
 
 ---
 
@@ -395,6 +423,53 @@ Ainda abertas:
 
 Para mandar ao cliente **antes** de marcar a data. Cada item tem como ele
 descobre a resposta, sem depender de conhecimento técnico.
+
+> ### Respostas do Henrique — 11/09/2026
+>
+> Prints de `ipconfig /all`, `msinfo32`, `winver` e do Explorer, mais três
+> respostas por escrito. Máquina: **SERVIDOR-AJA**.
+>
+> | # | Resposta | Consequência |
+> | --- | --- | --- |
+> | 1 | **Windows 10 Pro** 22H2, build 19045.6466 | Sem limitação de edição. |
+> | 2 | 64 bits ("PC baseado em x64") | ok |
+> | 3 | Xeon E5-2680 v4 (14 núcleos, 28 threads), 16 GB de RAM, 11,5 GB livres | Folga grande para Node + Postgres. Placa Atermiter E5-A59 (X99 genérica). |
+> | 4 | C: 73,2 GB livres de 118 GB. **D: (DADOS) 3,51 TB livres de 3,63 TB** | Instalação em **`D:\aja-obras`**, agora o padrão dos scripts: os documentos crescem no disco grande. O Postgres fica no C: (padrão do instalador), o que deixa os dumps num disco diferente do banco. |
+> | 5 | SERVIDOR-AJA | — |
+> | 6 | 192.168.1.222 /24, gateway 192.168.1.1 | Atalho: **`http://192.168.1.222:3000`**. Pelo IP, não pelo nome: o DNS da máquina aponta direto para 8.8.8.8, então o nome só resolve por NetBIOS. |
+> | 7 | **DHCP Habilitado: Não**, IP fixo | ok |
+> | 9 | Ligada 24x7 | Backup às 22:00 sem restrição de horário. |
+> | 12 | **Sem nobreak** | Queda de energia desliga o Postgres no tapa. Risco do cliente, registrado por escrito. |
+> | 13 | *"Não existe um usuário nela"*: ninguém trabalha nela | — |
+> | 16 | Provavelmente **não há**: a busca por "postgresql" no Iniciar caiu no Bing | O `instalar.ps1` confere de qualquer forma. |
+> | 17 | Não sabe, e não vai investigar | Ver abaixo. |
+>
+> #### A máquina tem internet
+>
+> Isso contradiz o *"tudo aqui é estanque"* de 09/09. Nos prints aparecem DNS
+> 8.8.8.8, uma busca no Bing com resultado do dia e notificação do OneDrive.
+> **Para o projeto é neutro:** nada no sistema depende de internet em runtime.
+> A entrega continua por pen drive. Se o Júnior quiser, baixar o pacote direto
+> na máquina é mais simples.
+>
+> #### Encerrado em 11/09/2026: o checklist para aqui
+>
+> O Henrique não vai investigar o antivírus, e o resto do checklist é
+> infraestrutura, que pelo contrato é do cliente (`escopo-e-orcamento.md`).
+> **Não perguntar mais** sobre antivírus (#17), suspensão (#10), local físico
+> (#11), retorno após queda de energia (#14) ou faixa de DHCP (#8). O risco
+> fica com o cliente, **registrado por escrito** num e-mail de ressalva que
+> cita: sem nobreak, antivírus não informado e backup no mesmo disco.
+>
+> O que continua sendo do nosso lado, e como ficou:
+>
+> - **Backup:** o `instalar.ps1` agenda a tarefa diária e roda o primeiro
+>   backup antes de terminar. Destino padrão `D:\aja-obras\backups`, no mesmo
+>   disco (seção 5). A cópia para fora da máquina é do cliente.
+> - **Antivírus:** pode bloquear o `nssm.exe`, o Node ou a porta 3000 no dia.
+>   Reservar folga na visita, sem prometer uma hora cravada.
+> - **Resolver no local:** senha de administrador (a conta `admin` existe) e a
+>   pasta que recebe o atalho.
 
 ### A. Identificação da máquina
 

@@ -78,6 +78,16 @@ Escrever-Ok "psql em $psql"
 $nssmCmd = Get-Command $Nssm -ErrorAction SilentlyContinue
 if (-not $nssmCmd) { Parar "não encontrei o nssm. Copie o nssm.exe do pen drive e passe -Nssm C:\caminho\nssm.exe." }
 Escrever-Ok "nssm em $($nssmCmd.Source)"
+# O serviço fica registrado apontando para ESTE nssm.exe. No pen drive, o
+# sistema funciona até alguém tirar o pen drive — e depois não sobe mais.
+try {
+  $unidadeNssm = Split-Path -Qualifier $nssmCmd.Source
+  if (([IO.DriveInfo]::new($unidadeNssm)).DriveType -eq [IO.DriveType]::Removable) {
+    Parar "o nssm.exe está numa unidade removível ($unidadeNssm). Copie para C:\Program Files\nssm\ e passe -Nssm com esse caminho."
+  }
+} catch {
+  # Caminho de rede (\\...) não tem letra de unidade; não é o caso do pen drive.
+}
 
 if (Get-Service $NomeServico -ErrorAction SilentlyContinue) {
   Parar "o serviço $NomeServico já existe. Esta máquina já foi instalada — use atualizar.ps1."

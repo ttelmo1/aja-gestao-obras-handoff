@@ -7,6 +7,9 @@ máquina Windows. O pacote foi montado e a aplicação subiu em teste local, mas
 desenvolvimento. Ver "O que ainda não foi testado" na etapa 14 de
 [`etapas-e-status.md`](etapas-e-status.md).
 
+**Passo a passo para executar:** [`roteiro-instalacao.md`](roteiro-instalacao.md).
+Este documento é o plano e o porquê; o roteiro é o que fazer, na ordem.
+
 A instalação está **fora das 140h contratadas** (`README.md`, "Instalação no
 cliente"): é *"a definir após visita técnica"*. As perguntas ainda sem resposta
 estão consolidadas no ponto **#11 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md)**;

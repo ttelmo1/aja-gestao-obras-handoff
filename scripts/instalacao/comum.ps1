@@ -176,6 +176,23 @@ function Achar-BinPostgres([string]$Programa) {
   return $null
 }
 
+<#
+  Imprime como restaurar um dump.
+
+  Host, usuário e banco separados, e não a DATABASE_URL: ela termina em
+  "?schema=public", parâmetro do Prisma que o libpq recusa ("invalid URI query
+  parameter") — a instrução de socorro falharia justo na hora do socorro. A
+  senha não é impressa: está no .env.
+#>
+function Mostrar-Restauracao($Partes, [string]$Arquivo, [string]$Cor = "Yellow") {
+  $pgRestore = Achar-BinPostgres "pg_restore"
+  if (-not $pgRestore) { $pgRestore = "pg_restore" }
+  Write-Host "  Stop-Service $NomeServico" -ForegroundColor $Cor
+  Write-Host "  `$env:PGPASSWORD = '<senha do usuário $($Partes.Usuario), na DATABASE_URL do .env>'" -ForegroundColor $Cor
+  Write-Host "  & `"$pgRestore`" --clean --if-exists -h $($Partes.Host) -p $($Partes.Porta) -U $($Partes.Usuario) -d $($Partes.Banco) `"$Arquivo`"" -ForegroundColor $Cor
+  Write-Host "  Start-Service $NomeServico" -ForegroundColor $Cor
+}
+
 <# Componentes da DATABASE_URL, para chamar pg_dump e psql. #>
 function Partes-Da-Url([string]$Url) {
   # postgresql://usuario:senha@host:porta/banco?params

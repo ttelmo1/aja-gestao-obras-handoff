@@ -172,7 +172,7 @@ if ($codigo -ne 0) {
   Write-Host ""
   if ($arquivoDump) {
     Write-Host "O banco pode ter ficado a meio caminho. Para restaurar o dump:" -ForegroundColor Yellow
-    Write-Host "  pg_restore --clean --if-exists -d `"$urlBanco`" `"$arquivoDump`"" -ForegroundColor Yellow
+    Mostrar-Restauracao $partes $arquivoDump
   } else {
     Write-Host "Sem dump (-SemBackup): não há como voltar o banco por aqui." -ForegroundColor Red
   }
@@ -210,7 +210,7 @@ if (-not (Esperar-Saude -Porta $Porta)) {
   if ($arquivoDump) {
     Write-Host ""
     Write-Host "Se o banco precisar voltar (migration destrutiva):" -ForegroundColor Yellow
-    Write-Host "  pg_restore --clean --if-exists -d `"$urlBanco`" `"$arquivoDump`"" -ForegroundColor Yellow
+    Mostrar-Restauracao $partes $arquivoDump
   }
   Parar "atualização revertida."
 }

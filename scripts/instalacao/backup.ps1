@@ -134,7 +134,7 @@ if ($Manter -gt 0) {
 
 Write-Host ""
 Write-Host "Backup em $pasta" -ForegroundColor Green
-Write-Host "Para restaurar (em máquina de teste, nunca direto na de produção):"
-Write-Host "  pg_restore --clean --if-exists -d `"<url do banco>`" `"$arquivoDump`""
+Write-Host "Para restaurar (teste antes em máquina separada):"
+Mostrar-Restauracao $partes $arquivoDump "Gray"
 Write-Host "  e copiar $destinoDocumentos de volta para $storage"
 exit 0

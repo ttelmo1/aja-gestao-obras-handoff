@@ -1329,6 +1329,18 @@ como plano B, e as duas rodam o mesmo `instalar.ps1`. Desenho em
 - **Firewall pelo `instalar.ps1`:** para a sub-rede local, em qualquer perfil
   de rede.
 
+**O CI em Windows pegou dois problemas que o Mac escondia:**
+
+1. **`typecheck` sem os tipos de rota.** `PageProps`, `LayoutProps` e
+   `RouteContext` são gerados pelo Next; num checkout limpo eles não existem.
+   O script passou a ser `next typegen && tsc --noEmit`.
+2. 🔴 **`caminhoRelativo` gravado com `\`.** `caminhoDaObra` usava `join`, que
+   no Windows devolve `obras\<id>\<uuid>.pdf` — e esse texto vai para o banco.
+   Um dump restaurado em Linux ou macOS leria isso como nome de arquivo, e
+   nenhum documento abriria. Passou a usar `posix.join`: o caminho no banco é
+   lógico, e quem traduz para o disco é `resolverDentroDe`. Os testes do
+   armazenamento deixaram de comparar com texto POSIX cru.
+
 Validado fora do Windows: o kit monta, os hashes conferem e os `.ps1` saem com
 BOM. **Nada do kit foi executado em Windows.** Os pontos que só a máquina real
 responde:

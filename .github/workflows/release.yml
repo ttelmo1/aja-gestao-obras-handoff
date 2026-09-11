@@ -106,7 +106,7 @@ jobs:
             Administrador:
 
             ```
-            D:\aja-obras\current\scripts\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-${{ steps.versao.outputs.versao }}.zip
+            powershell -ExecutionPolicy Bypass -File D:\aja-obras\current\scripts\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-${{ steps.versao.outputs.versao }}.zip
             ```
 
             O script confere a integridade, faz dump do banco, aplica as

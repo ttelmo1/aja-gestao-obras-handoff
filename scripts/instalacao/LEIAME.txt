@@ -27,8 +27,15 @@ usuário "postgres". Depois abra o PowerShell COMO ADMINISTRADOR.
 INSTALAÇÃO INICIAL
 ------------------
   cd <pasta onde este pacote foi extraído>
-  .\scripts\instalar.ps1 -SenhaPostgres "senha do postgres" `
-      -EmailAdmin "admin@empresa.local" -SenhaAdmin "senha do admin"
+  powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 `
+      -SenhaPostgres "senha do postgres" `
+      -EmailAdmin "admin@empresa.local" -SenhaAdmin "senha do admin" `
+      -Nssm "<caminho do>\nssm.exe"
+
+Por que "powershell -ExecutionPolicy Bypass -File" e não só .\scripts\...: o
+Windows vem com a execução de scripts desligada. O Bypass libera só esta
+execução e não muda a configuração da máquina. Não use Set-ExecutionPolicy
+Unrestricted — isso afrouxa a segurança de vez.
 
 Instala em D:\aja-obras, registra o serviço, agenda o backup diário e faz o
 primeiro backup. Ao final imprime o endereço de acesso e o que falta fazer
@@ -40,7 +47,8 @@ ATUALIZAÇÃO
 O pacote novo chega por pen drive ou pela pasta de rede, sempre com o .sha256.
 
   copie os dois arquivos para D:\aja-obras\pacotes\
-  D:\aja-obras\current\scripts\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-<versao>.zip
+  powershell -ExecutionPolicy Bypass -File D:\aja-obras\current\scripts\atualizar.ps1 `
+      -Pacote D:\aja-obras\pacotes\aja-obras-<versao>.zip
 
 O script confere a integridade, faz dump do banco, para o serviço, aplica as
 migrations, troca a versão e confirma que o sistema respondeu. Se qualquer passo

@@ -76,6 +76,28 @@ jobs:
       - name: Empacotar
         run: node scripts/empacotar.mjs --versao ${{ steps.versao.outputs.versao }}
 
+      - name: Cache dos componentes do kit
+        # O instalador do PostgreSQL tem ~350 MB e só muda quando a versão
+        # fixada em componentes.json muda. O hash continua sendo conferido.
+        uses: actions/cache@v4
+        with:
+          path: dist/.cache
+          key: kit-componentes-${{ hashFiles('scripts/kit/componentes.json') }}
+
+      - name: Montar o kit de instalação
+        run: node scripts/montar-kit.mjs --versao ${{ steps.versao.outputs.versao }}
+
+      - name: Guardar o kit como artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: aja-obras-kit-${{ steps.versao.outputs.versao }}
+          path: |
+            dist/aja-obras-kit-${{ steps.versao.outputs.versao }}.zip
+            dist/aja-obras-kit-${{ steps.versao.outputs.versao }}.zip.sha256
+          retention-days: 30
+          # Já é .zip de coisa comprimida: comprimir de novo só gasta tempo.
+          compression-level: 0
+
       - name: Guardar o pacote como artefato
         uses: actions/upload-artifact@v4
         with:
@@ -96,18 +118,18 @@ jobs:
           files: |
             dist/aja-obras-${{ steps.versao.outputs.versao }}.zip
             dist/aja-obras-${{ steps.versao.outputs.versao }}.zip.sha256
+            dist/aja-obras-kit-${{ steps.versao.outputs.versao }}.zip
+            dist/aja-obras-kit-${{ steps.versao.outputs.versao }}.zip.sha256
           body: |
-            Pacote de instalação on-premise — versão ${{ steps.versao.outputs.versao }}.
+            Sistema de Gestão de Obras — versão ${{ steps.versao.outputs.versao }}.
 
-            **Instalação nova:** extraia o `.zip` e siga `scripts\LEIAME.txt`.
+            **Instalação nova:** baixe o **kit** (`aja-obras-kit-…zip`),
+            extraia e dê duplo clique em `INSTALAR.cmd`. Passo a passo em
+            `docs/roteiro-instalacao.md`.
 
-            **Atualização:** copie o `.zip` **e o `.sha256`** para
-            `D:\aja-obras\pacotes\` na máquina do sistema e rode, como
-            Administrador:
-
-            ```
-            powershell -ExecutionPolicy Bypass -File D:\aja-obras\current\scripts\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-${{ steps.versao.outputs.versao }}.zip
-            ```
+            **Atualização:** copie o `aja-obras-${{ steps.versao.outputs.versao }}.zip`
+            **e o `.sha256`** para `D:\aja-obras\pacotes\` e dê duplo clique em
+            `D:\aja-obras\ATUALIZAR.cmd`.
 
             O script confere a integridade, faz dump do banco, aplica as
             migrations, troca a versão e verifica se o sistema respondeu —

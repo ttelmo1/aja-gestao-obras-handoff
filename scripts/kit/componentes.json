@@ -1,0 +1,15 @@
+{
+  "_leia": "Componentes de terceiros do kit de instalação, com versão e SHA-256 fixados. O montar-kit.mjs confere cada hash e derruba o build se não bater. Para trocar a versão do PostgreSQL: mude versao, arquivo e url, rode o build, confira a origem e fixe o hash que o erro mostrar.",
+  "postgresql": {
+    "versao": "17.10-2",
+    "arquivo": "postgresql-17.10-2-windows-x64.exe",
+    "url": "https://get.enterprisedb.com/postgresql/postgresql-17.10-2-windows-x64.exe",
+    "sha256": "81554536268e499f431efa3fa20736736c64102c719308a03ceb32aa0cb6ae06"
+  },
+  "nssm": {
+    "versao": "2.24-101-g897c7ad",
+    "arquivo": "nssm.exe",
+    "origem": "https://nssm.cc/ci/nssm-2.24-101-g897c7ad.zip, arquivo win64/nssm.exe. Domínio público. Guardado no repositório porque o site cai com frequência.",
+    "sha256": "eee9c44c29c2be011f1f1e43bb8c3fca888cb81053022ec5a0060035de16d848"
+  }
+}

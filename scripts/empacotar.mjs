@@ -174,6 +174,30 @@ if (process.version.replace(/^v/, "").split(".")[0] !== versaoNode.split(".")[0]
   );
 }
 
+// ---------------------------------------------------------------- runtime
+
+passo("Embutindo o Node");
+// O pacote leva o próprio node.exe em runtime\ — exatamente o que compilou a
+// aplicação. A máquina do cliente não precisa de instalador de Node, e a versão
+// deixa de ser algo que alguém confere: vem junto com cada release, e a
+// atualização troca o Node junto com o sistema.
+if (process.platform === "win32") {
+  if (process.version.replace(/^v/, "") !== versaoNode) {
+    abortar(
+      `o runner está em ${process.version} e o .nvmrc pede ${versaoNode}: o node.exe embutido seria de outra versão.`,
+    );
+  }
+  const runtime = path.join(pacote, "runtime");
+  mkdirSync(runtime, { recursive: true });
+  cpSync(process.execPath, path.join(runtime, "node.exe"));
+  // A licença do Node pede que o aviso acompanhe o binário redistribuído.
+  const licenca = path.join(path.dirname(process.execPath), "LICENSE");
+  if (existsSync(licenca)) cpSync(licenca, path.join(runtime, "LICENSE"));
+  console.log(`  runtime\\node.exe ${process.version}`);
+} else {
+  console.log("  fora do Windows: pacote sem runtime\\ — serve só para testar o empacotamento");
+}
+
 // ---------------------------------------------------------------- migrador
 
 passo("Montando as ferramentas de instalação (CLI do Prisma e afins)");
@@ -333,6 +357,9 @@ for (const obrigatorio of [
   path.join("scripts", "backup.ps1"),
   path.join("scripts", "comum.ps1"),
   path.join("scripts", "LEIAME.txt"),
+  path.join("scripts", "ATUALIZAR.cmd"),
+  // Só o pacote montado no Windows leva o Node (ver "Embutindo o Node").
+  ...(process.platform === "win32" ? [path.join("runtime", "node.exe")] : []),
 ]) {
   if (!existsSync(path.join(pacote, obrigatorio))) {
     abortar(`o pacote ficou sem ${obrigatorio}`);

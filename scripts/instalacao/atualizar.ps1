@@ -22,11 +22,16 @@
   janela de manutenção combinada.
 
 .EXEMPLO
+  Duplo clique em D:\aja-obras\ATUALIZAR.cmd, com o .zip e o .sha256 novos em
+  D:\aja-obras\pacotes\.
+
+.EXEMPLO
   .\atualizar.ps1 -Pacote D:\aja-obras\pacotes\aja-obras-2026.09.15.zip
 #>
 param(
-  # O .zip da release. O .sha256 tem que estar na mesma pasta.
-  [Parameter(Mandatory = $true)][string]$Pacote,
+  # O .zip da release. O .sha256 tem que estar na mesma pasta. Sem -Pacote é o
+  # modo do duplo clique (ATUALIZAR.cmd): usa o pacote novo de <raiz>\pacotes.
+  [string]$Pacote = "",
   [string]$Raiz = "D:\aja-obras",
   [int]$Porta = 3000,
   # Só para emergência: aplica sem dump. Não use em operação normal.
@@ -35,11 +40,48 @@ param(
 
 . "$PSScriptRoot\comum.ps1"
 
-Exigir-Administrador
+$interativo = -not $Pacote
+$script:PausarAoSair = $interativo
+
+# Erro inesperado — não um Parar — também precisa segurar a janela aberta no
+# duplo clique, senão a mensagem some antes de alguém ler.
+trap {
+  Write-Host ""
+  Write-Host "ERRO: $_" -ForegroundColor Red
+  if ($script:PausarAoSair) { Read-Host "Pressione Enter para fechar" | Out-Null }
+  exit 1
+}
+
+if (-not (Test-Path $Raiz)) { Parar "$Raiz não existe. Esta máquina já passou pela instalação inicial?" }
+# O ATUALIZAR.cmd passa a própria pasta como "D:\aja-obras\." — normaliza.
+$Raiz = (Resolve-Path $Raiz).Path.TrimEnd("\")
+
+if ($interativo) {
+  if (-not (E-Administrador)) { Reabrir-Como-Administrador $PSCommandPath "-Raiz `"$Raiz`"" }
+
+  # O pacote novo é o .zip de pacotes\ cuja versão ainda não está em releases\.
+  # O kit de instalação tem nome parecido e não é pacote de atualização.
+  $pastaPacotes = Join-Path $Raiz "pacotes"
+  $instaladas = @(Get-ChildItem (Join-Path $Raiz "releases") -Directory -ErrorAction SilentlyContinue |
+    ForEach-Object { $_.Name })
+  $novos = @(Get-ChildItem $pastaPacotes -Filter "aja-obras-*.zip" -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -notlike "aja-obras-kit-*" -and ($_.BaseName -replace '^aja-obras-', '') -notin $instaladas } |
+    Sort-Object LastWriteTime -Descending)
+  if ($novos.Count -eq 0) {
+    Parar "nenhum pacote novo em $pastaPacotes. Copie para lá o .zip e o .sha256 da versão nova."
+  }
+  if ($novos.Count -gt 1) {
+    Escrever-Aviso "há $($novos.Count) pacotes novos em $pastaPacotes; usando o mais recente."
+  }
+  $Pacote = $novos[0].FullName
+  Write-Host "Pacote: $Pacote"
+  Read-Host "Pressione Enter para atualizar (ou feche a janela para cancelar)" | Out-Null
+} else {
+  Exigir-Administrador
+}
 
 if (-not (Test-Path $Pacote)) { Parar "não encontrei o pacote: $Pacote" }
 $Pacote = (Resolve-Path $Pacote).Path
-if (-not (Test-Path $Raiz)) { Parar "$Raiz não existe. Esta máquina já passou pela instalação inicial?" }
 
 # A versão vem do nome do arquivo: aja-obras-<versao>.zip. É ela que nomeia a
 # pasta em releases\, e é o que aparece no /api/health depois.
@@ -152,10 +194,13 @@ $ferramentas = Join-Path $destino "ferramentas"
 $cliPrisma = Join-Path $ferramentas "node_modules\prisma\build\index.js"
 if (-not (Test-Path $cliPrisma)) { Parar "não encontrei o CLI do Prisma em $cliPrisma" }
 
+$nodeRelease = Node-Da-Release $destino
+if (-not $nodeRelease) { Parar "a release nova não traz runtime\node.exe e não há Node.js no PATH." }
+
 $env:DATABASE_URL = $urlBanco
 try {
   Push-Location $ferramentas
-  node $cliPrisma migrate deploy
+  & $nodeRelease $cliPrisma migrate deploy
   $codigo = $LASTEXITCODE
   Pop-Location
 } finally {
@@ -221,3 +266,5 @@ Write-Host "  http://localhost:$Porta/api/health"
 if ($anterior) {
   Write-Host "  versão anterior mantida em $anterior (rollback: trocar a junction current)."
 }
+if ($interativo) { Read-Host "Pressione Enter para fechar" | Out-Null }
+exit 0

@@ -23,18 +23,57 @@ function Escrever-Aviso([string]$Texto) {
   Write-Host "   $Texto" -ForegroundColor Yellow
 }
 
+# Janela aberta por duplo clique (INSTALAR.cmd, ATUALIZAR.cmd) fecha junto com
+# o script — e a mensagem de erro some antes de alguém ler. Os modos de duplo
+# clique ligam isto depois de carregar este arquivo.
+$script:PausarAoSair = $false
+
 function Parar([string]$Motivo) {
   Write-Host ""
   Write-Host "ERRO: $Motivo" -ForegroundColor Red
+  if ($script:PausarAoSair) { Read-Host "Pressione Enter para fechar" | Out-Null }
   exit 1
 }
 
-function Exigir-Administrador {
+function E-Administrador {
   $identidade = [Security.Principal.WindowsIdentity]::GetCurrent()
   $papel = New-Object Security.Principal.WindowsPrincipal($identidade)
-  if (-not $papel.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+  return $papel.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+function Exigir-Administrador {
+  if (-not (E-Administrador)) {
     Parar "abra o PowerShell como Administrador (registrar serviço e instalar exige elevação)."
   }
+}
+
+<#
+  Reabre o script numa janela nova, elevada — o aviso de administrador do
+  Windows. Para o duplo clique, em que ninguém abriu "como Administrador".
+#>
+function Reabrir-Como-Administrador([string]$Script, [string]$Argumentos = "") {
+  try {
+    Start-Process powershell.exe -Verb RunAs `
+      -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$Script`" $Argumentos"
+  } catch {
+    Parar "precisa de permissão de administrador, e o aviso do Windows foi recusado."
+  }
+  exit 0
+}
+
+<#
+  O node.exe que roda uma release.
+
+  O pacote montado no Actions traz o próprio Node em runtime\ — o mesmo que
+  compilou a aplicação —, e a máquina não precisa de instalador de Node. Pacote
+  sem runtime\ (montado fora do Windows, só para teste) cai no Node do PATH.
+#>
+function Node-Da-Release([string]$Release) {
+  $embutido = Join-Path $Release "runtime\node.exe"
+  if (Test-Path $embutido) { return $embutido }
+  $doPath = Get-Command node -ErrorAction SilentlyContinue
+  if ($doPath) { return $doPath.Source }
+  return $null
 }
 
 <#

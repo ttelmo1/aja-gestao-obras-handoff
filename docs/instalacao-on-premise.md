@@ -122,9 +122,11 @@ boa ideia — mas exige duas coisas, ambas no checklist da seção 9:
 
 - **IP fixo.** Em DHCP o endereço muda um dia e o atalho quebra para todos de
   uma vez, sem aviso.
-- **Firewall do Windows liberando a porta 3000 para entrada** no perfil de rede
-  privada. O padrão bloqueia, e o sintoma é "funciona na máquina, não funciona
-  em nenhuma outra".
+- **Firewall do Windows liberando a porta 3000 para entrada.** O padrão
+  bloqueia, e o sintoma é "funciona na máquina, não funciona em nenhuma outra".
+  O `instalar.ps1` cria a regra **para a sub-rede local, em qualquer perfil de
+  rede**: amarrar ao perfil Privado falharia em silêncio se o Windows tivesse
+  marcado a rede como Pública.
 
 Colocar o atalho numa pasta aberta a todos **não dá acesso a todos**: o sistema
 tem login próprio e o que cada um enxerga depende do perfil dele lá dentro, não
@@ -170,8 +172,10 @@ início no boot — **antes de qualquer login**. Sem isso o sistema só existe
 enquanto alguém estiver logado com uma janela de console aberta, e quem fechar
 a janela derruba a empresa inteira.
 
-NSSM é um executável único, sem instalador e sem dependência de rede: **baixe
-antes e leve junto no pen drive.**
+NSSM é um executável único, sem instalador e sem dependência de rede. Ele vai
+**dentro do kit** e é copiado para `D:\aja-obras\bin\`, fora de `releases\`: o
+serviço fica registrado apontando para o `nssm.exe` usado na instalação, e se
+ele sumir o sistema não sobe no próximo boot.
 
 ---
 
@@ -364,17 +368,34 @@ realmente ficaram.
 | 9 | Versão do Node fixada ✅ | `.nvmrc` → `node-versao.txt` no pacote, conferido na instalação | Precisam ser a mesma versão maior; `standalone` traz dependências, **não traz o runtime**. Instalador MSI do Node levado no pen drive. |
 | 10 | Criação do primeiro usuário ✅ | `scripts/instalacao/criar-admin.mjs`, dentro de `ferramentas\` | **Não estava no plano.** Sem ele a instalação termina numa tela de login por onde ninguém entra: o seed do repositório é TypeScript e roda com `tsx`, dependência de desenvolvimento que não vai no pacote. |
 
-### O pen drive de instalação
+### O kit de instalação (11/09/2026)
 
-Como a máquina não tem internet, **tudo** precisa ir junto. Nada pode ser
-"baixado na hora":
+A instalação manual pedia instalar o Node, passar pelo assistente do
+PostgreSQL, copiar o NSSM e digitar um comando longo no PowerShell. Virou
+**um arquivo e um duplo clique**. A instalação manual continua existindo como
+plano B, e os dois caminhos rodam o mesmo `instalar.ps1`. Passo a passo em
+[`roteiro-instalacao.md`](roteiro-instalacao.md).
 
-- Instalador do **Node.js** (MSI, versão fixada — a mesma do Actions)
-- Instalador do **PostgreSQL** para Windows (EDB)
-- **NSSM** (zip, executável único)
-- O **`.zip` da release** + o `.sha256`
-- Os scripts de instalação e atualização
-- Este documento e o checklist da seção 9, impressos
+| # | Item | Onde | Por quê |
+| --- | --- | --- | --- |
+| 11 | Node embutido ✅ | `runtime\node.exe` no pacote, pelo `empacotar.mjs` | É o `node.exe` do runner, a versão exata do `.nvmrc`. Some o MSI e a conferência de versão, e a atualização troca o Node junto com o sistema. |
+| 12 | Kit ✅ | `scripts/montar-kit.mjs`, `scripts/kit/` | Pacote + instalador do PostgreSQL + NSSM + `INSTALAR.cmd`. O PostgreSQL é baixado no runner e conferido contra o SHA-256 fixado em `componentes.json`. O NSSM mora no repositório, porque o site dele cai. |
+| 13 | Duplo clique ✅ | `INSTALAR.cmd` → `instalar-kit.ps1`; `ATUALIZAR.cmd` → `atualizar.ps1` sem `-Pacote` | Pedem elevação sozinhos, seguram a janela aberta no erro e, na instalação, perguntam as senhas com digitação oculta. |
+
+**As senhas do banco.** A do `postgres` é **escolhida por quem instala** e
+digitada no kit: é a que resolve problema no banco depois, e precisa ser
+conhecida. O PostgreSQL só aceita conexão local, então uma senha simples não
+fica exposta. A do `aja` continua aleatória, no `.env`: ninguém precisa dela.
+
+**Por que `.cmd` e não um instalador `.exe`** (Inno Setup, NSIS): um `.exe`
+sem assinatura abre com o aviso do SmartScreen, e um `.exe` desconhecido que
+instala serviço é o que mais chama atenção de antivírus — e o do cliente é
+desconhecido. O certificado custa algumas centenas de dólares por ano. Para uma
+instalação única, o `.cmd` dá o mesmo duplo clique sem esses custos.
+
+**Kit e pacote são coisas diferentes.** O kit (~525 MB) é só para a primeira
+instalação. A atualização continua sendo o pacote (~170 MB), sem o
+PostgreSQL.
 
 ---
 
@@ -518,9 +539,6 @@ descobre a resposta, sem depender de conhecimento técnico.
 
 Nada pode ser baixado no local. Conferir antes de sair:
 
-- [ ] Instalador Node.js MSI (versão fixada)
-- [ ] Instalador PostgreSQL Windows (EDB)
-- [ ] NSSM
-- [ ] `.zip` da release + `.sha256`
-- [ ] Scripts de instalação e atualização
-- [ ] Este documento impresso
+- [ ] `aja-obras-kit-<versão>.zip` + `.sha256` (traz sistema, PostgreSQL e NSSM)
+- [ ] `aja-obras-<versão>.zip` + `.sha256`, para o plano B
+- [ ] [`roteiro-instalacao.md`](roteiro-instalacao.md) impresso

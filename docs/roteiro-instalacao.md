@@ -1,25 +1,42 @@
 # Roteiro de instalação e atualização
 
-Passo a passo para executar. Serve para a **máquina de teste** e para a do
-**cliente**. As diferenças estão marcadas com 🧪 (só no teste) e 🏢 (só no
-cliente). O porquê de cada decisão está em
-[`instalacao-on-premise.md`](instalacao-on-premise.md); aqui fica só o que fazer.
+Passo a passo para executar, na máquina de **teste** e na do **cliente**. As
+diferenças estão marcadas com 🧪 (só no teste) e 🏢 (só no cliente). O porquê de
+cada decisão está em [`instalacao-on-premise.md`](instalacao-on-premise.md).
+
+Existem dois caminhos, e **os dois rodam o mesmo `instalar.ps1`** no fim:
+
+| | **Kit** — o principal | **Manual** — plano B |
+| --- | --- | --- |
+| Quando usar | Sempre | Só se o kit falhar e não der para corrigir na hora |
+| O que levar | Um arquivo: o kit | PostgreSQL, NSSM e o pacote, instalados um a um |
+| Como roda | Duplo clique no `INSTALAR.cmd` | Comando no PowerShell como Administrador |
+| Senhas | Perguntadas com digitação oculta | Digitadas no comando: ficam no histórico do PowerShell |
 
 ---
 
-## 0. Gerar o pacote
+## 0. Gerar o kit e o pacote
 
-O pacote é montado pelo GitHub Actions, a partir do que está **no GitHub**.
-Faça o push antes, ou o pacote sai sem as últimas mudanças.
+O GitHub Actions monta os dois a partir do que está **no GitHub**. Faça o push
+antes, ou eles saem sem as últimas mudanças.
+
+| Arquivo | Para quê |
+| --- | --- |
+| `aja-obras-kit-<versão>.zip` + `.sha256` | **Primeira instalação.** Traz tudo: sistema, PostgreSQL e NSSM (~525 MB). |
+| `aja-obras-<versão>.zip` + `.sha256` | **Atualização**, e a instalação manual. Só o sistema (~170 MB). |
 
 **🧪 Teste: disparo manual, sem publicar Release**
 
-1. GitHub → **Actions → Release on-premise → Run workflow**
-2. Branch **`prod`**, versão **`2026.09.11-teste1`**
-3. Repita com **`2026.09.11-teste2`**, para testar a atualização.
-4. Na página de cada execução, baixe o **artefato** (no pé da página). Ele vem
-   como um `.zip` que contém o `aja-obras-<versão>.zip` e o `.sha256`. Extraia
+1. GitHub → **Actions → Release on-premise → Run workflow**.
+2. Branch **`prod`**, versão **`2026.09.11-teste1`**. Na página da execução,
+   baixe o artefato **`aja-obras-kit-2026.09.11-teste1`**.
+3. Repita com **`2026.09.11-teste2`**. Desta vez baixe o artefato
+   **`aja-obras-2026.09.11-teste2`**, que é o pacote, para testar a atualização.
+4. Cada artefato vem como um `.zip` que contém o arquivo e o `.sha256`. Extraia
    só essa camada de fora.
+
+A primeira execução baixa o instalador do PostgreSQL (~370 MB). As seguintes
+usam o cache.
 
 **🏢 Cliente: por tag**
 
@@ -28,85 +45,107 @@ git tag v2026.09.14
 git push --tags
 ```
 
-O `.zip` e o `.sha256` saem em **Releases** no GitHub.
+Os quatro arquivos saem em **Releases** no GitHub.
 
 ---
 
-## 1. Montar o pen drive
-
-A instalação não baixa nada. Tudo é baixado antes, numa máquina com internet.
-
-| O que | Onde baixar | Arquivo |
-| --- | --- | --- |
-| Node.js **24.16.0** | nodejs.org → Downloads → Windows Installer (.msi), x64 | `node-v24.16.0-x64.msi` |
-| PostgreSQL **17** | enterprisedb.com → Download PostgreSQL → Windows x86-64 | `postgresql-17.x-windows-x64.exe` |
-| NSSM **2.24-101** | nssm.cc/download → pré-release 2.24-101 (não a 2.24 estável, que falha em Windows 10 recente) | usar o `win64\nssm.exe` de dentro do zip |
-| O sistema | passo 0 | `aja-obras-<versão>.zip` **e** `aja-obras-<versão>.zip.sha256` |
-
-A versão do Node tem que ser da **linha 24**, a mesma de `.nvmrc`. O instalador
-confere e para se for outra.
-
-```
-PENDRIVE\
-├── node-v24.16.0-x64.msi
-├── postgresql-17.x-windows-x64.exe
-├── nssm.exe
-├── aja-obras-<versão>.zip
-└── aja-obras-<versão>.zip.sha256
-```
-
----
-
-## 2. Antes de começar, na máquina
+## 1. Antes de começar
 
 - [ ] Entrar com uma conta **administradora** do Windows.
-- [ ] Ter um disco **D:**. 🧪 Se a máquina de teste não tiver, acrescente
-      `-Raiz C:\aja-obras` em **todos** os comandos (instalar, atualizar,
-      backup) e troque `D:\` por `C:\` no resto deste roteiro. **Não** use `subst`
-      para simular um D:: a tarefa de backup roda como SYSTEM e não enxerga essa
-      unidade.
-- [ ] Usar o **Windows PowerShell** (o azul, 5.1), não o PowerShell 7. É o que
-      o cliente tem.
-- [ ] 🧪 **Desligar a internet** depois de copiar o pen drive. Se a instalação
-      passar assim, ela não depende de download.
+- [ ] Ter um disco **D:**. Pelo kit, se não houver, a janela pergunta se pode
+      instalar em `C:\aja-obras`. Na instalação manual, acrescente
+      `-Raiz C:\aja-obras` aos comandos. **Não** use `subst` para simular um
+      D:: a tarefa de backup roda como SYSTEM e não enxerga essa unidade.
+- [ ] 🧪 **Desligar a internet** depois de copiar o kit. Se a instalação passar
+      assim, ela não depende de download.
 
 ---
 
-## 3. Instalar os pré-requisitos
+## 2. Instalação pelo kit
 
-### Node.js
+### 2.1 Copiar e extrair
 
-1. Rodar `node-v24.16.0-x64.msi` e avançar com o padrão.
-2. Na tela **"Tools for Native Modules"**, **deixar desmarcado**
-   *"Automatically install the necessary tools"*. Marcado, ele tenta baixar
-   Chocolatey, Python e Visual Studio Build Tools, e o pacote não precisa de
-   nenhum deles.
+1. Copie o `aja-obras-kit-<versão>.zip` para a máquina, por exemplo em
+   `C:\instalacao\`.
+2. **Desbloqueie antes de extrair:** botão direito no `.zip` → **Propriedades**
+   → marque **Desbloquear** → OK. Sem isso, o Windows marca cada arquivo
+   extraído como "vindo da internet" e mostra aviso de segurança ao abrir.
+3. Botão direito → **Extrair tudo**.
 
-### PostgreSQL
+> **Não rode de dentro do `.zip`.** O Explorer deixa abrir o `INSTALAR.cmd`
+> sem extrair, mas o resto do kit não vem junto. O script detecta isso e para
+> com instrução.
 
-1. Rodar `postgresql-17.x-windows-x64.exe`.
-2. Componentes: manter **PostgreSQL Server** e **Command Line Tools**. Os
-   scripts usam `psql`, `pg_dump` e `pg_restore`. O pgAdmin é opcional.
-3. Senha do superusuário `postgres`: **anotar**. Ela é pedida na instalação do
-   sistema.
+### 2.2 Rodar
+
+1. Duplo clique em **`INSTALAR.cmd`**.
+2. Aceite o aviso **"Deseja permitir que este aplicativo faça alterações?"**.
+   A instalação continua numa janela nova.
+3. Responda o que a janela pedir:
+
+| Pergunta | Regra |
+| --- | --- |
+| E-mail do administrador | É o login da tela do sistema |
+| Senha do administrador (duas vezes) | Mínimo 8 caracteres, com letra e número |
+| Senha do `postgres` (duas vezes) | Qualquer uma, sem aspas duplas (`"`) e sem terminar em `\`. **Anote.** |
+
+Se a máquina **já tiver** PostgreSQL, o kit não instala outro e pede a senha do
+`postgres` que já existe.
+
+### 2.3 O que acontece
+
+Leva de 5 a 15 minutos, sem mais perguntas:
+
+1. Confere o SHA-256 do pacote e dos componentes.
+2. Extrai o pacote.
+3. Instala o PostgreSQL 17 em modo silencioso, sem pgAdmin nem Stack Builder.
+4. Confirma que a senha do `postgres` entra no banco.
+5. Copia o NSSM para `D:\aja-obras\bin\`.
+6. Roda o `instalar.ps1`. Os 9 passos dele precisam terminar em verde:
+   1. Pré-requisitos
+   2. Diretórios
+   3. `.env`
+   4. Banco
+   5. Release
+   6. Schema
+   7. Administrador
+   8. Serviço e firewall
+   9. Backup
+7. Guarda o pacote em `D:\aja-obras\pacotes\` e abre o navegador no sistema.
+
+### 2.4 Se parar no meio
+
+A janela mostra o erro em **vermelho** e espera Enter para fechar. Tire um
+print antes de fechar. Se o erro aconteceu depois do passo 5 do `instalar.ps1`,
+siga **"Reinstalar do zero"** (seção 8) antes de rodar o kit de novo.
+
+---
+
+## 3. Instalação manual (plano B)
+
+Os componentes são os mesmos do kit, e dá para tirá-los da pasta
+`componentes\` do kit extraído. **O Node não precisa ser instalado:** ele vem
+dentro do pacote, em `runtime\node.exe`.
+
+### 3.1 PostgreSQL
+
+1. Rodar `postgresql-17.10-2-windows-x64.exe`.
+2. Componentes: manter **PostgreSQL Server** e **Command Line Tools**. O
+   pgAdmin é opcional.
+3. Senha do superusuário `postgres`: **anotar**.
 4. Porta **5432**, diretório e locale padrão.
 5. No fim, **desmarcar o Stack Builder**, que baixa complementos da internet.
 
-### NSSM
+### 3.2 NSSM
 
 Copiar o `nssm.exe` para **`C:\Program Files\nssm\nssm.exe`**.
 
 > Não rode direto do pen drive. O serviço fica registrado apontando para o
 > `nssm.exe` usado na instalação: com ele no pen drive, o sistema para de subir
-> quando o pen drive sai. O `instalar.ps1` recusa esse caso.
+> no primeiro reinício depois que o pen drive sai. O `instalar.ps1` recusa esse
+> caso.
 
----
-
-## 4. Instalar o sistema
-
-### 4.1 Copiar e conferir o pacote
-
-Copiar o `.zip` e o `.sha256` para `C:\instalacao\` e conferir a integridade:
+### 3.3 Conferir e extrair o pacote
 
 ```powershell
 cd C:\instalacao
@@ -114,16 +153,13 @@ cd C:\instalacao
 Get-Content .\aja-obras-<versão>.zip.sha256
 ```
 
-Os dois códigos têm que ser iguais (maiúscula e minúscula não importam). Se
-não forem, copie de novo. A atualização confere isso sozinha; a instalação não.
-
-Extrair o `.zip` (botão direito → **Extrair tudo**) para
+Os dois códigos têm que ser iguais (maiúscula e minúscula não importam).
+Desbloqueie o `.zip` como no passo 2.1 e extraia para
 `C:\instalacao\aja-obras-<versão>\`.
 
-### 4.2 Rodar o instalador
+### 3.4 Rodar o instalador
 
-Abrir **um PowerShell novo como Administrador**. Tem que ser novo, para enxergar
-o Node recém-instalado.
+PowerShell **como Administrador**:
 
 ```powershell
 cd C:\instalacao\aja-obras-<versão>
@@ -134,58 +170,34 @@ powershell -ExecutionPolicy Bypass -File .\scripts\instalar.ps1 `
     -Nssm "C:\Program Files\nssm\nssm.exe"
 ```
 
-| Parâmetro | O que é |
-| --- | --- |
-| `-SenhaPostgres` | A senha anotada no instalador do PostgreSQL |
-| `-EmailAdmin` | Login do primeiro administrador do sistema |
-| `-SenhaAdmin` | **Mínimo 8 caracteres, com pelo menos uma letra e um número** |
-| `-Nssm` | Caminho do `nssm.exe` do passo 3 |
-| `-Raiz` | Opcional. Padrão `D:\aja-obras` |
-| `-HorarioBackup` | Opcional. Padrão `22:00` |
-
 > **Por que `powershell -ExecutionPolicy Bypass -File`:** o Windows vem com a
 > execução de scripts desligada. O Bypass libera só esta execução e não muda a
 > máquina. Não use `Set-ExecutionPolicy Unrestricted`.
 
-O script mostra 9 passos. Todos precisam terminar em verde:
-
-1. Pré-requisitos
-2. Diretórios
-3. `.env`
-4. Banco
-5. Release
-6. Schema
-7. Administrador
-8. Serviço
-9. Backup ("primeiro backup feito")
-
-### 4.3 Liberar o firewall
-
-Ainda no PowerShell como Administrador:
-
-```powershell
-New-NetFirewallRule -DisplayName 'AJA Obras' -Direction Inbound -LocalPort 3000 -Protocol TCP -Action Allow -Profile Private
-```
-
-> Se a rede da máquina estiver marcada como **Pública** no Windows, a regra não
-> vale. Conferir em Configurações → Rede → propriedades da conexão → **Privada**.
+> **As senhas ficam no histórico do PowerShell**, em texto puro. Ao terminar,
+> apague-o:
+> `Remove-Item (Get-PSReadLineOption).HistorySavePath`
 
 ---
 
-## 5. Conferir a instalação
+## 4. Conferir a instalação
+
+Vale para os dois caminhos.
 
 - [ ] `http://localhost:3000` abre, e o login com o administrador funciona.
 - [ ] `Invoke-RestMethod http://localhost:3000/api/health` mostra a versão
       certa e `banco: True`.
 - [ ] De **outro aparelho** na mesma rede (o celular serve), abrir
       `http://<ip-da-máquina>:3000`. 🏢 No cliente: `http://192.168.1.222:3000`.
+      O firewall é liberado pela instalação, só para a rede local.
 - [ ] Agendador de Tarefas → **AJA Obras - backup** → último resultado `0x0`.
 - [ ] Existe `D:\aja-obras\backups\<data>\banco.dump`.
-- [ ] **Reiniciar a máquina e NÃO fazer login.** Pelo outro aparelho o sistema
+- [ ] Existe `D:\aja-obras\ATUALIZAR.cmd`.
+- [ ] **Reiniciar a máquina e NÃO fazer login.** Pelo outro aparelho, o sistema
       tem que abrir: o serviço sobe antes de qualquer login.
 
-Com o sistema no ar, **criar uma obra e anexar um PDF**. Depois, rodar o backup
-de novo e conferir se o arquivo aparece:
+Com o sistema no ar, **crie uma obra e anexe um PDF**. Depois, rode o backup de
+novo e confira se o arquivo aparece:
 
 ```powershell
 Start-ScheduledTask "AJA Obras - backup"
@@ -194,7 +206,7 @@ Get-ChildItem D:\aja-obras\backups\documentos -Recurse -File
 
 ### 🏢 Atalho na pasta de rede
 
-Criar um arquivo `Sistema de Obras.url` na pasta comum, com este conteúdo:
+Crie um arquivo `Sistema de Obras.url` na pasta comum, com este conteúdo:
 
 ```
 [InternetShortcut]
@@ -206,23 +218,25 @@ não resolver em todos os PCs.
 
 ---
 
-## 6. Atualizar para uma nova versão
+## 5. Atualizar para uma nova versão
 
-1. Copiar o `.zip` **e o `.sha256`** novos para `D:\aja-obras\pacotes\`.
-2. Avisar os usuários: o sistema fica fora por alguns minutos.
-3. PowerShell **como Administrador**:
+1. Copie o `aja-obras-<versão>.zip` **e o `.sha256`** para
+   `D:\aja-obras\pacotes\`.
+2. Avise os usuários: o sistema fica fora por alguns minutos.
+3. Duplo clique em **`D:\aja-obras\ATUALIZAR.cmd`** e aceite o aviso de
+   administrador.
+4. A janela mostra qual pacote encontrou. Confira e aperte **Enter**.
+
+O script confere o hash, faz dump do banco, para o serviço, aplica as
+migrations, troca a versão e verifica se o sistema respondeu. Se falhar, volta
+sozinho para a versão anterior e mostra como restaurar o banco.
+
+Pelo PowerShell, como Administrador, o equivalente é:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File D:\aja-obras\current\scripts\atualizar.ps1 `
     -Pacote D:\aja-obras\pacotes\aja-obras-<versão>.zip
 ```
-
-Use o `atualizar.ps1` de `D:\aja-obras\current\scripts`, não o de dentro do
-pacote novo.
-
-O script confere o hash, faz dump do banco, para o serviço, aplica as
-migrations, troca a versão e verifica se o sistema respondeu. Se falhar, volta
-sozinho para a versão anterior e imprime como restaurar o banco.
 
 **Conferir:**
 
@@ -234,7 +248,7 @@ sozinho para a versão anterior e imprime como restaurar o banco.
 
 ---
 
-## 7. Restaurar um backup
+## 6. Restaurar um backup
 
 Para quando o banco precisa voltar a um ponto anterior. **Tudo que entrou
 depois do dump se perde.**
@@ -267,20 +281,23 @@ restaurado não aponta para eles.
 
 ---
 
-## 8. 🧪 Testes de falha (só na máquina de teste)
+## 7. 🧪 Testes de falha (só na máquina de teste)
 
 São os testes que valem mais. Antes de repetir uma atualização, apague a pasta
 `D:\aja-obras\releases\<versão>` que ela criou.
 
 | # | Como provocar | O que tem que acontecer |
 | --- | --- | --- |
-| 1 | **Política de execução:** rodar `.\scripts\instalar.ps1` sem o `powershell -ExecutionPolicy Bypass -File` | Erro de execução desabilitada. Confirma que o LEIAME precisava do Bypass. |
-| 2 | **Hash errado:** trocar um caractere do `.sha256` e atualizar | Para no passo 1, sem mexer em nada. |
-| 3 | **Banco parado:** `Stop-Service postgresql-x64-17` e atualizar | Aborta no dump; o sistema anterior segue intacto. Religar o Postgres depois. |
-| 4 | **Rollback manual:** comandos abaixo | `/api/health` volta a mostrar a versão anterior. |
-| 5 | **Restauração:** excluir uma obra no sistema e seguir a seção 7 com o dump anterior | A obra volta, e o PDF abre. |
+| 1 | Abrir o `INSTALAR.cmd` **de dentro do `.zip`**, sem extrair | Para e manda extrair o kit. |
+| 2 | Na senha do admin, digitar `abc` | Recusa e pede de novo, **antes** de instalar qualquer coisa. |
+| 3 | Confirmar a senha com uma diferente, ou só trocando maiúscula por minúscula | "As duas não são iguais", e pede de novo. |
+| 4 | **Hash errado:** trocar um caractere do `.sha256` do pacote e atualizar | Para no passo 1, sem mexer em nada. |
+| 5 | **Banco parado:** `Stop-Service postgresql-x64-17` e atualizar | Aborta no dump; o sistema anterior segue intacto. Religue o Postgres depois. |
+| 6 | **Rollback manual:** comandos abaixo | `/api/health` volta a mostrar a versão anterior. |
+| 7 | **Restauração:** excluir uma obra no sistema e seguir a seção 6 | A obra volta, e o PDF abre. |
+| 8 | **Plano B:** depois de reinstalar do zero, instalar pela seção 3 | Mesmo resultado da seção 4. |
 
-Rollback manual (teste 4):
+Rollback manual (teste 6):
 
 ```powershell
 cmd /c rmdir D:\aja-obras\current
@@ -288,38 +305,76 @@ cmd /c mklink /J D:\aja-obras\current D:\aja-obras\releases\2026.09.11-teste1
 Restart-Service AjaObras
 ```
 
-### Reinstalar do zero
+---
 
-O `instalar.ps1` se recusa a rodar se o serviço já existir. Para limpar tudo:
+## 8. Reinstalar do zero
+
+O `instalar.ps1` e o kit se recusam a rodar se o serviço já existir. PowerShell
+como Administrador:
 
 ```powershell
 Stop-Service AjaObras -ErrorAction SilentlyContinue
-& "C:\Program Files\nssm\nssm.exe" remove AjaObras confirm
+& D:\aja-obras\bin\nssm.exe remove AjaObras confirm      # manual: C:\Program Files\nssm\nssm.exe
 Unregister-ScheduledTask "AJA Obras - backup" -Confirm:$false
-& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "DROP DATABASE aja_obras" -c "DROP USER aja"
+Remove-NetFirewallRule -DisplayName "AJA Obras"
 Remove-Item D:\aja-obras -Recurse -Force
 ```
 
+Depois, escolha o que fazer com o PostgreSQL:
+
+**Manter o PostgreSQL e apagar só o banco do sistema.** Quem rodar o kit de
+novo usa o PostgreSQL existente, com a mesma senha do `postgres`.
+
+```powershell
+& "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U postgres -c "DROP DATABASE aja_obras" -c "DROP USER aja"
+```
+
+**🧪 Remover o PostgreSQL também**, para testar de novo a instalação silenciosa:
+
+```powershell
+& "C:\Program Files\PostgreSQL\17\uninstall-postgresql.exe" --mode unattended
+Remove-Item "C:\Program Files\PostgreSQL" -Recurse -Force
+```
+
+> A segunda linha não é opcional. O desinstalador deixa a pasta de dados para
+> trás, e um PostgreSQL instalado por cima dela reaproveita o banco antigo **com
+> a senha antiga** do `postgres`.
+
 ---
 
-## 9. Se algo der errado
+## 9. As senhas
+
+| Usuário | Onde é usada | Quem define | Onde fica |
+| --- | --- | --- | --- |
+| Administrador do sistema | Login da tela | Você, na instalação | Só o hash, no banco. Pode ser trocada pela tela. |
+| `postgres` | Manutenção do banco (reinstalar, restaurar à mão) | Você, na instalação | **Em lugar nenhum. Anote.** |
+| `aja` | O sistema, o backup e a atualização | Gerada pela instalação | `D:\aja-obras\.env`. Ninguém precisa dela. |
+
+O `postgres` só aceita conexão da própria máquina: uma senha simples não fica
+exposta para a rede. Não libere o PostgreSQL para acesso de outros PCs.
+
+---
+
+## 10. Se algo der errado
 
 | O que ver | Onde |
 | --- | --- |
 | Erro do sistema | `D:\aja-obras\logs\servico-erro.log` |
 | Backup | `D:\aja-obras\logs\backup.log` |
+| Instalação do PostgreSQL pelo kit | `%TEMP%\install-postgresql.log` |
 | Saúde | `http://localhost:3000/api/health` |
 | Serviço | `Get-Service AjaObras` |
 
 Para pedir ajuda, mande:
 
-- a **saída inteira** do PowerShell (texto ou print), principalmente o que sair
+- print da janela, ou a saída inteira do PowerShell, principalmente o que sair
   em vermelho;
-- os dois logs acima.
+- os logs acima.
 
 **Nunca:**
 
 - compartilhar `D:\aja-obras\storage\` na rede, porque qualquer um abriria
   qualquer contrato sem passar pela permissão do sistema;
 - apagar ou sobrescrever `D:\aja-obras\.env`;
+- apagar `D:\aja-obras\bin\nssm.exe`, porque o serviço depende dele;
 - rodar `prisma migrate dev` ou `db push`.

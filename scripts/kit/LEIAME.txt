@@ -1,0 +1,42 @@
+SISTEMA DE GESTÃO DE OBRAS — AJA GRUPO EMPRESARIAL
+Kit de instalação
+
+COMO INSTALAR
+-------------
+1. Extraia este kit inteiro: botão direito no .zip, "Extrair tudo".
+   Não rode de dentro do .zip.
+2. Dê duplo clique em INSTALAR.cmd e aceite o aviso de administrador.
+3. Responda o que a janela pedir:
+     - e-mail e senha do administrador do sistema (o login da tela)
+     - senha do usuário postgres (o banco de dados)
+4. No fim, o navegador abre no sistema.
+
+Instala em D:\aja-obras. Se a máquina não tiver D:, a janela pergunta.
+Nada é baixado da internet: tudo que a instalação precisa está neste kit.
+
+AS SENHAS
+---------
+  administrador   login da tela do sistema. Pode ser trocada pela tela depois.
+  postgres        a que resolve problema no banco. ANOTE E GUARDE.
+  aja             usuário que o sistema usa no banco. Automática, fica no
+                  arquivo D:\aja-obras\.env. Ninguém precisa dela.
+
+O QUE TEM AQUI
+--------------
+INSTALAR.cmd                         duplo clique
+instalar-kit.ps1                     o que o INSTALAR.cmd roda
+aja-obras-<versao>.zip (+ .sha256)   o sistema
+componentes\postgresql-*.exe         instalador oficial do PostgreSQL
+componentes\nssm.exe                 registra o sistema como serviço do Windows
+componentes\componentes.sha256       conferência dos componentes
+
+SE ALGO DER ERRADO
+------------------
+A janela mostra o erro em vermelho e espera Enter para fechar. Tire um print
+dela. O passo a passo completo, inclusive como recomeçar do zero, está em
+docs/roteiro-instalacao.md.
+
+ATUALIZAR DEPOIS
+----------------
+Não use o kit. Copie o .zip e o .sha256 da versão nova para
+D:\aja-obras\pacotes\ e dê duplo clique em D:\aja-obras\ATUALIZAR.cmd.

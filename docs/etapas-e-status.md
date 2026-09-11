@@ -1310,6 +1310,34 @@ data:
 
 Ver ponto #11 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
+### Kit de instalação — 11/09/2026
+
+A instalação passou a ser **um arquivo e um duplo clique**. A manual continua
+como plano B, e as duas rodam o mesmo `instalar.ps1`. Desenho em
+`instalacao-on-premise.md`, seção 6; passo a passo em
+[`roteiro-instalacao.md`](roteiro-instalacao.md).
+
+- **Node embutido:** o `node.exe` do runner vai em `runtime\` de cada release.
+  Some o MSI.
+- **Kit (`scripts/montar-kit.mjs`):** reúne pacote, instalador do PostgreSQL
+  17.10-2 (baixado no runner e conferido contra o SHA-256 fixado) e NSSM
+  2.24-101 (guardado no repositório). O workflow publica kit e pacote.
+- **`INSTALAR.cmd`:** pede elevação, pergunta e-mail e senha do admin e a
+  senha do `postgres`, com digitação oculta, e instala o PostgreSQL em modo
+  silencioso. O `aja` continua com senha aleatória no `.env`.
+- **`ATUALIZAR.cmd` na raiz:** acha sozinho o pacote novo em `pacotes\`.
+- **Firewall pelo `instalar.ps1`:** para a sub-rede local, em qualquer perfil
+  de rede.
+
+Validado fora do Windows: o kit monta, os hashes conferem e os `.ps1` saem com
+BOM. **Nada do kit foi executado em Windows.** Os pontos que só a máquina real
+responde:
+
+- os parâmetros do instalador silencioso da EDB, principalmente
+  `--disable-components pgAdmin,stackbuilder`;
+- a elevação por duplo clique;
+- o `Expand-Archive` de um pacote de ~170 MB.
+
 **Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
 cenário mais provável. O código não é mais o gargalo: o prazo depende do
 retorno do checklist e do acesso à máquina.

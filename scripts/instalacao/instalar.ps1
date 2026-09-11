@@ -5,21 +5,23 @@
 .DESCRIÇÃO
   Roda uma vez. É o script de maior risco do conjunto, porque cria o que os
   outros assumem existir: a árvore em D:\aja-obras, o .env com o segredo de
-  sessão, o banco, o schema, o primeiro administrador, o serviço do Windows e
-  a tarefa diária de backup.
+  sessão, o banco, o schema, o primeiro administrador, o serviço do Windows,
+  a regra de firewall e a tarefa diária de backup.
+
+  Dois caminhos chegam aqui, e o script é o mesmo nos dois
+  (docs/roteiro-instalacao.md):
+    - o kit (INSTALAR.cmd), que antes instala o PostgreSQL e o NSSM;
+    - a instalação manual, plano B.
 
   O que ele NÃO faz, de propósito:
-    - não instala Node nem PostgreSQL. Os dois têm instalador próprio, com
-      telas e opções que não vale a pena automatizar numa instalação única;
-      ele apenas confere se estão presentes e para com instrução clara.
-    - não configura IP fixo nem firewall. São mudanças na rede do cliente, e
-      quem responde por elas é quem administra a rede.
+    - não instala o PostgreSQL: só confere. No kit, quem instala é o
+      instalar-kit.ps1.
+    - não configura IP fixo. É mudança na rede do cliente.
 
-  Pré-requisitos na máquina (levados no pen drive, seção 6 do plano):
-    Node.js (mesma versão maior do .nvmrc), PostgreSQL, NSSM.
+  O Node vem dentro do pacote (runtime\node.exe).
 
 .EXEMPLO
-  .\instalar.ps1 -SenhaPostgres "..." -EmailAdmin admin@empresa.local -SenhaAdmin "..."
+  .\instalar.ps1 -SenhaPostgres "..." -EmailAdmin admin@empresa.local -SenhaAdmin "..." -Nssm "C:\Program Files\nssm\nssm.exe"
 #>
 param(
   # D: e não C:: na máquina do cliente o C: tem 118 GB e o D: tem 3,6 TB, e
@@ -59,24 +61,31 @@ Write-Host "  raiz: $Raiz"
 
 Escrever-Passo "1/9 Conferindo o que precisa estar instalado"
 
-$node = Get-Command node -ErrorAction SilentlyContinue
-if (-not $node) { Parar "Node.js não está instalado (ou não está no PATH). Instale o MSI do pen drive e abra um PowerShell novo." }
-$versaoNode = (& node --version).TrimStart("v")
-$maiorNode = [int]($versaoNode -split '\.')[0]
-$maiorEsperado = [int]((Get-Content (Join-Path $pacote "node-versao.txt") -Raw).Trim() -split '\.')[0]
-if ($maiorNode -ne $maiorEsperado) {
-  # `standalone` traz as dependências, não o runtime: a versão maior do Node na
-  # máquina tem que ser a mesma com que o pacote foi compilado.
-  Parar "Node $versaoNode instalado, mas este pacote foi compilado para a linha $maiorEsperado.x. Instale a versão certa."
+$nodeEmbutido = Test-Path (Join-Path $pacote "runtime\node.exe")
+$nodePacote = Node-Da-Release $pacote
+if (-not $nodePacote) {
+  Parar "o pacote não traz runtime\node.exe e não há Node.js no PATH. Use o pacote gerado pelo GitHub Actions."
 }
-Escrever-Ok "Node $versaoNode"
+$versaoNode = (& $nodePacote --version).TrimStart("v")
+if ($nodeEmbutido) {
+  Escrever-Ok "Node $versaoNode, embutido no pacote"
+} else {
+  $maiorNode = [int]($versaoNode -split '\.')[0]
+  $maiorEsperado = [int]((Get-Content (Join-Path $pacote "node-versao.txt") -Raw).Trim() -split '\.')[0]
+  if ($maiorNode -ne $maiorEsperado) {
+    # `standalone` traz as dependências, não o runtime: sem o Node embutido, a
+    # versão maior do Node da máquina tem que ser a mesma da compilação.
+    Parar "Node $versaoNode instalado, mas este pacote foi compilado para a linha $maiorEsperado.x. Instale a versão certa."
+  }
+  Escrever-Ok "Node $versaoNode, do PATH"
+}
 
 $psql = Achar-BinPostgres "psql"
-if (-not $psql) { Parar "não encontrei o psql. Instale o PostgreSQL do pen drive." }
+if (-not $psql) { Parar "não encontrei o psql. Instale o PostgreSQL (com as Command Line Tools)." }
 Escrever-Ok "psql em $psql"
 
 $nssmCmd = Get-Command $Nssm -ErrorAction SilentlyContinue
-if (-not $nssmCmd) { Parar "não encontrei o nssm. Copie o nssm.exe do pen drive e passe -Nssm C:\caminho\nssm.exe." }
+if (-not $nssmCmd) { Parar "não encontrei o nssm. Passe -Nssm com o caminho do nssm.exe." }
 Escrever-Ok "nssm em $($nssmCmd.Source)"
 # O serviço fica registrado apontando para ESTE nssm.exe. No pen drive, o
 # sistema funciona até alguém tirar o pen drive — e depois não sobe mais.
@@ -120,6 +129,9 @@ if (Test-Path $arquivoEnv) {
   [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
   $segredo = [Convert]::ToBase64String($bytes)
 
+  # A senha do usuário "aja" é aleatória e só existe aqui: quem lê é o sistema,
+  # o backup e a atualização, todos pelo .env. Para mexer no banco à mão, a
+  # senha que importa é a do postgres.
   $bytesSenha = New-Object byte[] 24
   [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytesSenha)
   # Sem caractere que precise de escape na URL de conexão.
@@ -192,14 +204,23 @@ Ligar-Env $Raiz $destino
 Apontar-Current $Raiz $destino
 Escrever-Ok "release em $destino, current apontando para ela."
 
+# O duplo clique da atualização mora na raiz, fora das releases: é o arquivo
+# que alguém vai procurar daqui a meses.
+$atalhoAtualizar = Join-Path $pacote "scripts\ATUALIZAR.cmd"
+if (Test-Path $atalhoAtualizar) {
+  Copy-Item $atalhoAtualizar (Join-Path $Raiz "ATUALIZAR.cmd") -Force
+  Escrever-Ok "ATUALIZAR.cmd em $Raiz"
+}
+
 # -------------------------------------------------------------- 6. migrar
 
 Escrever-Passo "6/9 Criando o schema (migrate deploy)"
 $ferramentas = Join-Path $destino "ferramentas"
+$nodeRelease = Node-Da-Release $destino
 $env:DATABASE_URL = $urlBanco
 try {
   Push-Location $ferramentas
-  node (Join-Path $ferramentas "node_modules\prisma\build\index.js") migrate deploy
+  & $nodeRelease (Join-Path $ferramentas "node_modules\prisma\build\index.js") migrate deploy
   $codigo = $LASTEXITCODE
   Pop-Location
   if ($codigo -ne 0) { Parar "migrate deploy falhou (código $codigo)." }
@@ -207,7 +228,7 @@ try {
 
   Escrever-Passo "7/9 Criando o primeiro administrador"
   Push-Location $ferramentas
-  node (Join-Path $ferramentas "criar-admin.mjs") --email $EmailAdmin --senha $SenhaAdmin --nome "Administrador"
+  & $nodeRelease (Join-Path $ferramentas "criar-admin.mjs") --email $EmailAdmin --senha $SenhaAdmin --nome "Administrador"
   $codigo = $LASTEXITCODE
   Pop-Location
   if ($codigo -ne 0) { Parar "não consegui criar o administrador (código $codigo)." }
@@ -217,9 +238,11 @@ try {
 
 # -------------------------------------------------------------- 8. serviço
 
-Escrever-Passo "8/9 Registrando o serviço do Windows"
-$exeNode = $node.Source
-& $Nssm install $NomeServico $exeNode "$Raiz\current\server.js" | Out-Null
+Escrever-Passo "8/9 Registrando o serviço do Windows e o firewall"
+# Pelo current, e não pela release de hoje: a atualização troca o current, e o
+# Node da versão nova passa a rodar sem mexer no serviço.
+$nodeServico = if ($nodeEmbutido) { Join-Path $Raiz "current\runtime\node.exe" } else { $nodePacote }
+& $Nssm install $NomeServico $nodeServico "$Raiz\current\server.js" | Out-Null
 & $Nssm set $NomeServico AppDirectory "$Raiz\current" | Out-Null
 # HOSTNAME=0.0.0.0 é o que faz o serviço atender a rede, e não só a própria
 # máquina: sem isso o sintoma é "abre aqui, não abre em nenhum outro PC".
@@ -239,6 +262,16 @@ if (-not (Esperar-Saude -Porta $Porta)) {
   Write-Host "O serviço subiu mas não respondeu. Veja $Raiz\logs\servico-erro.log" -ForegroundColor Red
   Parar "instalação incompleta."
 }
+
+# Sub-rede local em vez de perfil de rede: vale com a rede marcada como
+# Privada, Pública ou Domínio — o que o Windows escolheu nesta máquina é
+# detalhe que ninguém confere, e é o motivo clássico de "abre aqui e não abre
+# em nenhum outro PC" —, e continua fechada para qualquer coisa fora da rede.
+if (-not (Get-NetFirewallRule -DisplayName "AJA Obras" -ErrorAction SilentlyContinue)) {
+  New-NetFirewallRule -DisplayName "AJA Obras" -Direction Inbound -LocalPort $Porta -Protocol TCP `
+    -Action Allow -Profile Any -RemoteAddress LocalSubnet | Out-Null
+}
+Escrever-Ok "firewall: porta $Porta liberada para a rede local."
 
 # --------------------------------------------------------------- 9. backup
 
@@ -290,11 +323,11 @@ Write-Host "  Nesta máquina:  http://localhost:$Porta"
 if ($ip) { Write-Host "  Na rede:        http://${ip}:$Porta" }
 Write-Host "  Login:          $EmailAdmin"
 Write-Host "  Backup:         diário às $HorarioBackup em $DestinoBackup"
+Write-Host "  Atualizar:      $Raiz\ATUALIZAR.cmd"
 Write-Host ""
 Write-Host "Falta fazer, fora deste script:" -ForegroundColor Yellow
-Write-Host "  1. Liberar a porta $Porta no firewall do Windows (perfil de rede privada)."
-Write-Host "     New-NetFirewallRule -DisplayName 'AJA Obras' -Direction Inbound -LocalPort $Porta -Protocol TCP -Action Allow -Profile Private"
-Write-Host "  2. Abrir o endereço da rede em OUTRO computador antes de ir embora."
+Write-Host "  1. Abrir o endereço da rede em OUTRO computador antes de ir embora."
 if (-not $backupOk) {
-  Write-Host "  3. Corrigir o backup: rode a tarefa `"$TarefaBackup`" de novo depois de ver o log." -ForegroundColor Red
+  Write-Host "  2. Corrigir o backup: rode a tarefa `"$TarefaBackup`" de novo depois de ver o log." -ForegroundColor Red
 }
+exit 0

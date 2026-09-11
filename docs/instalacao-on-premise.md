@@ -393,8 +393,8 @@ instala serviço é o que mais chama atenção de antivírus — e o do cliente 
 desconhecido. O certificado custa algumas centenas de dólares por ano. Para uma
 instalação única, o `.cmd` dá o mesmo duplo clique sem esses custos.
 
-**Kit e pacote são coisas diferentes.** O kit (~525 MB) é só para a primeira
-instalação. A atualização continua sendo o pacote (~170 MB), sem o
+**Kit e pacote são coisas diferentes.** O kit (~440 MB) é só para a primeira
+instalação. A atualização continua sendo o pacote (~85 MB), sem o
 PostgreSQL.
 
 ---

@@ -1340,6 +1340,17 @@ como plano B, e as duas rodam o mesmo `instalar.ps1`. Desenho em
    nenhum documento abriria. Passou a usar `posix.join`: o caminho no banco é
    lógico, e quem traduz para o disco é `resolverDentroDe`. Os testes do
    armazenamento deixaram de comparar com texto POSIX cru.
+3. **O build exigia banco.** O client do Prisma nascia ao importar o módulo, e
+   o `next build` carrega cada rota para coletar a configuração dela — então
+   compilar pedia `DATABASE_URL` na máquina que compila, e o runner não tem
+   banco. O client passou a nascer no primeiro uso. A alternativa, dar uma URL
+   de mentira ao build, arriscaria assar essa URL no pacote do cliente.
+4. **O pacote inchava por rastreamento.** `resolve(process.cwd(), STORAGE_DIR)`
+   fazia o Turbopack concluir que o projeto inteiro podia ser lido em runtime e
+   incluir todo o código-fonte no build — a origem de `docs/`, `tests/` e
+   `storage/` aparecerem no pacote. Resolvido com `turbopackIgnore` na chamada.
+   A limpeza do `empacotar.mjs` continua como rede de segurança. O pacote caiu
+   de 171 MB para 85 MB, e o kit de 525 MB para 440 MB.
 
 Validado fora do Windows: o kit monta, os hashes conferem e os `.ps1` saem com
 BOM. **Nada do kit foi executado em Windows.** Os pontos que só a máquina real
@@ -1348,7 +1359,7 @@ responde:
 - os parâmetros do instalador silencioso da EDB, principalmente
   `--disable-components pgAdmin,stackbuilder`;
 - a elevação por duplo clique;
-- o `Expand-Archive` de um pacote de ~170 MB.
+- o `Expand-Archive` de um pacote de ~85 MB.
 
 **Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
 cenário mais provável. O código não é mais o gargalo: o prazo depende do

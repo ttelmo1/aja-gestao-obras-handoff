@@ -20,8 +20,30 @@ function criarClient() {
   });
 }
 
-export const prisma = globalForPrisma.prisma ?? criarClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function client(): PrismaClient {
+  if (!globalForPrisma.prisma) {
+    globalForPrisma.prisma = criarClient();
+  }
+  return globalForPrisma.prisma;
 }
+
+/**
+ * O client só nasce no primeiro uso, e não quando o módulo é importado.
+ *
+ * Não é detalhe de estilo: o `next build` carrega cada rota para coletar a
+ * configuração dela, e criar o client ali exigiria `DATABASE_URL` **na máquina
+ * que compila**. O build roda no GitHub Actions, que não tem banco nenhum — e
+ * a alternativa (passar uma URL de mentira para o build) arriscaria assar essa
+ * URL no pacote que vai para o cliente. Com a criação adiada, quem precisa da
+ * variável é só o servidor em execução, que é onde ela existe de verdade.
+ *
+ * O Proxy mantém `prisma` com o mesmo tipo e o mesmo uso de antes; o `bind`
+ * preserva o `this` dos métodos do client.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_alvo, propriedade) {
+    const real = client();
+    const valor = Reflect.get(real, propriedade);
+    return typeof valor === "function" ? valor.bind(real) : valor;
+  },
+});

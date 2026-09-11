@@ -22,8 +22,8 @@ antes, ou eles saem sem as últimas mudanças.
 
 | Arquivo | Para quê |
 | --- | --- |
-| `aja-obras-kit-<versão>.zip` + `.sha256` | **Primeira instalação.** Traz tudo: sistema, PostgreSQL e NSSM (~525 MB). |
-| `aja-obras-<versão>.zip` + `.sha256` | **Atualização**, e a instalação manual. Só o sistema (~170 MB). |
+| `aja-obras-kit-<versão>.zip` + `.sha256` | **Primeira instalação.** Traz tudo: sistema, PostgreSQL e NSSM (~440 MB). |
+| `aja-obras-<versão>.zip` + `.sha256` | **Atualização**, e a instalação manual. Só o sistema (~85 MB). |
 
 **🧪 Teste: disparo manual, sem publicar Release**
 

@@ -1352,6 +1352,31 @@ como plano B, e as duas rodam o mesmo `instalar.ps1`. Desenho em
    A limpeza do `empacotar.mjs` continua como rede de segurança. O pacote caiu
    de 171 MB para 85 MB, e o kit de 525 MB para 440 MB.
 
+### Primeira instalação real em Windows — 13/09/2026
+
+Rodou até o passo 4 de 9 e parou ali. O que passou já vale registrar, porque
+era o que mais preocupava: conferência de SHA-256, extração, **instalação
+silenciosa do PostgreSQL 17**, cópia do NSSM, geração do `.env` — e o próprio
+tratamento de erro, que segurou a janela aberta com a mensagem em vermelho.
+
+🔴 **`psql -c` não substitui variável do psql.** A criação do usuário do banco
+usava `-c "... WITH PASSWORD :'senha'"`, com a senha em `-v senha=...` para não
+aparecer na linha de comando. Mas `-c` manda a linha direto ao servidor, sem
+passar pela substituição: o servidor recebe o `:` cru e recusa com *syntax
+error at or near ":"*. Só script lido de arquivo ou de stdin interpola.
+
+O SQL passou a ir **por stdin**, com a senha no próprio texto — que continua
+fora da lista de processos, e ali `-v` não é necessário. Dois cuidados que o
+teste local contra um Postgres de verdade mostrou serem obrigatórios:
+
+- **`ON_ERROR_STOP=1`**: sem ele, erro em script lido de stdin termina com
+  código **0**, e a instalação seguiria com o banco pela metade.
+- **Apóstrofo na senha** é dobrado antes de entrar no SQL.
+
+Quando o usuário já existe (sobra de tentativa anterior), o script agora faz
+`ALTER USER` com a senha do `.env` novo, em vez de seguir com uma senha que não
+casa — antes, a aplicação subiria sem conseguir conectar.
+
 Validado fora do Windows: o kit monta, os hashes conferem e os `.ps1` saem com
 BOM. **Nada do kit foi executado em Windows.** Os pontos que só a máquina real
 responde:

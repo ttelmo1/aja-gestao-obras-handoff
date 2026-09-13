@@ -170,15 +170,32 @@ $partes = Partes-Da-Url $urlBanco
 Escrever-Passo "4/9 Criando o banco e o usuário da aplicação"
 $env:PGPASSWORD = $SenhaPostgres
 try {
+  # A senha viaja no texto SQL, por stdin, e nunca como argumento — argumento
+  # aparece na lista de processos da máquina.
+  #
+  # Por que não `-c` com variável do psql (`:'senha'`), que era o jeito antigo:
+  # `-c` manda a linha direto ao servidor, SEM substituir variáveis do psql, e
+  # o servidor recebe o `:` cru e recusa com "syntax error at or near". Só
+  # script lido de arquivo ou de stdin passa pela substituição — e aí a senha
+  # voltaria para a linha de comando, em `-v`. Por stdin, não precisa dela.
+  #
+  # ON_ERROR_STOP é obrigatório neste formato: sem ele, erro em script lido de
+  # stdin ainda termina com código 0, e a falha passaria batida.
+  $senhaSql = $partes.Senha -replace "'", "''"
   $existeUsuario = & $psql -h localhost -U postgres -tAc "SELECT 1 FROM pg_roles WHERE rolname='$($partes.Usuario)'"
   if ($existeUsuario -ne "1") {
-    # A senha entra por parâmetro do psql para não aparecer no histórico nem em
-    # log de comando.
-    & $psql -h localhost -U postgres -v senha="$($partes.Senha)" -c "CREATE USER `"$($partes.Usuario)`" WITH PASSWORD :'senha'" | Out-Null
+    "CREATE USER `"$($partes.Usuario)`" WITH PASSWORD '$senhaSql';" |
+      & $psql -h localhost -U postgres -v ON_ERROR_STOP=1 -q -f - | Out-Null
     if ($LASTEXITCODE -ne 0) { Parar "falhou ao criar o usuário do banco." }
     Escrever-Ok "usuário $($partes.Usuario) criado."
   } else {
-    Escrever-Aviso "usuário $($partes.Usuario) já existia."
+    # Sobra de tentativa anterior: o .env recém-escrito tem uma senha nova, e
+    # ela precisa valer para o usuário que já existe — senão a aplicação sobe
+    # sem conseguir conectar, e o erro só aparece na primeira tela.
+    "ALTER USER `"$($partes.Usuario)`" WITH PASSWORD '$senhaSql';" |
+      & $psql -h localhost -U postgres -v ON_ERROR_STOP=1 -q -f - | Out-Null
+    if ($LASTEXITCODE -ne 0) { Parar "o usuário $($partes.Usuario) já existia e não consegui ajustar a senha dele." }
+    Escrever-Aviso "usuário $($partes.Usuario) já existia — senha sincronizada com o .env."
   }
 
   $existeBanco = & $psql -h localhost -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$($partes.Banco)'"

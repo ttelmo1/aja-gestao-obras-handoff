@@ -1377,14 +1377,65 @@ Quando o usuário já existe (sobra de tentativa anterior), o script agora faz
 `ALTER USER` com a senha do `.env` novo, em vez de seguir com uma senha que não
 casa — antes, a aplicação subiria sem conseguir conectar.
 
-Validado fora do Windows: o kit monta, os hashes conferem e os `.ps1` saem com
-BOM. **Nada do kit foi executado em Windows.** Os pontos que só a máquina real
-responde:
+### Segunda tentativa, mesmo dia: o serviço sobe e tudo responde 500
 
-- os parâmetros do instalador silencioso da EDB, principalmente
-  `--disable-components pgAdmin,stackbuilder`;
-- a elevação por duplo clique;
-- o `Expand-Archive` de um pacote de ~85 MB.
+Com o `psql` corrigido, o kit passou dos passos 1 a 8 e parou na verificação de
+saúde: o serviço subia, mas `/api/health` devolvia 500 por 90 segundos até o
+script desistir. No log:
+
+```
+Cannot find module '@prisma/client-2c3a283f134fdcb6/runtime/client'
+Cannot find package 'pg-587764f78a6c7a9c'
+```
+
+🔴 **O Next cria apelidos de pacote como atalhos para o caminho absoluto da
+máquina que compilou.** O Turbopack externaliza `@prisma/client` e `pg` com um
+nome apelidado (`<pacote>-<hash>`) e o Next materializa esse apelido em
+`.next/node_modules/` como **symlink absoluto**, apontando para o
+`node_modules` da pasta onde o build rodou — no runner, algo como
+`D:/a/aja-gestao-obras-handoff/.../node_modules/pg`. A cadeia até o 500:
+
+1. o `empacotar.mjs` copiava com `cpSync` sem `dereference`, preservando o
+   atalho;
+2. o `Compress-Archive` do Windows **descarta atalho em silêncio** — no pacote
+   instalado, `.next/node_modules/@prisma` chegou vazio e o `pg-<hash>` nem
+   existia;
+3. na máquina do cliente o caminho do runner não existe, então toda rota que
+   toca o banco responde 500.
+
+**Correção:** `cpSync(..., { dereference: true })`. O apelido vira pasta de
+verdade dentro do pacote. Custo: `@prisma/client` tem 72 MB e passa a entrar
+duas vezes. Ainda assim o pacote fica menor que os 171 MB de antes da correção
+de rastreamento.
+
+**Trava para não repetir:** o empacotador agora **aborta se sobrar qualquer
+atalho** no pacote, como já fazia com o `.env`.
+
+**A lição que corrige uma afirmação antiga deste documento.** Estava escrito que
+"o pacote foi validado em macOS — a aplicação sobe e responde". Ela subia porque
+o teste rodava **na mesma máquina que compilou**, onde o caminho absoluto do
+atalho existia. Em qualquer outra máquina teria falhado igual. Pacote só está
+testado quando roda em máquina diferente da que o montou.
+
+### O que rodou de verdade em Windows — 13/09/2026
+
+Com a correção aplicada e o pacote montado na máquina de teste, o servidor
+respondeu `{"ok":true,"banco":true}` rodando **de fora do repositório**, sem
+nenhum atalho no pacote.
+
+Já exercitado no Windows, pelas duas tentativas do kit:
+
+- conferência de SHA-256 e `Expand-Archive` de um pacote de ~85 MB;
+- **instalação silenciosa do PostgreSQL 17**, com `--disable-components
+  pgAdmin,stackbuilder`;
+- elevação por duplo clique no `INSTALAR.cmd`;
+- `.env` gerado, banco e usuário criados, **migrations aplicadas pelo CLI do
+  Prisma embutido** (o `schema-engine` de Windows) e primeiro administrador
+  criado com o `bcryptjs` do pacote;
+- serviço registrado e iniciado pelo NSSM.
+
+Falta exercitar: regra de firewall e tarefa de backup (o script para antes
+delas quando a saúde falha), o ciclo de atualização, o rollback e a restauração.
 
 **Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
 cenário mais provável. O código não é mais o gargalo: o prazo depende do

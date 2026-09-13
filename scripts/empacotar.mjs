@@ -92,7 +92,14 @@ if (!existsSync(path.join(standalone, "server.js"))) {
 passo("Montando a pasta do pacote");
 rmSync(pacote, { recursive: true, force: true });
 mkdirSync(pacote, { recursive: true });
-cpSync(standalone, pacote, { recursive: true });
+// `dereference: true` não é detalhe: o Next cria apelidos de pacote em
+// `.next/node_modules` (por exemplo `pg-<hash>` e `@prisma/client-<hash>`, que
+// é como o Turbopack nomeia externals) e os cria como ATALHOS para o caminho
+// ABSOLUTO da máquina que compilou. Copiados como atalho, o pacote só funciona
+// nessa máquina: na do cliente o caminho não existe, o servidor sobe e todas as
+// rotas respondem 500 com "Cannot find module". Seguindo o atalho, o apelido
+// vira pasta de verdade dentro do pacote.
+cpSync(standalone, pacote, { recursive: true, dereference: true });
 
 // `server.js` não serve `public/` nem `.next/static` sozinho: o build não os
 // copia para dentro do standalone (é o comportamento documentado do Next, que
@@ -183,9 +190,13 @@ passo("Embutindo o Node");
 // atualização troca o Node junto com o sistema.
 if (process.platform === "win32") {
   if (process.version.replace(/^v/, "") !== versaoNode) {
-    abortar(
-      `o runner está em ${process.version} e o .nvmrc pede ${versaoNode}: o node.exe embutido seria de outra versão.`,
-    );
+    const recado = `este Node é ${process.version} e o .nvmrc pede ${versaoNode}: o node.exe embutido seria de outra versão.`;
+    // No CI é erro: o pacote publicado tem que levar exatamente a versão
+    // declarada. Fora dele é aviso, para dar para montar um pacote de teste na
+    // máquina de quem desenvolve — foi o que faltou em 13/09/2026, quando o
+    // pacote só pôde ser testado depois de ir ao cliente.
+    if (process.env.CI) abortar(recado);
+    console.log(`  AVISO: ${recado}`);
   }
   const runtime = path.join(pacote, "runtime");
   mkdirSync(runtime, { recursive: true });
@@ -367,6 +378,24 @@ for (const obrigatorio of [
 }
 if (existsSync(path.join(pacote, "scripts", "empacotar.mjs"))) {
   abortar("o empacotador vazou para dentro do pacote");
+}
+
+// Nenhum atalho pode sair no pacote. O Compress-Archive do Windows os descarta
+// em silêncio, e o Next cria dois deles em `.next/node_modules` apontando para
+// o caminho ABSOLUTO da máquina que compilou. Foi assim que a primeira
+// instalação no cliente subiu com todas as rotas em 500 (13/09/2026).
+const atalhos = [];
+(function procurar(diretorio) {
+  for (const item of readdirSync(diretorio, { withFileTypes: true })) {
+    const caminho = path.join(diretorio, item.name);
+    if (item.isSymbolicLink()) atalhos.push(path.relative(pacote, caminho));
+    else if (item.isDirectory()) procurar(caminho);
+  }
+})(pacote);
+if (atalhos.length > 0) {
+  abortar(
+    `o pacote ficou com atalho(s), que não sobrevivem ao .zip: ${atalhos.join(", ")}`,
+  );
 }
 
 passo("Calculando o SHA-256");

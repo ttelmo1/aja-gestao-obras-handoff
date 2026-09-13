@@ -1403,13 +1403,33 @@ nome apelidado (`<pacote>-<hash>`) e o Next materializa esse apelido em
 3. na máquina do cliente o caminho do runner não existe, então toda rota que
    toca o banco responde 500.
 
-**Correção:** `cpSync(..., { dereference: true })`. O apelido vira pasta de
-verdade dentro do pacote. Custo: `@prisma/client` tem 72 MB e passa a entrar
-duas vezes. Ainda assim o pacote fica menor que os 171 MB de antes da correção
-de rastreamento.
+**Correção:** o apelido vira pasta de verdade dentro do pacote. Custo:
+`@prisma/client` tem 72 MB e passa a entrar duas vezes. Ainda assim o pacote
+fica menor que os 171 MB de antes da correção de rastreamento.
 
 **Trava para não repetir:** o empacotador agora **aborta se sobrar qualquer
 atalho** no pacote, como já fazia com o `.env`.
+
+🔴 **`dereference: true` não é garantia — depende da versão de Node.** A
+primeira correção confiou na opção do `cpSync`, e ela funcionou na máquina de
+desenvolvimento. No runner do GitHub Actions, com o Node 24.16 que o `.nvmrc`
+pede, os dois atalhos passaram intactos e a trava barrou o empacotamento. Nos
+testes feitos depois, o Node 24.14 da máquina de desenvolvimento dereferencia
+até quando a opção está em `false`, e o 24.16 não dereferencia nem com ela em
+`true`: o comportamento simplesmente não é estável entre versões.
+
+**Correção definitiva:** `scripts/atalhos.mjs` resolve os atalhos à mão —
+`realpath` no alvo, apaga só o atalho (`rmdir` para pasta, que no Windows não
+sai por `unlink`) e copia o conteúdo no lugar. Roda em passadas, porque o
+conteúdo que entra pode trazer outros atalhos, e **explode se o alvo não
+existir**, em vez de entregar pacote pela metade. Mora em módulo separado do
+empacotador, e não dentro dele, para ter teste (`tests/atalhos.test.ts`): o
+empacotador roda o build inteiro ao ser importado, e este pedaço já custou
+duas rodadas de CI.
+
+O caso de atalho de **arquivo** é pulado no teste onde o Windows não deixa
+criar um sem privilégio de administrador. O que o Next cria é junction de
+pasta, que não precisa de privilégio e é o caso coberto.
 
 **A lição que corrige uma afirmação antiga deste documento.** Estava escrito que
 "o pacote foi validado em macOS — a aplicação sobe e responde". Ela subia porque

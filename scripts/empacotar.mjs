@@ -29,6 +29,8 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { atalhosEm, resolverAtalhos } from "./atalhos.mjs";
+
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 function argumento(nome, padrao = null) {
@@ -92,14 +94,14 @@ if (!existsSync(path.join(standalone, "server.js"))) {
 passo("Montando a pasta do pacote");
 rmSync(pacote, { recursive: true, force: true });
 mkdirSync(pacote, { recursive: true });
-// `dereference: true` não é detalhe: o Next cria apelidos de pacote em
-// `.next/node_modules` (por exemplo `pg-<hash>` e `@prisma/client-<hash>`, que
-// é como o Turbopack nomeia externals) e os cria como ATALHOS para o caminho
-// ABSOLUTO da máquina que compilou. Copiados como atalho, o pacote só funciona
-// nessa máquina: na do cliente o caminho não existe, o servidor sobe e todas as
-// rotas respondem 500 com "Cannot find module". Seguindo o atalho, o apelido
-// vira pasta de verdade dentro do pacote.
+// `dereference: true` pede para o copiador seguir os atalhos que o Next deixa
+// em `.next/node_modules`, mas o que ele faz muda com a versão de Node — quem
+// termina o serviço, igual em qualquer runner, é o `resolverAtalhos`
+// (scripts/atalhos.mjs explica o estrago que atalho no `.zip` causa).
 cpSync(standalone, pacote, { recursive: true, dereference: true });
+for (const resolvido of resolverAtalhos(pacote)) {
+  console.log(`  atalho resolvido: ${resolvido}`);
+}
 
 // `server.js` não serve `public/` nem `.next/static` sozinho: o build não os
 // copia para dentro do standalone (é o comportamento documentado do Next, que
@@ -339,6 +341,14 @@ for (const nome of readdirSync(path.join(pacote, "scripts"))) {
 
 // ---------------------------------------------------------------- zip
 
+// Última conferência antes de compactar: nenhum atalho pode sair no `.zip`,
+// porque o Compress-Archive os descarta em silêncio. Aqui a lista já deve
+// estar vazia — quem resolve é o `resolverAtalhos`, lá na montagem da pasta.
+const atalhos = atalhosEm(pacote);
+if (atalhos.length > 0) {
+  abortar(`o pacote ficou com atalho(s), que não sobrevivem ao .zip: ${atalhos.join(", ")}`);
+}
+
 passo("Compactando");
 rmSync(zip, { force: true });
 if (process.platform === "win32") {
@@ -378,24 +388,6 @@ for (const obrigatorio of [
 }
 if (existsSync(path.join(pacote, "scripts", "empacotar.mjs"))) {
   abortar("o empacotador vazou para dentro do pacote");
-}
-
-// Nenhum atalho pode sair no pacote. O Compress-Archive do Windows os descarta
-// em silêncio, e o Next cria dois deles em `.next/node_modules` apontando para
-// o caminho ABSOLUTO da máquina que compilou. Foi assim que a primeira
-// instalação no cliente subiu com todas as rotas em 500 (13/09/2026).
-const atalhos = [];
-(function procurar(diretorio) {
-  for (const item of readdirSync(diretorio, { withFileTypes: true })) {
-    const caminho = path.join(diretorio, item.name);
-    if (item.isSymbolicLink()) atalhos.push(path.relative(pacote, caminho));
-    else if (item.isDirectory()) procurar(caminho);
-  }
-})(pacote);
-if (atalhos.length > 0) {
-  abortar(
-    `o pacote ficou com atalho(s), que não sobrevivem ao .zip: ${atalhos.join(", ")}`,
-  );
 }
 
 passo("Calculando o SHA-256");

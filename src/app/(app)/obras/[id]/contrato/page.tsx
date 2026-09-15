@@ -56,7 +56,6 @@ export default async function ContratoPage({
           contratantes={contratantes}
           padrao={{
             id: obra.id,
-            codigo: obra.codigo,
             objeto: obra.objeto,
             numeroContrato: obra.numeroContrato,
             numeroProcesso: obra.numeroProcesso,

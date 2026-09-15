@@ -1232,6 +1232,26 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
    pasta vazia `storage/obras/<id>/` continua existindo.
    **Em aberto:** a senha do administrador na confirmação, que a Fernanda
    sugeriu — ver ponto #8.
+3. ✅ **Código interno sai da tela.** A Fernanda: *"o código interno não é
+   necessário pois já tem o número do contrato"*. Saiu do cartão do painel,
+   do cabeçalho da obra e do formulário. **A lógica fica:** a coluna `codigo`
+   continua, o cadastro gera `OBR-ano-seq` quando o campo vem vazio (que agora
+   é sempre) e a edição mantém o atual; a busca do painel ainda encontra por
+   ele. Voltar é devolver o input e os dois rótulos.
+
+   **Histórico passa a citar o contrato.** As mensagens novas de auditoria
+   dizem "obra do contrato 015/2026" em vez de "obra OBR-2026-001". As antigas
+   ficam como foram gravadas — a trilha é append-only —, então a aba Histórico
+   de uma obra antiga mostra os dois formatos.
+
+   **Perde-se:** o código era citado como a chave entre a obra no sistema e a
+   pasta dela na rede. Se a pasta for organizada pelo código, quem procura
+   passa a depender da busca do painel para descobrir qual é.
+4. ⏸️ **Upload de PDF grande falha na homologação.** A Vercel limita o corpo
+   da requisição a ~4,5 MB; é limite da plataforma, e fica sem ação. **A
+   verificar na instalação local:** o `proxy.ts` do Next 16 guarda em memória
+   só os primeiros 10 MB do corpo (`proxyClientMaxBodySize`), abaixo dos 320 MB
+   configurados para Server Actions.
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 

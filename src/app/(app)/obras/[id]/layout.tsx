@@ -46,7 +46,7 @@ export default async function ObraLayout({
             {obra.objeto}
           </h1>
           <p className="mt-1.5 text-sm text-[var(--muted)]">
-            {obra.codigo} · Contrato {obra.numeroContrato} · {obra.contratante.nome}
+            Contrato {obra.numeroContrato} · {obra.contratante.nome}
             {obra.numeroProcesso && ` · Processo ${obra.numeroProcesso}`}
           </p>
         </div>

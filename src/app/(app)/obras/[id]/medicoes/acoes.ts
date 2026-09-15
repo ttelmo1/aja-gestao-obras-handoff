@@ -127,7 +127,7 @@ export async function salvarMedicao(
 
   const obra = await prisma.obra.findUnique({
     where: { id: obraId },
-    select: { id: true, codigo: true },
+    select: { id: true, numeroContrato: true },
   });
   if (!obra) return { erro: "Obra não encontrada." };
 
@@ -155,7 +155,7 @@ export async function salvarMedicao(
             entidade: "Medicao",
             entidadeId: id,
             obraId,
-            descricao: `Medição ${antes.numero} da obra ${obra.codigo} alterada.`,
+            descricao: `Medição ${antes.numero} da obra do contrato ${obra.numeroContrato} alterada.`,
             dadosAntes: mudancas.antes,
             dadosDepois: mudancas.depois,
           },
@@ -190,7 +190,7 @@ export async function salvarMedicao(
           entidade: "Medicao",
           entidadeId: medicao.id,
           obraId,
-          descricao: `Medição ${medicao.numero} lançada na obra ${obra.codigo}.`,
+          descricao: `Medição ${medicao.numero} lançada na obra do contrato ${obra.numeroContrato}.`,
           dadosDepois: {
             numero: medicao.numero,
             valorMedido: medicao.valorMedido,
@@ -228,7 +228,7 @@ export async function excluirMedicao(
       obraId: true,
       status: true,
       valorMedido: true,
-      obra: { select: { codigo: true } },
+      obra: { select: { numeroContrato: true } },
     },
   });
   if (!medicao) return { erro: "Medição não encontrada." };
@@ -257,7 +257,7 @@ export async function excluirMedicao(
         entidade: "Medicao",
         entidadeId: id,
         obraId: medicao.obraId,
-        descricao: `Medição ${medicao.numero} da obra ${medicao.obra.codigo} excluída.`,
+        descricao: `Medição ${medicao.numero} da obra do contrato ${medicao.obra.numeroContrato} excluída.`,
         dadosAntes: {
           numero: medicao.numero,
           valorMedido: medicao.valorMedido,

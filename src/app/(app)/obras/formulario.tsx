@@ -17,7 +17,6 @@ import { excluirObra, salvarObra, type EstadoObra } from "./acoes";
 
 export type ObraNoFormulario = {
   id: string;
-  codigo: string;
   objeto: string;
   numeroContrato: string;
   numeroProcesso: string | null;
@@ -81,21 +80,7 @@ export function FormularioObra({
           />
         </Campo>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Campo
-            id="codigo"
-            rotulo="Código interno"
-            dica={padrao ? undefined : "Em branco, o sistema numera sozinho."}
-          >
-            <input
-              id="codigo"
-              name="codigo"
-              defaultValue={padrao?.codigo}
-              placeholder="OBR-2026-001"
-              className={classeInput}
-            />
-          </Campo>
-
+        <div className="grid gap-4 sm:grid-cols-2">
           <Campo id="numeroContrato" rotulo="Número do contrato">
             <input
               id="numeroContrato"

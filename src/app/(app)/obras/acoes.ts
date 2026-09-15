@@ -21,6 +21,9 @@ export type EstadoObra = { erro?: string; sucesso?: string } | undefined;
 
 const obraSchema = z
   .object({
+    // O campo saiu da tela em 15/09/2026 (o número do contrato já identifica
+    // a obra), mas a lógica fica: vazio gera o código na criação e mantém o
+    // atual na edição. Voltar com ele é só devolver o input ao formulário.
     codigo: z.string().trim(),
     objeto: z.string().trim().min(5, "Descreva o objeto da obra."),
     numeroContrato: z.string().trim().min(1, "Informe o número do contrato."),
@@ -132,7 +135,7 @@ export async function salvarObra(
             entidade: "Obra",
             entidadeId: id,
             obraId: id,
-            descricao: `Obra ${antes.codigo} alterada.`,
+            descricao: `Obra do contrato ${antes.numeroContrato} alterada.`,
             dadosAntes: mudancas.antes,
             dadosDepois: mudancas.depois,
           },
@@ -166,7 +169,7 @@ export async function salvarObra(
           entidade: "Obra",
           entidadeId: obra.id,
           obraId: obra.id,
-          descricao: `Obra ${obra.codigo} cadastrada: ${obra.objeto}.`,
+          descricao: `Obra do contrato ${obra.numeroContrato} cadastrada: ${obra.objeto}.`,
           dadosDepois: { codigo: obra.codigo, objeto: obra.objeto, status: obra.status },
         },
         tx,
@@ -212,6 +215,7 @@ export async function excluirObra(
     select: {
       id: true,
       codigo: true,
+      numeroContrato: true,
       objeto: true,
       _count: {
         select: {
@@ -247,7 +251,7 @@ export async function excluirObra(
         entidade: "Obra",
         entidadeId: id,
         obraId: id,
-        descricao: `Obra ${obra.codigo} excluída: ${obra.objeto}.`,
+        descricao: `Obra do contrato ${obra.numeroContrato} excluída: ${obra.objeto}.`,
         // As contagens ficam na trilha porque as linhas saem em cascata, sem
         // registro próprio de exclusão.
         dadosAntes: {

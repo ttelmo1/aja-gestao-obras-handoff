@@ -107,7 +107,7 @@ export async function salvarRerratificacao(
 
   const obra = await prisma.obra.findUnique({
     where: { id: obraId },
-    select: { id: true, codigo: true },
+    select: { id: true, numeroContrato: true },
   });
   if (!obra) return { erro: "Obra não encontrada." };
 
@@ -144,7 +144,7 @@ export async function salvarRerratificacao(
             entidade: "Rerratificacao",
             entidadeId: id,
             obraId,
-            descricao: `Rerratificação ${antes.numero} da obra ${obra.codigo} alterada.`,
+            descricao: `Rerratificação ${antes.numero} da obra do contrato ${obra.numeroContrato} alterada.`,
             dadosAntes: mudancas.antes,
             dadosDepois: mudancas.depois,
           },
@@ -181,7 +181,7 @@ export async function salvarRerratificacao(
           entidade: "Rerratificacao",
           entidadeId: criada.id,
           obraId,
-          descricao: `Rerratificação ${criada.numero} registrada na obra ${obra.codigo}.`,
+          descricao: `Rerratificação ${criada.numero} registrada na obra do contrato ${obra.numeroContrato}.`,
           dadosDepois: {
             numero: criada.numero,
             valorImpactado: criada.valorImpactado,
@@ -219,7 +219,7 @@ export async function excluirRerratificacao(
       obraId: true,
       status: true,
       valorImpactado: true,
-      obra: { select: { codigo: true } },
+      obra: { select: { numeroContrato: true } },
       _count: { select: { documentos: { where: { excluidoEm: null } } } },
     },
   });
@@ -248,7 +248,7 @@ export async function excluirRerratificacao(
         entidade: "Rerratificacao",
         entidadeId: id,
         obraId: rerratificacao.obraId,
-        descricao: `Rerratificação ${rerratificacao.numero} da obra ${rerratificacao.obra.codigo} excluída.`,
+        descricao: `Rerratificação ${rerratificacao.numero} da obra do contrato ${rerratificacao.obra.numeroContrato} excluída.`,
         dadosAntes: {
           numero: rerratificacao.numero,
           valorImpactado: rerratificacao.valorImpactado,

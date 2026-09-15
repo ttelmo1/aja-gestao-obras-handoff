@@ -16,12 +16,12 @@ import type { ResumoObra } from "@/modules/obras/resumo";
  * Cartão de obra do painel — a tela que o cliente já viu no mockup. A faixa
  * navio na lateral esquerda e as barras de progresso vêm de lá. A barra de
  * execução física saiu em 09/09/2026 junto com o dado (requisitos.md 1.4), e é
- * o espaço dela que o operador ocupa. O código continua aqui: é a chave que
- * liga a obra no sistema à pasta dela na rede.
+ * o espaço dela que o operador ocupa. O código interno saiu da tela em
+ * 15/09/2026 — o número do contrato, logo abaixo do objeto, já identifica a
+ * obra —, mas continua gerado e gravado no banco.
  */
 export type ObraNoPainel = {
   id: string;
-  codigo: string;
   objeto: string;
   numeroContrato: string;
   status: StatusObra;
@@ -87,7 +87,6 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
       )}
 
       <Dados>
-        <Dado rotulo="Código">{obra.codigo}</Dado>
         {/* Operador só em atenção ou crítico: obra em dia não tem o que
             atribuir, e o rótulo vazio em quinze cartões verdes é ruído. */}
         {alerta && (

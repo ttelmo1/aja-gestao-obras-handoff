@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { PeriodicidadeMedicao, StatusObra } from "@/generated/prisma/enums";
 import {
@@ -50,13 +51,13 @@ export function FormularioObra({
   padrao?: ObraNoFormulario;
   contratantes: Opcao[];
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoObra, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoObra>(
     salvarObra,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-5">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-5">
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 
       <fieldset className="flex flex-col gap-4">

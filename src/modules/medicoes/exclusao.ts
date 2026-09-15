@@ -16,15 +16,17 @@ export type VinculoComMedicao = {
 };
 
 /**
- * Filtro dos documentos ativos de uma medição. Inclui o que entrou pela
- * tramitação: documento preso a um movimento da medição não tem `medicaoId`,
- * mas sai em cascata junto com o movimento quando a medição é apagada.
+ * Filtro de todos os documentos que saem em cascata com a medição, excluídos
+ * ou não. Inclui o que entrou pela tramitação: documento preso a um movimento
+ * da medição não tem `medicaoId`, mas sai junto com o movimento.
  */
+export function ondeDocumentosDaMedicao(medicaoId: string) {
+  return { OR: [{ medicaoId }, { movimento: { medicaoId } }] };
+}
+
+/** Só os ativos entre eles — os que travam a exclusão. */
 export function ondeDocumentosAtivosDaMedicao(medicaoId: string) {
-  return {
-    excluidoEm: null,
-    OR: [{ medicaoId }, { movimento: { medicaoId } }],
-  };
+  return { excluidoEm: null, ...ondeDocumentosDaMedicao(medicaoId) };
 }
 
 /** Documentos ativos por medição, a partir da lista já carregada da obra. */

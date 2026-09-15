@@ -362,7 +362,8 @@ medição anterior à instalação.
 **Assumimos:**
 
 - **Documentos:** exclusão lógica (`excluidoEm`). O arquivo some da tela, o
-  registro fica para a auditoria.
+  registro fica para a auditoria. Quando a obra ou a medição dona dele é
+  apagada, registro e arquivo saem de vez (15/09/2026).
 - **Obras, medições, etapas:** exclusão física, em cascata. **Alterado em
   15/09/2026, no período de teste:** a única trava é **documento ativo**.
   Medição sai em qualquer situação — a regra da etapa 5, de só apagar

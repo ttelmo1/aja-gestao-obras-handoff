@@ -10,6 +10,7 @@ import { autorizar } from "@/lib/guarda";
 import { dec } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
+import { apagarArquivos } from "@/lib/storage";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { proximoCodigo } from "@/modules/obras/codigo";
 import { bloqueioExclusaoObra } from "@/modules/obras/exclusao";
@@ -231,7 +232,13 @@ export async function excluirObra(
   if (bloqueio) return { erro: bloqueio };
 
   const { ip } = await origemDaRequisicao();
-  await prisma.$transaction(async (tx) => {
+  const caminhos = await prisma.$transaction(async (tx) => {
+    // Lidos na mesma transação da exclusão: são os documentos já excluídos
+    // logicamente que a cascata leva junto, e cujos arquivos saem depois.
+    const documentos = await tx.documento.findMany({
+      where: { obraId: id },
+      select: { caminhoRelativo: true },
+    });
     await tx.obra.delete({ where: { id } });
     await registrar(
       {
@@ -252,7 +259,9 @@ export async function excluirObra(
       },
       tx,
     );
+    return documentos.map((d) => d.caminhoRelativo);
   });
+  await apagarArquivos(caminhos);
 
   revalidatePath("/obras");
   redirect("/obras");

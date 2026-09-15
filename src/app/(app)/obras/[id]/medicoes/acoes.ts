@@ -18,11 +18,13 @@ import { autorizar } from "@/lib/guarda";
 import { dec } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
+import { apagarArquivos } from "@/lib/storage";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { calcularIss, proximoNumero } from "@/modules/medicoes/calculos";
 import {
   bloqueioExclusaoMedicao,
   ondeDocumentosAtivosDaMedicao,
+  ondeDocumentosDaMedicao,
 } from "@/modules/medicoes/exclusao";
 
 export type EstadoMedicao = { erro?: string; sucesso?: string } | undefined;
@@ -240,7 +242,13 @@ export async function excluirMedicao(
   if (bloqueio) return { erro: bloqueio };
 
   const { ip } = await origemDaRequisicao();
-  await prisma.$transaction(async (tx) => {
+  const caminhos = await prisma.$transaction(async (tx) => {
+    // Lidos na mesma transação da exclusão: são os documentos já excluídos
+    // logicamente que a cascata leva junto, e cujos arquivos saem depois.
+    const documentos = await tx.documento.findMany({
+      where: ondeDocumentosDaMedicao(id),
+      select: { caminhoRelativo: true },
+    });
     await tx.medicao.delete({ where: { id } });
     await registrar(
       {
@@ -258,7 +266,9 @@ export async function excluirMedicao(
       },
       tx,
     );
+    return documentos.map((d) => d.caminhoRelativo);
   });
+  await apagarArquivos(caminhos);
 
   revalidatePath(`/obras/${medicao.obraId}`, "layout");
   revalidatePath("/obras");

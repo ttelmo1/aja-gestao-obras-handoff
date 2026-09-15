@@ -67,10 +67,11 @@ async function arquivoExiste(caminhoRelativo: string): Promise<boolean> {
 /**
  * Remove o arquivo do disco.
  *
- * Usada só quando a gravação no banco falha depois da escrita — o "excluir"
- * do usuário é lógico (`excluidoEm`), e o arquivo permanece: o registro
- * continua na trilha de auditoria, e auditoria que aponta para arquivo
- * inexistente não serve para nada.
+ * Usada quando a gravação no banco falha depois da escrita, e quando obra ou
+ * medição é apagada e leva as linhas dos documentos em cascata. O "excluir"
+ * do documento pelo usuário é lógico (`excluidoEm`) e não passa por aqui: o
+ * registro continua na trilha de auditoria, e auditoria que aponta para
+ * arquivo inexistente não serve para nada.
  */
 async function apagarArquivo(caminhoRelativo: string): Promise<void> {
   await rm(caminhoAbsoluto(caminhoRelativo), { force: true });

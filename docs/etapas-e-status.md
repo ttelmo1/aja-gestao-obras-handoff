@@ -1222,9 +1222,14 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
    movimento sai em cascata com ela — sem contar esse caminho, a exclusão
    levaria documento ativo junto sem avisar.
 
-   **Custo conhecido:** o arquivo de documento já excluído logicamente não é
-   apagado do armazenamento quando a obra sai; a linha some em cascata e o
-   arquivo fica órfão. Volume irrelevante para limpar exemplos.
+   **Os arquivos saem junto.** Documento excluído na aba Documentos é só
+   marcado (`excluidoEm`); o arquivo continua no armazenamento. Quando obra
+   ou medição é apagada, a cascata leva as linhas desses documentos, e o
+   arquivo ficaria sem nada que apontasse para ele. Por isso a action lê os
+   caminhos na mesma transação e, depois do commit, apaga os arquivos
+   (`apagarArquivos`, em `lib/storage`) — no disco ou na `ArquivoBlob`. Falha
+   ao apagar vai para o log e não desfaz a exclusão. Na instalação local, a
+   pasta vazia `storage/obras/<id>/` continua existindo.
    **Em aberto:** a senha do administrador na confirmação, que a Fernanda
    sugeriu — ver ponto #8.
 

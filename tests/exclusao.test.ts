@@ -5,6 +5,7 @@ import {
   bloqueioExclusaoMedicao,
   contarDocumentosPorMedicao,
   ondeDocumentosAtivosDaMedicao,
+  ondeDocumentosDaMedicao,
 } from "@/modules/medicoes/exclusao";
 import { bloqueioExclusaoObra } from "@/modules/obras/exclusao";
 
@@ -24,6 +25,12 @@ describe("exclusão de medição", () => {
       { medicaoId: "m1" },
       { movimento: { medicaoId: "m1" } },
     ]);
+  });
+
+  it("para apagar os arquivos, pega também os documentos já excluídos", () => {
+    const onde = ondeDocumentosDaMedicao("m1");
+    assert.equal("excluidoEm" in onde, false);
+    assert.deepEqual(onde.OR, ondeDocumentosAtivosDaMedicao("m1").OR);
   });
 
   it("conta o documento da tramitação para a medição do movimento", () => {

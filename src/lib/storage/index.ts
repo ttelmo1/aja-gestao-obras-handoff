@@ -35,3 +35,21 @@ export function arquivoExiste(caminhoRelativo: string): Promise<boolean> {
 export function apagarArquivo(caminhoRelativo: string): Promise<void> {
   return driver().apagarArquivo(caminhoRelativo);
 }
+
+/**
+ * Apaga os arquivos de documentos cujas linhas saíram em cascata — obra ou
+ * medição excluída. Sem isto, o registro some e os bytes ficam no
+ * armazenamento sem nada que aponte para eles.
+ *
+ * Chamada **depois** do commit: se a transação falhar, os arquivos precisam
+ * continuar lá. E nunca lança: a exclusão já foi confirmada no banco, e um
+ * arquivo que não saiu vira órfão registrado no log, não erro na tela.
+ */
+export async function apagarArquivos(caminhos: string[]): Promise<void> {
+  const resultados = await Promise.allSettled(caminhos.map(apagarArquivo));
+  resultados.forEach((r, i) => {
+    if (r.status === "rejected") {
+      console.error(`Arquivo não apagado: ${caminhos[i]}`, r.reason);
+    }
+  });
+}

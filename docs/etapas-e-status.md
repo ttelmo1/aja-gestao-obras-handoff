@@ -1200,6 +1200,34 @@ continuar testando processo parado isolado.
   físico-financeiro** — levantados e descartados na conversa que removeu o
   físico.
 
+### Ajustes do período de teste — 15/09/2026
+
+Pedidos da Fernanda ao lançar as obras reais na homologação.
+
+1. ✅ **Formulário de obra não apaga o que foi digitado quando dá erro.** Com
+   `<form action>`, o React 19 limpa os campos ao fim de todo envio, inclusive
+   quando a action devolve erro. `useEnvioSemReset` envia pelo `onSubmit`.
+   Aplicado só no formulário de obra; medição, rerratificação, cadastros e
+   tramitação têm o mesmo padrão e ficaram de fora.
+2. ✅ **Exclusão: só documento ativo trava.** Medição sai em qualquer situação
+   (caiu a regra de só apagar *Rascunho*), com link de exclusão em cada linha
+   da tabela. Obra sai com medições, rerratificações e tramitação em cascata,
+   desde que a aba Documentos esteja vazia. As duas passam por uma janela de
+   confirmação (`ConfirmarExclusao`, `<dialog>` nativo) que mostra o que vai
+   sair e, quando há documento, explica a trava em vez de oferecer o botão.
+   Regras em `modules/medicoes/exclusao.ts` e `modules/obras/exclusao.ts`.
+
+   **O documento da tramitação conta para a medição.** Arquivo enviado num
+   movimento da medição fica com `movimentoId`, não `medicaoId`, mas o
+   movimento sai em cascata com ela — sem contar esse caminho, a exclusão
+   levaria documento ativo junto sem avisar.
+
+   **Custo conhecido:** o arquivo de documento já excluído logicamente não é
+   apagado do armazenamento quando a obra sai; a linha some em cascata e o
+   arquivo fica órfão. Volume irrelevante para limpar exemplos.
+   **Em aberto:** a senha do administrador na confirmação, que a Fernanda
+   sugeriu — ver ponto #8.
+
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o

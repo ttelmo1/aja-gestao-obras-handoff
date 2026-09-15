@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { ConfirmarExclusao } from "@/components/ui/confirmar-exclusao";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { StatusMedicao } from "@/generated/prisma/enums";
+import { bloqueioExclusaoMedicao } from "@/modules/medicoes/exclusao";
 import {
   ROTULOS_STATUS_MEDICAO,
   STATUS_MEDICAO,
@@ -310,22 +312,44 @@ export function FormularioMedicao({
   );
 }
 
-/** Excluir medição — só aparece para quem tem a permissão. */
-export function BotaoExcluirMedicao({ id }: { id: string }) {
-  const [estado, acao, pendente] = useActionState<EstadoMedicao, FormData>(
-    excluirMedicao,
-    undefined,
-  );
+/** O que a janela de confirmação mostra, já formatado no servidor. */
+export type MedicaoParaExcluir = {
+  id: string;
+  numero: string;
+  competencia: string;
+  valor: string;
+  situacao: string;
+  protocolo: string | null;
+  documentosAtivos: number;
+};
 
+/**
+ * Excluir medição — só aparece para quem tem a permissão. Como link na linha
+ * da tabela e como botão no detalhe; nos dois, a confirmação mostra qual
+ * medição vai sair.
+ */
+export function BotaoExcluirMedicao({
+  medicao,
+  gatilho,
+}: {
+  medicao: MedicaoParaExcluir;
+  gatilho: "link" | "botao";
+}) {
   return (
-    <div className="flex flex-col gap-2">
-      <form action={acao}>
-        <input type="hidden" name="id" value={id} />
-        <Botao type="submit" variante="perigo" disabled={pendente}>
-          {pendente ? "Excluindo…" : "Excluir medição"}
-        </Botao>
-      </form>
-      {estado?.erro && <Alerta tipo="erro">{estado.erro}</Alerta>}
-    </div>
+    <ConfirmarExclusao
+      acao={excluirMedicao}
+      campos={{ id: medicao.id }}
+      titulo={`Excluir a medição ${medicao.numero}?`}
+      detalhes={[
+        { rotulo: "Competência", valor: medicao.competencia },
+        { rotulo: "Valor medido", valor: medicao.valor },
+        { rotulo: "Situação", valor: medicao.situacao },
+        { rotulo: "Protocolo", valor: medicao.protocolo ?? "—" },
+      ]}
+      bloqueio={bloqueioExclusaoMedicao(medicao.documentosAtivos)}
+      aviso="A medição e a tramitação dela são apagadas de vez. A auditoria continua registrando a exclusão."
+      gatilho={gatilho}
+      rotuloGatilho={gatilho === "link" ? "Excluir" : "Excluir medição"}
+    />
   );
 }

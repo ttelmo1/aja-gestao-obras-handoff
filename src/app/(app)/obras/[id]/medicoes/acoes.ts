@@ -20,6 +20,10 @@ import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { calcularIss, proximoNumero } from "@/modules/medicoes/calculos";
+import {
+  bloqueioExclusaoMedicao,
+  ondeDocumentosAtivosDaMedicao,
+} from "@/modules/medicoes/exclusao";
 
 export type EstadoMedicao = { erro?: string; sucesso?: string } | undefined;
 
@@ -223,24 +227,17 @@ export async function excluirMedicao(
       status: true,
       valorMedido: true,
       obra: { select: { codigo: true } },
-      _count: { select: { documentos: { where: { excluidoEm: null } } } },
     },
   });
   if (!medicao) return { erro: "Medição não encontrada." };
 
-  // Medição que já saiu do rascunho virou processo no órgão: existe protocolo,
-  // nota e gente esperando. Apagar seria perder o rastro; o caminho é
-  // Rejeitada, que continua no histórico.
-  if (medicao.status !== StatusMedicao.RASCUNHO) {
-    return {
-      erro: "Só medição em rascunho pode ser apagada. Uma medição já protocolada deve ser marcada como Rejeitada — o histórico do processo precisa continuar existindo.",
-    };
-  }
-  if (medicao._count.documentos > 0) {
-    return {
-      erro: `Esta medição tem ${medicao._count.documentos} documento(s) vinculado(s). Remova-os antes de apagá-la.`,
-    };
-  }
+  // Qualquer situação sai; só documento ativo trava — contando o que entrou
+  // pela tramitação, que iria junto em cascata. Ver modules/medicoes/exclusao.
+  const documentosAtivos = await prisma.documento.count({
+    where: ondeDocumentosAtivosDaMedicao(id),
+  });
+  const bloqueio = bloqueioExclusaoMedicao(documentosAtivos);
+  if (bloqueio) return { erro: bloqueio };
 
   const { ip } = await origemDaRequisicao();
   await prisma.$transaction(async (tx) => {
@@ -253,7 +250,11 @@ export async function excluirMedicao(
         entidadeId: id,
         obraId: medicao.obraId,
         descricao: `Medição ${medicao.numero} da obra ${medicao.obra.codigo} excluída.`,
-        dadosAntes: { numero: medicao.numero, valorMedido: medicao.valorMedido },
+        dadosAntes: {
+          numero: medicao.numero,
+          valorMedido: medicao.valorMedido,
+          status: medicao.status,
+        },
       },
       tx,
     );

@@ -12,6 +12,7 @@ import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { proximoCodigo } from "@/modules/obras/codigo";
+import { bloqueioExclusaoObra } from "@/modules/obras/exclusao";
 import { terminoPrevisto } from "@/modules/obras/prazo";
 import { etapasIniciais } from "@/modules/tramitacao/fluxo";
 
@@ -224,13 +225,10 @@ export async function excluirObra(
   });
   if (!obra) return { erro: "Obra não encontrada." };
 
-  const dependentes =
-    obra._count.medicoes + obra._count.documentos + obra._count.rerratificacoes;
-  if (dependentes > 0) {
-    return {
-      erro: `Esta obra tem ${dependentes} registro(s) vinculados (medições, documentos ou rerratificações). Cancele-a pelo campo de situação em vez de apagar — o histórico do contrato precisa continuar existindo.`,
-    };
-  }
+  // Medições, rerratificações e tramitação saem em cascata; só documento
+  // ativo trava. Ver modules/obras/exclusao.
+  const bloqueio = bloqueioExclusaoObra(obra._count.documentos);
+  if (bloqueio) return { erro: bloqueio };
 
   const { ip } = await origemDaRequisicao();
   await prisma.$transaction(async (tx) => {
@@ -243,7 +241,14 @@ export async function excluirObra(
         entidadeId: id,
         obraId: id,
         descricao: `Obra ${obra.codigo} excluída: ${obra.objeto}.`,
-        dadosAntes: { codigo: obra.codigo, objeto: obra.objeto },
+        // As contagens ficam na trilha porque as linhas saem em cascata, sem
+        // registro próprio de exclusão.
+        dadosAntes: {
+          codigo: obra.codigo,
+          objeto: obra.objeto,
+          medicoes: obra._count.medicoes,
+          rerratificacoes: obra._count.rerratificacoes,
+        },
       },
       tx,
     );

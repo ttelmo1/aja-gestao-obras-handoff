@@ -19,7 +19,6 @@ const ABAS: { sufixo: string; rotulo: string; recurso: Recurso }[] = [
   { sufixo: "", rotulo: "Resumo", recurso: "obra" },
   { sufixo: "/contrato", rotulo: "Contrato", recurso: "obra" },
   { sufixo: "/medicoes", rotulo: "Medições", recurso: "medicao" },
-  { sufixo: "/tramitacao", rotulo: "Tramitação", recurso: "tramitacao" },
   { sufixo: "/rerratificacoes", rotulo: "Rerratificações", recurso: "rerratificacao" },
   { sufixo: "/documentos", rotulo: "Documentos", recurso: "documento" },
   { sufixo: "/historico", rotulo: "Histórico", recurso: "auditoria" },

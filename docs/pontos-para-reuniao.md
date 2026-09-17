@@ -977,6 +977,41 @@ obras", que hoje exige escolher o próprio nome na lista?
 
 **Custo de mudar:** baixo — `src/modules/obras/filtros.ts` e a barra de filtros.
 
+## 23. O farol sem o critério de processo parado 🔴
+
+Com a tramitação fora da tela (17/09/2026), nenhum movimento novo é registrado
+e o critério **"processo parado há N dias"** — amarelo aos 15, vermelho aos 30 —
+deixa de acender. O código continua em `modules/farol/regras.ts`, recebendo
+`diasParado = null` para sempre.
+
+Sobram dois critérios: **proximidade do término** (amarelo 30 dias antes,
+vermelho depois de vencido) e **prazo da próxima medição** (amarelo dez dias
+antes, vermelho ao vencer). Os dois olham calendário de contrato; nenhum olha
+se o processo andou. Uma obra com prazo folgado e medição em dia fica verde
+mesmo que nada aconteça nela há dois meses — que é justamente o que o farol
+foi pedido para pegar.
+
+**Três caminhos, sem decidir em silêncio:**
+
+1. **Aceitar dois critérios** e dizer isso ao cliente. Honesto, e o farol vira
+   um alerta de prazo, não de andamento.
+2. **Trocar a fonte do "parado"** para *dias desde o último documento anexado à
+   obra*. É a informação que o desenho novo passa a ter. Mede outra coisa com o
+   mesmo nome: um processo pode andar sem gerar documento, e um documento pode
+   ser anexado semanas depois do fato.
+3. **Trocar por "dias desde a última alteração na obra"**, lendo a auditoria —
+   pega qualquer mexida, não só anexo, mas acende por atividade de digitação, e
+   não por andamento real do processo.
+
+**Perguntar ao Junior:** a obra parada há muito tempo deve continuar chamando
+atenção no painel? Se sim, qual dos sinais ele considera "andou": documento
+novo, ou qualquer alteração?
+
+**Custo:** o 1 é não fazer nada. O 2 e o 3 são pequenos — uma consulta a mais
+onde hoje se conta o movimento aberto, e o mesmo `calcularFarol` recebendo o
+número de outra fonte. O que custa é escolher errado e treinar o cliente a
+ignorar a luz.
+
 ## Pontos já resolvidos 🟢
 
 Registrados para não voltarem à mesa:

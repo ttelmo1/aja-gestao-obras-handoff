@@ -1252,6 +1252,30 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
    verificar na instalação local:** o `proxy.ts` do Next 16 guarda em memória
    só os primeiros 10 MB do corpo (`proxyClientMaxBodySize`), abaixo dos 320 MB
    configurados para Server Actions.
+5. ✅ **Tramitação sai da tela — 17/09/2026.** Pedido do Junior, pela Fernanda:
+   *"com os documentos listados não vai precisar dessa aba"*, *"cada documento
+   vai ser anexado e pela listagem vai dar pra saber o que falta e saber o
+   fluxo do processo"*, *"ele quer o mais simples possível"*.
+
+   **Saiu da interface:** a aba e a rota `/obras/[id]/tramitacao` inteira
+   (página, actions e os dois componentes), o bloco "Tramitação do processo"
+   da medição — com o encaminhamento a setor e a tabela de movimentos — e as
+   colunas "Setor atual" e "Tempo" da lista de medições.
+
+   **Continua no lugar:** as tabelas `EtapaObra` e `TramitacaoMovimento`, os
+   módulos `modules/tramitacao/`, as 11 etapas criadas junto com a obra, o
+   cadastro de Setores e os movimentos já registrados. A remoção é de tela, e
+   volta com um `git revert` do commit — por isso foi feita antes da lista de
+   documentos existir, e não depois.
+
+   **O que ficou sem alimentação:** nenhum movimento novo pode ser registrado,
+   então `diasParado` passa a ser sempre `null` numa base nova. O critério
+   "processo parado" do farol continua no código e não acende mais — **em
+   discussão, ver ponto #23**. O "Processo parado há N dias" do resumo e do
+   painel mostra travessão, e o cadastro de Setores fica sem uso.
+
+   **Só apagar schema e tabelas depois** que a lista de documentos estiver de
+   pé e aprovada. Migration destrutiva é o último passo, nunca o primeiro.
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 

@@ -13,7 +13,6 @@ import { formatarBRL, formatarPercentual } from "@/lib/money";
 import { pode } from "@/modules/auth/permissoes";
 import { contarDocumentosPorMedicao } from "@/modules/medicoes/exclusao";
 import { resumoDaObra } from "@/modules/obras/resumo";
-import { situacaoDaTramitacao } from "@/modules/tramitacao/movimentos";
 
 import { carregarDocumentos, carregarMedicoes, carregarObra } from "../dados";
 import { medicaoParaExcluir } from "./exclusao";
@@ -54,13 +53,6 @@ export default async function MedicoesPage({
   const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes, null, agora);
   const estourou = financeiro.saldoAMedir.isNegative();
   const documentosPorMedicao = contarDocumentosPorMedicao(documentos);
-
-  // A situação da tramitação entra pronta em cada linha: calcular dentro do
-  // JSX repetiria a mesma soma três vezes por medição.
-  const linhas = medicoes.map((m) => ({
-    medicao: m,
-    tramitacao: situacaoDaTramitacao(m.movimentos, agora),
-  }));
 
   return (
     <div className="flex flex-col gap-4">
@@ -146,13 +138,11 @@ export default async function MedicoesPage({
               "ISS",
               "Responsável",
               "Situação",
-              "Setor atual",
-              "Tempo",
               "Docs",
               ...(podeExcluir ? [""] : []),
             ]}
           >
-            {linhas.map(({ medicao: m, tramitacao }) => (
+            {medicoes.map((m) => (
               <Linha key={m.id}>
                 <Celula>
                   {podeEditar ? (
@@ -182,23 +172,6 @@ export default async function MedicoesPage({
                 <Celula apagada>{m.responsavel?.nome ?? "—"}</Celula>
                 <Celula>
                   <BadgeMedicao status={m.status} />
-                </Celula>
-                <Celula apagada>
-                  {tramitacao.atual?.setorDestino.nome ?? "—"}
-                </Celula>
-                <Celula tabular>
-                  {tramitacao.diasParado === null ? (
-                    <span className="text-[var(--muted)]">—</span>
-                  ) : (
-                    <strong
-                      style={{
-                        color:
-                          tramitacao.diasParado >= 15 ? "var(--danger)" : undefined,
-                      }}
-                    >
-                      {tramitacao.diasParado} dia(s)
-                    </strong>
-                  )}
                 </Celula>
                 <Celula tabular apagada>
                   {m._count.documentos}

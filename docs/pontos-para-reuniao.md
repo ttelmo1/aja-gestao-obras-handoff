@@ -839,11 +839,25 @@ Junior queria: *"acaba, não tem erro da pessoa esquecer"*.
 4. **A medição tem lista própria**: *"listada em cada medição os documentos
    necessários"*, no mesmo formato.
 
+5. **Quais são os documentos necessários da medição** — respondido em 17/09,
+   nesta ordem: **medição, memória de cálculo, cronograma, relatório
+   fotográfico, diário de obra e nota fiscal**, mais a linha "Outro" para o que
+   não tem tipo próprio. Deixou de ser suposição nossa.
+
+   Quatro deles **não existiam como tipo** e entraram no enum
+   (`MEMORIA_CALCULO`, `CRONOGRAMA`, `RELATORIO_FOTOGRAFICO`, `DIARIO_OBRA`) —
+   antes seriam anexados como "Planilha" ou "Foto". Os quatro ficam fora da
+   lista do contrato: são documentos de medição, e cobrá-los na obra deixaria
+   quatro linhas vermelhas eternas.
+
+   **Saíram da lista da medição:** processo / protocolo, ISS e planilha, que
+   estavam ali por leitura do mockup. Continuam anexáveis pela linha "Outro" e,
+   onde já existirem, aparecem marcados "fora da lista" — nenhum arquivo foi
+   perdido. **Vale confirmar o ISS**, que tem campo próprio no formulário da
+   medição e pode ter ficado de fora por esquecimento, não por decisão.
+
 **Assumimos, e é o que falta confirmar:**
 
-- **Quais são os documentos necessários da medição.** Implementado com os
-  cinco que o mockup já sugeria no upload da medição: medição, processo /
-  protocolo, nota fiscal, ISS e planilha. Ele não disse quais são.
 - **A lista é igual para todo contratante.** Nenhuma fala sugeriu o contrário,
   e a dispensa por obra resolve a variação caso a caso. Se um dia variar por
   órgão, vira cadastro.
@@ -855,7 +869,7 @@ Junior queria: *"acaba, não tem erro da pessoa esquecer"*.
 Hoje não acende — o farol tem dois critérios (ponto #23) e nenhum olha
 documento. Com a lista no ar, é a pergunta natural seguinte.
 
-**Onde:** `src/modules/documentos/conferencia.ts`, a aba Documentos e a tela da
+**Onde:** `src/modules/documentos/acervo.ts`, a aba Documentos e a tela da
 medição.
 
 ## 19. Cards de totais no topo do painel: ficam ou saem 🔴

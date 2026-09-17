@@ -46,12 +46,26 @@ export function ehDoContrato(d: VinculosDoDocumento): boolean {
  * — que é a ordem do processo (edital, proposta, contrato, garantia, ordem de
  * início…). Foi o que o cliente apontou na conversa, com a tela aberta.
  *
- * **Medição:** só os cinco que já eram sugeridos no upload da medição. A
- * Fernanda pediu *"listada em cada medição os documentos necessários"* sem
- * dizer quais — estes cinco são a leitura do mockup, e estão registrados como
- * suposição a confirmar em docs/pontos-para-reuniao.md.
+ * **Medição:** os seis que o cliente nomeou em 17/09/2026 — medição, memória de
+ * cálculo, cronograma, relatório fotográfico, diário de obra e nota fiscal —
+ * mais a linha "Outro", por onde entra o que não tem tipo próprio. Deixou de
+ * ser suposição nossa: até então eram os cinco sugeridos pelo mockup.
+ *
+ * Os quatro tipos novos **não entram na lista do contrato**: são documentos de
+ * medição, e cobrá-los no contrato deixaria quatro linhas vermelhas eternas em
+ * toda obra. Continuam podendo ser anexados lá, e aparecem como "fora da
+ * lista" se alguém o fizer.
  */
-export const ESPERADOS_DA_OBRA: TipoDocumento[] = tiposOrdenados("obra");
+const SO_DA_MEDICAO = new Set<TipoDocumento>([
+  TipoDocumento.MEMORIA_CALCULO,
+  TipoDocumento.CRONOGRAMA,
+  TipoDocumento.RELATORIO_FOTOGRAFICO,
+  TipoDocumento.DIARIO_OBRA,
+]);
+
+export const ESPERADOS_DA_OBRA: TipoDocumento[] = tiposOrdenados("obra").filter(
+  (t) => !SO_DA_MEDICAO.has(t),
+);
 export const ESPERADOS_DA_MEDICAO: TipoDocumento[] = [
   ...TIPOS_POR_CONTEXTO.medicao,
 ];
@@ -244,11 +258,16 @@ export type ResumoAcervo = {
  * Os números do cabeçalho, contados por tipo e não por arquivo — e só sobre o
  * que esta tela cobra: arquivo de outra tela, ou de tipo fora da lista, não
  * entra na conta de "o que falta".
+ *
+ * "Outro" também não entra. Ele tem linha própria nas duas telas, mas é a
+ * porta de entrada do que não tem tipo — não é documento necessário, e contá-lo
+ * deixaria toda obra e toda medição com uma pendência que nunca fecha.
  */
 export function resumoDoAcervo(linhas: Array<LinhaAcervo<unknown>>): ResumoAcervo {
   const situacaoPorTipo = new Map<TipoDocumento, SituacaoLinha>();
   for (const l of linhas) {
     if (l.classe !== "ESPERADO") continue;
+    if (l.tipo === TipoDocumento.OUTRO) continue;
     // "Anexado" ganha de "não anexado" no mesmo tipo: onde o tipo se repete, a
     // linha de inclusão convive com os arquivos e não pode contar como falta.
     if (l.situacao === "ANEXADO" || !situacaoPorTipo.has(l.tipo)) {

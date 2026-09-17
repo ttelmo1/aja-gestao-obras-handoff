@@ -452,6 +452,13 @@ enum TipoDocumento {
   ORDEM_INICIO
   PROTOCOLO
   MEDICAO
+  /// Os quatro abaixo entraram em 17/09/2026, quando o cliente disse quais são
+  /// os documentos necessários de uma medição. Antes eram cobertos por
+  /// PLANILHA e FOTO, que ficam para o caso genérico.
+  MEMORIA_CALCULO
+  CRONOGRAMA
+  RELATORIO_FOTOGRAFICO
+  DIARIO_OBRA
   NOTA_FISCAL
   ISS
   DESPACHO

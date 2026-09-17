@@ -7,6 +7,8 @@ import {
   acervoDoContrato,
   aceitaMaisDeUm,
   ehDoContrato,
+  ESPERADOS_DA_MEDICAO,
+  ESPERADOS_DA_OBRA,
   resumoDoAcervo,
 } from "@/modules/documentos/acervo";
 
@@ -38,6 +40,9 @@ const ESPERADOS = [
   TipoDocumento.GARANTIA,
   TipoDocumento.OUTRO,
 ];
+
+/** "Outro" tem linha, mas não é cobrado: é a porta do que não tem tipo. */
+const COBRADOS = ESPERADOS.length - 1;
 
 const acervo = (documentos: Doc[] = [], dispensados: { tipo: TipoDocumento; motivo: string | null }[] = []) =>
   acervoDoContrato({ esperados: ESPERADOS, documentos, dispensados });
@@ -96,7 +101,7 @@ describe("acervo do contrato", () => {
     assert.equal(ultima?.classe, "OUTRA_TELA");
     assert.equal(ultima?.aceitaInclusao, false);
     // Não pesa na cobrança: quem cobra a medição é a tela dela.
-    assert.equal(resumoDoAcervo(linhas).cobrados, ESPERADOS.length);
+    assert.equal(resumoDoAcervo(linhas).cobrados, COBRADOS);
   });
 
   it("dispensado fica cinza, desce para o fim e para de aceitar inclusão", () => {
@@ -123,20 +128,76 @@ describe("acervo do contrato", () => {
 
     const resumo = resumoDoAcervo(linhas);
     assert.equal(resumo.dispensados, 1);
-    assert.equal(resumo.cobrados, ESPERADOS.length - 1);
+    assert.equal(resumo.cobrados, COBRADOS - 1);
   });
 
   it("o resumo conta tipos, não arquivos", () => {
     const linhas = acervo([
-      doc("a", TipoDocumento.OUTRO, "2026-03-01"),
-      doc("b", TipoDocumento.OUTRO, "2026-03-02"),
+      doc("a", TipoDocumento.PROPOSTA, "2026-03-01"),
+      doc("b", TipoDocumento.CONTRATO, "2026-03-02"),
       doc("c", TipoDocumento.CONTRATO, "2026-03-03"),
     ]);
     const resumo = resumoDoAcervo(linhas);
 
-    assert.equal(resumo.anexados, 2);
+    // Contrato tem dois arquivos e conta uma vez; proposta está fora da lista
+    // cobrada e não conta. Falta a garantia.
+    assert.equal(resumo.anexados, 1);
     assert.equal(resumo.faltando, 1);
-    assert.equal(resumo.cobrados, 3);
+    assert.equal(resumo.cobrados, COBRADOS);
+  });
+
+  // Cobrar "Outro" deixaria toda obra com uma pendência que nunca fecha.
+  it("“Outro” tem linha mas não entra na cobrança, cheio ou vazio", () => {
+    const vazio = resumoDoAcervo(acervo());
+    assert.equal(vazio.cobrados, COBRADOS);
+    assert.equal(vazio.faltando, COBRADOS);
+
+    const cheio = resumoDoAcervo(
+      acervo([doc("o", TipoDocumento.OUTRO, "2026-03-01")]),
+    );
+    assert.equal(cheio.cobrados, COBRADOS);
+    assert.equal(cheio.anexados, 0);
+  });
+});
+
+describe("os documentos necessários de cada tela", () => {
+  // Ditos pelo cliente em 17/09/2026, nesta ordem, mais a linha "Outro".
+  it("a medição cobra os seis que o cliente nomeou, na ordem", () => {
+    assert.deepEqual(ESPERADOS_DA_MEDICAO, [
+      TipoDocumento.MEDICAO,
+      TipoDocumento.MEMORIA_CALCULO,
+      TipoDocumento.CRONOGRAMA,
+      TipoDocumento.RELATORIO_FOTOGRAFICO,
+      TipoDocumento.DIARIO_OBRA,
+      TipoDocumento.NOTA_FISCAL,
+      TipoDocumento.OUTRO,
+    ]);
+  });
+
+  // Senão toda obra abriria com quatro linhas vermelhas que nunca fecham.
+  it("o contrato não cobra os documentos que são da medição", () => {
+    for (const tipo of [
+      TipoDocumento.MEMORIA_CALCULO,
+      TipoDocumento.CRONOGRAMA,
+      TipoDocumento.RELATORIO_FOTOGRAFICO,
+      TipoDocumento.DIARIO_OBRA,
+    ]) {
+      assert.ok(!ESPERADOS_DA_OBRA.includes(tipo), tipo);
+    }
+    assert.ok(ESPERADOS_DA_OBRA.includes(TipoDocumento.CONTRATO));
+  });
+
+  // Anexado no contrato assim mesmo, ainda aparece — só que fora da lista.
+  it("documento de medição anexado ao contrato não some da tela", () => {
+    const linhas = acervoDoContrato({
+      esperados: ESPERADOS_DA_OBRA,
+      documentos: [doc("c", TipoDocumento.CRONOGRAMA, "2026-03-01")],
+      dispensados: [],
+    });
+    const cronograma = linhaDe(linhas, TipoDocumento.CRONOGRAMA);
+
+    assert.equal(cronograma?.classe, "EXTRA");
+    assert.equal(cronograma?.situacao, "ANEXADO");
   });
 });
 

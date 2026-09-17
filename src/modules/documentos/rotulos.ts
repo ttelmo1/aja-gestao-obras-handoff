@@ -14,6 +14,10 @@ export const ROTULOS_TIPO_DOCUMENTO: Record<TipoDocumento, string> = {
   ORDEM_INICIO: "Ordem de início",
   PROTOCOLO: "Processo / protocolo",
   MEDICAO: "Medição",
+  MEMORIA_CALCULO: "Memória de cálculo",
+  CRONOGRAMA: "Cronograma",
+  RELATORIO_FOTOGRAFICO: "Relatório fotográfico",
+  DIARIO_OBRA: "Diário de obra",
   NOTA_FISCAL: "Nota fiscal",
   ISS: "ISS",
   DESPACHO: "Despacho",
@@ -54,12 +58,17 @@ export const TIPOS_POR_CONTEXTO: Record<
     TipoDocumento.ATESTADO,
     TipoDocumento.FOTO,
   ],
+  // Os documentos necessários de uma medição, ditos pelo cliente em
+  // 17/09/2026 e nesta ordem. `OUTRO` fecha a lista: é a linha por onde entra
+  // o que não tem tipo próprio, e a única que se repete sem limite.
   medicao: [
     TipoDocumento.MEDICAO,
-    TipoDocumento.PROTOCOLO,
+    TipoDocumento.MEMORIA_CALCULO,
+    TipoDocumento.CRONOGRAMA,
+    TipoDocumento.RELATORIO_FOTOGRAFICO,
+    TipoDocumento.DIARIO_OBRA,
     TipoDocumento.NOTA_FISCAL,
-    TipoDocumento.ISS,
-    TipoDocumento.PLANILHA,
+    TipoDocumento.OUTRO,
   ],
   // A lista do seletor "TIPO DO DOCUMENTO" da etapa, no mockup.
   etapa: [

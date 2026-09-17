@@ -7,11 +7,7 @@ import { ModalFormulario } from "@/components/ui/modal";
 import type { TipoDocumento } from "@/generated/prisma/enums";
 import { aceitaMaisDeUm } from "@/modules/documentos/acervo";
 import { acceptHtml, TAMANHO_MAXIMO_BYTES } from "@/modules/documentos/formatos";
-import {
-  ROTULOS_TIPO_DOCUMENTO,
-  tiposOrdenados,
-  type TIPOS_POR_CONTEXTO,
-} from "@/modules/documentos/rotulos";
+import { ROTULOS_TIPO_DOCUMENTO } from "@/modules/documentos/rotulos";
 
 import {
   dispensarDocumento,
@@ -174,84 +170,5 @@ export function ExigirDocumento({
       </button>
       {estado?.erro && <Alerta tipo="erro">{estado.erro}</Alerta>}
     </form>
-  );
-}
-
-/**
- * Anexa um documento de tipo fora da lista cobrada pela tela.
- *
- * A lista da medição é curta de propósito — os cinco documentos que o mockup
- * já sugeria ali. Sem esta porta, anexar um parecer ou uma foto à medição
- * ficaria impossível; com ela, o caso raro continua possível sem alongar a
- * lista que o usuário lê todo dia. É a única janela que ainda pergunta o tipo,
- * porque aqui nenhuma linha o decidiu.
- */
-export function IncluirDeOutroTipo({
-  obraId,
-  medicaoId,
-  contexto,
-  tiposJaListados,
-}: {
-  obraId: string;
-  medicaoId?: string;
-  contexto: keyof typeof TIPOS_POR_CONTEXTO;
-  /** Os tipos que já têm linha própria — não se repetem no seletor. */
-  tiposJaListados: TipoDocumento[];
-}) {
-  const jaListados = new Set(tiposJaListados);
-  const opcoes = tiposOrdenados(contexto).filter((t) => !jaListados.has(t));
-  const sufixo = medicaoId ?? obraId;
-
-  return (
-    <ModalFormulario
-      acao={enviarDocumentos}
-      campos={{ obraId, medicaoId }}
-      titulo="Incluir documento de outro tipo"
-      descricao="Para o que não tem linha própria na lista acima — um parecer, uma foto, uma planilha extra."
-      rotuloEnvio="Enviar documento"
-      rotuloEnviando="Enviando…"
-      varianteEnvio="destaque"
-      gatilho="Incluir documento de outro tipo"
-    >
-      <Campo id={`tipo-livre-${sufixo}`} rotulo="Tipo do documento">
-        <select
-          id={`tipo-livre-${sufixo}`}
-          name="tipo"
-          defaultValue={opcoes[0]}
-          className={classeInput}
-        >
-          {opcoes.map((t) => (
-            <option key={t} value={t}>
-              {ROTULOS_TIPO_DOCUMENTO[t]}
-            </option>
-          ))}
-        </select>
-      </Campo>
-
-      <Campo
-        id={`arquivo-livre-${sufixo}`}
-        rotulo="Arquivo(s)"
-        dica={`PDF, XLSX, XLS, CSV, JPG e PNG, até ${LIMITE_MB}MB cada. É possível selecionar mais de um.`}
-      >
-        <input
-          id={`arquivo-livre-${sufixo}`}
-          name="arquivos"
-          type="file"
-          multiple
-          required
-          accept={acceptHtml()}
-          className={`${classeInput} file:mr-3 file:rounded-md file:border-0 file:bg-[var(--primary)] file:px-3 file:py-1.5 file:text-sm file:font-bold file:text-white`}
-        />
-      </Campo>
-
-      <Campo id={`descricao-livre-${sufixo}`} rotulo="Observação (opcional)">
-        <input
-          id={`descricao-livre-${sufixo}`}
-          name="descricao"
-          placeholder="Ex.: memória de cálculo revisada"
-          className={classeInput}
-        />
-      </Campo>
-    </ModalFormulario>
   );
 }

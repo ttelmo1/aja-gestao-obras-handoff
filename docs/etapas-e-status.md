@@ -1404,6 +1404,40 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     respondeu. Também não foi respondido se pagamento parado deve acender o
     farol — hoje não acende.
 
+11. ✅ **Os documentos necessários da medição, ditos pelo cliente — 17/09/2026.**
+    A lista deixou de ser suposição: **medição, memória de cálculo, cronograma,
+    relatório fotográfico, diário de obra e nota fiscal**, nessa ordem, mais a
+    linha **"Outro"** ao fim.
+
+    **Quatro tipos novos no enum** (`MEMORIA_CALCULO`, `CRONOGRAMA`,
+    `RELATORIO_FOTOGRAFICO`, `DIARIO_OBRA`). A migration só faz `ALTER TYPE …
+    ADD VALUE`: nada é renomeado nem removido, e documento já gravado como
+    "Planilha" ou "Foto" continua válido.
+
+    **Os quatro ficam fora da lista do contrato.** São documentos de medição;
+    cobrá-los na obra abriria quatro linhas vermelhas eternas em toda obra.
+    Anexados lá assim mesmo, aparecem como "fora da lista".
+
+    **"Incluir documento de outro tipo" saiu.** Era a única janela que ainda
+    perguntava o tipo, e existia porque a lista da medição era curta demais.
+    Com a linha "Outro" na tabela — que se repete sem limite e aceita descrição,
+    como na aba Documentos — ela deixou de ter função. O componente
+    `IncluirDeOutroTipo` foi removido.
+
+    **"Outro" tem linha mas não é cobrado.** Não conta no "N de M não
+    anexado(s)", aparece como *Opcional* em cinza em vez de "Não anexado" em
+    vermelho, e não oferece "não se aplica" — é a porta de entrada do que não
+    tem tipo próprio, não um documento necessário. Vale para as duas telas: a
+    aba da obra passou de 20 para 19 tipos cobrados.
+
+    **Saíram da lista da medição** processo / protocolo, ISS e planilha, que
+    estavam ali por leitura do mockup — o ISS convém confirmar, já que tem campo
+    próprio no formulário (ponto #18).
+
+    Verificado no navegador com o banco local, depois da migration: a medição
+    lista os seis na ordem pedida com "6 de 6 não anexado(s)", "Outro" como
+    opcional ao fim, e a aba da obra segue com os 20 tipos de antes.
+
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o

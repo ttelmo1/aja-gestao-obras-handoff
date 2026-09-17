@@ -1,4 +1,5 @@
 import { Celula, Linha, Tabela } from "@/components/ui/tabela";
+import { TipoDocumento } from "@/generated/prisma/enums";
 import { Vazio } from "@/components/ui/vazio";
 import { formatarData } from "@/lib/date-br";
 import type { LinhaAcervo } from "@/modules/documentos/acervo";
@@ -146,7 +147,10 @@ export function AcervoDeDocumentos({
                       tipo={l.tipo}
                     />
                   ) : (
-                    !d && (
+                    // "Outro" não se dispensa: não é documento cobrado, é a
+                    // linha por onde entra o que não tem tipo próprio.
+                    !d &&
+                    l.tipo !== TipoDocumento.OUTRO && (
                       <DispensarDocumento
                         obraId={obraId}
                         medicaoId={medicaoId}
@@ -176,6 +180,11 @@ function SituacaoDaLinha({ linha }: { linha: LinhaAcervo<unknown> }) {
   }
   if (linha.situacao === "ANEXADO") {
     return <span className="whitespace-nowrap text-[var(--success)]">Anexado</span>;
+  }
+  // "Outro" vazio não é pendência: é a linha por onde se anexa o que não tem
+  // tipo próprio. Vermelho ali seria uma cobrança que nunca fecha.
+  if (linha.tipo === TipoDocumento.OUTRO) {
+    return <span className="whitespace-nowrap text-[var(--muted)]">Opcional</span>;
   }
   return <strong className="whitespace-nowrap text-[var(--danger)]">Não anexado</strong>;
 }

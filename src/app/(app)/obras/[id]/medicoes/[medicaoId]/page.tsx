@@ -21,7 +21,6 @@ import {
   paraCampoMes,
 } from "../../dados";
 import { AcervoDeDocumentos } from "../../documentos/acervo";
-import { IncluirDeOutroTipo } from "../../documentos/acoes-linha";
 import { medicaoParaExcluir } from "../exclusao";
 import { BotaoExcluirMedicao, FormularioMedicao } from "../formulario";
 
@@ -126,7 +125,8 @@ export default async function EditarMedicaoPage({
       >
         <p className="mb-4 rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
           A lista mostra os documentos necessários da medição. Cada tipo aceita
-          quantos arquivos precisar.
+          quantos arquivos precisar; o que não tem tipo próprio entra pela linha
+          &ldquo;Outro&rdquo;, com a descrição.
         </p>
 
         <AcervoDeDocumentos
@@ -139,17 +139,6 @@ export default async function EditarMedicaoPage({
           mostrarOrigem={false}
           vazio="Nenhum documento previsto para esta medição."
         />
-
-        {podeIncluir && (
-          <div className="mt-4 border-t border-[var(--border)] pt-4">
-            <IncluirDeOutroTipo
-              obraId={obra.id}
-              medicaoId={medicao.id}
-              contexto="medicao"
-              tiposJaListados={ESPERADOS_DA_MEDICAO}
-            />
-          </div>
-        )}
       </Card>
 
       {podeExcluir && (

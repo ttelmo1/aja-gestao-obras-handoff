@@ -10,6 +10,7 @@ import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
 import { apagarArquivo, salvarArquivo } from "@/lib/storage";
 import { AcaoAuditoria, registrar } from "@/modules/auditoria/registrar";
+import { aceitaMaisDeUm } from "@/modules/documentos/acervo";
 import { validarArquivo } from "@/modules/documentos/formatos";
 import { ROTULOS_TIPO_DOCUMENTO } from "@/modules/documentos/rotulos";
 
@@ -70,6 +71,49 @@ async function vinculosValidos(v: Vinculos): Promise<string | null> {
 }
 
 /**
+ * Um tipo, um arquivo — no contrato.
+ *
+ * A aba Documentos virou uma lista de tipos esperados, com uma linha cada:
+ * dois arquivos no mesmo tipo desdobrariam a linha e desfariam a leitura de
+ * "o que falta". Quem precisa de um segundo arquivo do mesmo assunto usa
+ * "Outro", o único tipo que aceita repetição.
+ *
+ * Vale só para o que é do contrato: medição, rerratificação e tramitação
+ * continuam aceitando quantos arquivos precisarem, porque lá a lista é do
+ * anexo e não do tipo.
+ */
+async function recusaPorRepeticao(
+  v: Vinculos,
+  quantosArquivos: number,
+): Promise<string | null> {
+  const doContrato =
+    !v.medicaoId && !v.movimentoId && !v.rerratificacaoId && !v.etapaObraId;
+  if (!doContrato || aceitaMaisDeUm(v.tipo)) return null;
+
+  const rotulo = ROTULOS_TIPO_DOCUMENTO[v.tipo];
+  if (quantosArquivos > 1) {
+    return `“${rotulo}” aceita um arquivo só. Envie os demais como “${ROTULOS_TIPO_DOCUMENTO[TipoDocumento.OUTRO]}”.`;
+  }
+
+  const jaTem = await prisma.documento.findFirst({
+    where: {
+      obraId: v.obraId,
+      tipo: v.tipo,
+      excluidoEm: null,
+      medicaoId: null,
+      movimentoId: null,
+      rerratificacaoId: null,
+      etapaObraId: null,
+    },
+    select: { nomeOriginal: true },
+  });
+  if (jaTem) {
+    return `Já existe um documento do tipo “${rotulo}” neste contrato (${jaTem.nomeOriginal}). Exclua o atual ou envie este como “${ROTULOS_TIPO_DOCUMENTO[TipoDocumento.OUTRO]}”.`;
+  }
+  return null;
+}
+
+/**
  * Upload múltiplo (requisitos.md 1.6). Cada arquivo vira um `Documento`
  * próprio, com o mesmo tipo e a mesma descrição — que é como o mockup
  * apresenta: "é possível anexar mais de um documento à mesma etapa".
@@ -110,6 +154,9 @@ export async function enviarDocumentos(
     .getAll("arquivos")
     .filter((a): a is File => a instanceof File && a.size > 0);
   if (arquivos.length === 0) return { erro: "Selecione ao menos um arquivo." };
+
+  const recusa = await recusaPorRepeticao(dados, arquivos.length);
+  if (recusa) return { erro: recusa };
 
   // Valida todos antes de gravar qualquer um: melhor recusar o lote inteiro
   // do que deixar metade no disco e reclamar da outra metade.

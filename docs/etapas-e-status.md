@@ -1319,6 +1319,64 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
    Validado no navegador com o banco local: marcar, ver descer para o fim em
    cinza, voltar a exigir, e as duas ações no histórico da obra.
 
+8. ✅ **A aba Documentos vira uma lista só — 17/09/2026.** Pedido do Telmo no
+   mesmo dia, olhando a tela pronta: os três blocos ("Conferência do
+   contrato", "Documentos" e "Novo documento do contrato") diziam a mesma
+   coisa em lugares diferentes, e o envio ficava num formulário no fim da
+   página, solto de qualquer linha. Agora é **uma tabela**: cada linha é um
+   tipo esperado, e a coluna "Ação" traz o que dá para fazer com ela —
+   **Incluir**, Abrir, Excluir, "Não se aplica".
+
+   **Um tipo, um arquivo.** A linha só fecha a conta se não se desdobrar, então
+   o contrato aceita um arquivo por tipo; o segundo arquivo do mesmo assunto
+   entra como **"Outro"**, o único tipo que aceita repetição — e por isso o
+   único cuja linha continua oferecendo "Incluir" depois de preenchida. A
+   recusa é da action (`recusaPorRepeticao`), não só da tela. Medição,
+   rerratificação e tramitação continuam aceitando quantos arquivos
+   precisarem: lá a lista é do anexo, não do tipo.
+
+   **Incluir e "Não se aplica" viraram modais**, abertas pela própria linha —
+   o tipo já está decidido por ela, então a janela não pergunta de novo, e o
+   motivo da dispensa deixou de ser um campo solto embaixo da tabela que
+   ninguém preenchia. `<dialog>` nativo, sem biblioteca.
+
+   **Arquivos de outras telas aparecem na mesma lista**, no fim, marcados "de
+   outra tela" e com a origem — sem botão de incluir, porque quem anexa é a
+   tela de origem.
+
+   Regra em `modules/documentos/acervo.ts`, com teste. Validado no navegador
+   com o banco local: incluir a proposta pela linha, a janela fechar sozinha e
+   a linha virar "Anexado".
+
+9. ✅ **A medição segue a mesma lista, com atalhos no cabeçalho — 17/09/2026.**
+   "Documentos necessários" e "Arquivos da medição" viraram um bloco só,
+   **"Documentos da medição"**, com a mesma tabela da obra (`mostrarOrigem`
+   desligado: ali toda linha é da própria medição).
+
+   **A regra de repetição é diferente da do contrato, e de propósito:** na
+   medição **todo tipo aceita quantos arquivos precisar** — duas planilhas de
+   memória de cálculo na mesma medição são normais, e cobrar "uma nota fiscal
+   por medição" seria inventar regra que o cliente não pediu. É o parâmetro
+   `permiteRepeticao` de `montarAcervo`.
+
+   Como a lista da medição é curta (os cinco do mockup), anexar um parecer ou
+   uma foto ficaria impossível: para isso existe **"Incluir documento de outro
+   tipo"**, a única janela que ainda pergunta o tipo, porque ali nenhuma linha
+   o decidiu. Arquivo de tipo fora da lista aparece no fim, marcado "fora da
+   lista", e não entra na conta do cabeçalho.
+
+   **Atalhos "Documentação" e "Excluir medição" no cabeçalho**, ao lado do
+   número da medição: a tela é comprida e quem entrava para anexar um arquivo
+   rolava o formulário inteiro. São âncoras (`href="#documentos"`), não botões
+   com JavaScript — funcionam com teclado e a rolagem suave vem do CSS, com
+   `prefers-reduced-motion` respeitado.
+
+   **Código morto removido junto:** `modules/documentos/conferencia.ts`, o
+   componente `documentos/conferencia.tsx` e `tests/conferencia.test.ts` saíram
+   — eram a implementação paralela que o acervo substituiu. `ESPERADOS_DA_OBRA`
+   e `ESPERADOS_DA_MEDICAO` mudaram de casa para `acervo.ts`, com a
+   justificativa original.
+
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o

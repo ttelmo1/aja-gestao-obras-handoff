@@ -5,12 +5,12 @@ import { Dado } from "@/components/ui/dados";
 import { exigirPermissao } from "@/lib/guarda";
 import { pode } from "@/modules/auth/permissoes";
 import {
-  conferenciaDeDocumentos,
+  acervoDoContrato,
   ESPERADOS_DA_OBRA,
-  resumoDaConferencia,
-} from "@/modules/documentos/conferencia";
+  resumoDoAcervo,
+} from "@/modules/documentos/acervo";
 import {
-  filtrarPorOrigem,
+  filtrarLinhasDoAcervo,
   lerFiltrosDocumento,
   temFiltroDocumento,
 } from "@/modules/documentos/filtros";
@@ -18,20 +18,24 @@ import { origensDisponiveis } from "@/modules/documentos/origem";
 import { formatarTamanho, TIPOS_DOCUMENTO } from "@/modules/documentos/rotulos";
 
 import { carregarDispensas, carregarDocumentos, carregarObra } from "../dados";
-import { ConferenciaDocumentos } from "./conferencia";
-import { EnviarDocumentos } from "./enviar";
+import { AcervoDeDocumentos } from "./acervo";
 import { FiltrosDaCentral } from "./filtros";
-import { ListaDocumentos } from "./lista";
 
 export const metadata = { title: "Documentos" };
 export const dynamic = "force-dynamic";
 
 /**
- * Central de Documentos da Obra — a tela do mockup que reúne tudo que foi
- * enviado nas outras abas, com o vínculo de origem preservado.
+ * Documentos da Obra — uma lista só.
  *
- * A busca e o filtro de tipo vão ao banco; o de origem é aplicado depois,
- * porque origem não é coluna — é o vínculo mais específico entre quatro.
+ * Em 17/09/2026 a aba tinha três blocos: "Conferência do contrato", que
+ * listava o que se espera; "Documentos", que listava o que existe; e "Novo
+ * documento do contrato", um formulário no fim da página onde o tipo era
+ * escolhido de novo, solto de qualquer linha. Os três viraram esta tabela:
+ * cada linha é um tipo esperado, e a coluna "Ação" traz o que se pode fazer
+ * com ela — incluir o arquivo, abrir, excluir, marcar que não se aplica.
+ *
+ * O envio passa a ser **um arquivo por tipo**; o segundo arquivo do mesmo
+ * assunto entra como "Outro", o único tipo que aceita repetição.
  */
 export default async function DocumentosPage({
   params,
@@ -48,64 +52,25 @@ export default async function DocumentosPage({
   ]);
   if (!obra) notFound();
 
-  // A conferência do contrato só olha o que é do próprio contrato: documento
-  // de medição é cobrado na tela da medição, e contá-lo aqui marcaria "Nota
-  // fiscal anexada" na obra por causa da nota da medição 3. O anexo de um
-  // movimento de tramitação também fica de fora — ele pertence ao percurso de
-  // uma medição, e a tramitação saiu da tela em 17/09.
-  const conferencia = conferenciaDeDocumentos({
+  const linhas = acervoDoContrato({
     esperados: ESPERADOS_DA_OBRA,
-    documentos: todos.filter((d) => !d.medicaoId && !d.movimentoId),
+    documentos: todos,
+    // Dispensa de medição é assunto da tela da medição.
     dispensados: dispensas.filter((d) => d.medicaoId === null),
   });
-  const resumo = resumoDaConferencia(conferencia);
+  const resumo = resumoDoAcervo(linhas);
 
   // As opções do seletor saem do acervo inteiro, não do resultado filtrado:
   // um filtro que apaga as próprias opções trava o usuário na escolha atual.
   const origens = origensDisponiveis(todos);
+  const visiveis = filtrarLinhasDoAcervo(linhas, filtros);
 
-  const busca = filtros.busca.toLowerCase();
-  const visiveis = filtrarPorOrigem(
-    todos.filter((d) => {
-      if (filtros.tipo && d.tipo !== filtros.tipo) return false;
-      if (!busca) return true;
-      return (
-        d.nomeOriginal.toLowerCase().includes(busca) ||
-        (d.descricao?.toLowerCase().includes(busca) ?? false)
-      );
-    }),
-    filtros.origem,
-  );
-
-  const espaco = visiveis.reduce((s, d) => s + Number(d.tamanhoBytes), 0);
+  const espaco = todos.reduce((s, d) => s + Number(d.tamanhoBytes), 0);
 
   return (
     <div className="flex flex-col gap-4">
-      <Card titulo="Central de Documentos da Obra">
-        <p className="mb-4 rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
-          Esta área reúne todos os arquivos enviados nas demais telas. Cada
-          documento continua vinculado à origem: contrato, medição, etapa de
-          tramitação ou rerratificação.
-        </p>
-
-        <FiltrosDaCentral
-          base={`/obras/${obra.id}/documentos`}
-          filtros={filtros}
-          tipos={TIPOS_DOCUMENTO}
-          origens={origens}
-        />
-
-        <div className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-3">
-          <Dado rotulo="Documentos">{visiveis.length}</Dado>
-          <Dado rotulo="No acervo da obra">{todos.length}</Dado>
-          <Dado rotulo="Espaço ocupado">
-            <span className="tabular">{formatarTamanho(espaco)}</span>
-          </Dado>
-        </div>
-      </Card>
-
       <Card
-        titulo="Conferência do contrato"
+        titulo="Documentos da Obra"
         acao={
           <span
             className="text-sm font-bold"
@@ -119,41 +84,50 @@ export default async function DocumentosPage({
           </span>
         }
       >
-        <p className="mb-4 text-sm text-[var(--muted)]">
-          Em vermelho o que ainda não foi anexado. O que não se aplica a este
-          contrato pode ser marcado: fica cinza e desce para o fim da lista.
-          Documento de medição é cobrado na tela da própria medição.
+        {/*
+          O texto é curto de propósito. A versão anterior explicava as quatro
+          regras da tela de uma vez — vermelho, uma vez por tipo, "não se
+          aplica", arquivos de outras telas — e ninguém lia parágrafo desse
+          tamanho. O resto a própria tabela mostra: o vermelho se vê, o botão
+          "Não se aplica" está na linha, e o arquivo de outra tela vem marcado.
+        */}
+        <p className="mb-4 rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
+          A lista mostra todos os documentos esperados do contrato. Cada tipo é
+          anexado uma vez, use <strong>&ldquo;Outros&rdquo;</strong> caso queira
+          anexar mais de um.
         </p>
 
-        <ConferenciaDocumentos
-          obraId={obra.id}
-          linhas={conferencia}
-          podeEditar={pode(usuario.perfil, "documento", "editar")}
+        <FiltrosDaCentral
+          base={`/obras/${obra.id}/documentos`}
+          filtros={filtros}
+          tipos={TIPOS_DOCUMENTO}
+          origens={origens}
         />
-      </Card>
 
-      <Card titulo={`Documentos (${visiveis.length})`}>
-        <ListaDocumentos
-          documentos={visiveis}
-          podeExcluir={pode(usuario.perfil, "documento", "excluir")}
-          vazio={
-            temFiltroDocumento(filtros)
-              ? "Nenhum documento encontrado com esses filtros."
-              : "Nenhum documento enviado nesta obra ainda."
-          }
-        />
-      </Card>
+        <div className="mt-4 grid gap-3 border-t border-b border-[var(--border)] py-4 sm:grid-cols-4">
+          <Dado rotulo="Anexados">{resumo.anexados}</Dado>
+          <Dado rotulo="Não anexados">{resumo.faltando}</Dado>
+          <Dado rotulo="Não se aplicam">{resumo.dispensados}</Dado>
+          <Dado rotulo="Espaço ocupado">
+            <span className="tabular">{formatarTamanho(espaco)}</span>
+          </Dado>
+        </div>
 
-      {pode(usuario.perfil, "documento", "criar") && (
-        <Card titulo="Novo documento do contrato">
-          <p className="mb-4 text-sm text-[var(--muted)]">
-            Documento enviado aqui fica vinculado ao contrato da obra. Para
-            anexar à medição ou a um setor da tramitação, use o bloco de
-            documentos dentro da própria tela — assim a origem fica registrada.
-          </p>
-          <EnviarDocumentos obraId={obra.id} contexto="obra" />
-        </Card>
-      )}
+        <div className="mt-4">
+          <AcervoDeDocumentos
+            obraId={obra.id}
+            linhas={visiveis}
+            podeIncluir={pode(usuario.perfil, "documento", "criar")}
+            podeDispensar={pode(usuario.perfil, "documento", "editar")}
+            podeExcluir={pode(usuario.perfil, "documento", "excluir")}
+            vazio={
+              temFiltroDocumento(filtros)
+                ? "Nenhum documento encontrado com esses filtros."
+                : "Nenhum documento previsto para esta obra."
+            }
+          />
+        </div>
+      </Card>
     </div>
   );
 }

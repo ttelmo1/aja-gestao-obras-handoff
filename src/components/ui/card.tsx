@@ -5,16 +5,25 @@ import type { ReactNode } from "react";
  * padrão de conteúdo em todas as telas.
  */
 export function Card({
+  id,
   titulo,
   acao,
   children,
 }: {
+  /**
+   * Âncora do painel, para um atalho `href="#id"` levar até ele. O
+   * `scroll-mt` evita que o topo do painel fique embaixo do cabeçalho fixo.
+   */
+  id?: string;
   titulo?: string;
   acao?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[14px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--sombra-card)]">
+    <section
+      id={id}
+      className="scroll-mt-4 rounded-[14px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--sombra-card)]"
+    >
       {(titulo || acao) && (
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
           {titulo && (

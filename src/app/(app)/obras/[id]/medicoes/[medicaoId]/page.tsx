@@ -6,10 +6,10 @@ import { paraCampoDinheiro } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
 import {
-  conferenciaDeDocumentos,
+  acervoDaMedicao,
   ESPERADOS_DA_MEDICAO,
-  resumoDaConferencia,
-} from "@/modules/documentos/conferencia";
+  resumoDoAcervo,
+} from "@/modules/documentos/acervo";
 import { contarDocumentosPorMedicao } from "@/modules/medicoes/exclusao";
 
 import {
@@ -20,9 +20,8 @@ import {
   paraCampoData,
   paraCampoMes,
 } from "../../dados";
-import { ConferenciaDocumentos } from "../../documentos/conferencia";
-import { EnviarDocumentos } from "../../documentos/enviar";
-import { ListaDocumentos } from "../../documentos/lista";
+import { AcervoDeDocumentos } from "../../documentos/acervo";
+import { IncluirDeOutroTipo } from "../../documentos/acoes-linha";
 import { medicaoParaExcluir } from "../exclusao";
 import { BotaoExcluirMedicao, FormularioMedicao } from "../formulario";
 
@@ -52,12 +51,17 @@ export default async function EditarMedicaoPage({
   if (!medicao) notFound();
 
   const documentosDaMedicao = documentos.filter((d) => d.medicaoId === medicao.id);
-  const conferencia = conferenciaDeDocumentos({
+  // Uma lista só: o que a medição precisa e o que ela já tem, na mesma tabela
+  // — a aba Documentos da obra virou isso em 17/09 e a medição segue junto.
+  const linhas = acervoDaMedicao({
     esperados: ESPERADOS_DA_MEDICAO,
     documentos: documentosDaMedicao,
     dispensados: dispensas.filter((d) => d.medicaoId === medicao.id),
   });
-  const resumo = resumoDaConferencia(conferencia);
+  const resumo = resumoDoAcervo(linhas);
+
+  const podeIncluir = pode(usuario.perfil, "documento", "criar");
+  const podeExcluir = pode(usuario.perfil, "medicao", "excluir");
 
   return (
     <div className="flex flex-col gap-4">
@@ -65,6 +69,16 @@ export default async function EditarMedicaoPage({
         titulo={`Medição nº ${String(medicao.numero).padStart(2, "0")}${
           medicao.protocolo ? ` · Protocolo ${medicao.protocolo}` : ""
         }`}
+        acao={
+          <div className="flex flex-wrap gap-2">
+            <AtalhoDaMedicao para="documentos">Documentação</AtalhoDaMedicao>
+            {podeExcluir && (
+              <AtalhoDaMedicao para="excluir-medicao">
+                Excluir medição
+              </AtalhoDaMedicao>
+            )}
+          </div>
+        }
       >
         <FormularioMedicao
           obraId={obra.id}
@@ -95,7 +109,8 @@ export default async function EditarMedicaoPage({
       </Card>
 
       <Card
-        titulo="Documentos necessários"
+        id="documentos"
+        titulo={`Documentos da medição (${documentosDaMedicao.length})`}
         acao={
           <span
             className="text-sm font-bold"
@@ -109,50 +124,40 @@ export default async function EditarMedicaoPage({
           </span>
         }
       >
-        <p className="mb-4 text-sm text-[var(--muted)]">
-          Em vermelho o que ainda não foi anexado nesta medição. O que não se
-          aplica pode ser marcado: fica cinza e desce para o fim da lista.
+        <p className="mb-4 rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
+          A lista mostra os documentos necessários da medição. Cada tipo aceita
+          quantos arquivos precisar.
         </p>
 
-        <ConferenciaDocumentos
+        <AcervoDeDocumentos
           obraId={obra.id}
           medicaoId={medicao.id}
-          linhas={conferencia}
-          podeEditar={pode(usuario.perfil, "documento", "editar")}
-        />
-      </Card>
-
-      <Card titulo={`Arquivos da medição (${documentosDaMedicao.length})`}>
-        <p className="mb-4 text-sm text-[var(--muted)]">
-          Medição assinada, protocolo, nota fiscal, guia do ISS, memória de
-          cálculo — cada medição pode ter quantos documentos precisar.
-        </p>
-
-        <ListaDocumentos
-          documentos={documentosDaMedicao}
+          linhas={linhas}
+          podeIncluir={podeIncluir}
+          podeDispensar={pode(usuario.perfil, "documento", "editar")}
           podeExcluir={pode(usuario.perfil, "documento", "excluir")}
           mostrarOrigem={false}
-          vazio="Nenhum documento anexado a esta medição."
+          vazio="Nenhum documento previsto para esta medição."
         />
 
-        {pode(usuario.perfil, "documento", "criar") && (
-          <div className="mt-5 border-t border-[var(--border)] pt-5">
-            <EnviarDocumentos
+        {podeIncluir && (
+          <div className="mt-4 border-t border-[var(--border)] pt-4">
+            <IncluirDeOutroTipo
               obraId={obra.id}
-              contexto="medicao"
               medicaoId={medicao.id}
-              titulo="Enviar outro documento da medição"
+              contexto="medicao"
+              tiposJaListados={ESPERADOS_DA_MEDICAO}
             />
           </div>
         )}
       </Card>
 
-      {pode(usuario.perfil, "medicao", "excluir") && (
-        <Card titulo="Excluir medição">
+      {podeExcluir && (
+        <Card id="excluir-medicao" titulo="Excluir medição">
           <div className="flex flex-col gap-3 text-sm">
             <p className="text-[var(--muted)]">
               A exclusão apaga a medição. Medição com documento ativo não pode
-              ser apagada: exclua os documentos antes, na aba Documentos.
+              ser apagada: exclua os documentos antes, no bloco acima.
             </p>
             <BotaoExcluirMedicao
               medicao={medicaoParaExcluir(
@@ -165,5 +170,30 @@ export default async function EditarMedicaoPage({
         </Card>
       )}
     </div>
+  );
+}
+
+/**
+ * Atalho do cabeçalho para um bloco mais abaixo da página.
+ *
+ * A tela da medição é comprida — o formulário inteiro fica antes dos
+ * documentos e da exclusão —, e quem entra para anexar um arquivo estava
+ * rolando tudo. É link com âncora, e não botão com JavaScript: funciona com o
+ * teclado, abre em nova aba se alguém quiser, e a rolagem suave vem do CSS.
+ */
+function AtalhoDaMedicao({
+  para,
+  children,
+}: {
+  para: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <a
+      href={`#${para}`}
+      className="inline-flex items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-sm font-bold text-[var(--primary)] transition-colors hover:bg-[var(--background)]"
+    >
+      {children}
+    </a>
   );
 }

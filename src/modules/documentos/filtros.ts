@@ -64,3 +64,39 @@ export function filtrarPorOrigem<T extends VinculosDoDocumento>(
   if (!origem) return documentos;
   return documentos.filter((d) => origemDoDocumento(d).chave === origem);
 }
+
+/**
+ * Filtro aplicado à lista unificada da aba Documentos, onde nem toda linha
+ * tem arquivo.
+ *
+ * A linha vazia (o tipo que ainda falta) só sobrevive a um filtro que ela
+ * possa satisfazer: casa com o filtro de tipo e com a origem "contrato", e
+ * some na busca por texto — não há nome nem descrição onde procurar, e
+ * mantê-la faria a busca por "nota" devolver vinte linhas sem arquivo.
+ */
+export function filtrarLinhasDoAcervo<
+  L extends {
+    tipo: TipoDocumento;
+    documento:
+      | (VinculosDoDocumento & { nomeOriginal: string; descricao: string | null })
+      | null;
+  },
+>(linhas: L[], f: FiltrosDocumento): L[] {
+  const busca = f.busca.trim().toLowerCase();
+
+  return linhas.filter((l) => {
+    if (f.tipo && l.tipo !== f.tipo) return false;
+
+    if (!l.documento) {
+      return busca === "" && (f.origem === null || f.origem === "contrato");
+    }
+    if (f.origem && origemDoDocumento(l.documento).chave !== f.origem) {
+      return false;
+    }
+    if (!busca) return true;
+    return (
+      l.documento.nomeOriginal.toLowerCase().includes(busca) ||
+      (l.documento.descricao?.toLowerCase().includes(busca) ?? false)
+    );
+  });
+}

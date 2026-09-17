@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { Esfera } from "@/generated/prisma/enums";
 import { formatarCnpj } from "@/modules/cadastros/cnpj";
@@ -78,13 +79,13 @@ export type Contratante = {
 };
 
 export function FormContratante({ padrao }: { padrao?: Contratante }) {
-  const [estado, acao, pendente] = useActionState<EstadoCadastro, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoCadastro>(
     salvarContratante,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -183,13 +184,13 @@ export type Responsavel = {
 };
 
 export function FormResponsavel({ padrao }: { padrao?: Responsavel }) {
-  const [estado, acao, pendente] = useActionState<EstadoCadastro, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoCadastro>(
     salvarResponsavel,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -262,13 +263,13 @@ export type Setor = {
 };
 
 export function FormSetor({ padrao }: { padrao?: Setor }) {
-  const [estado, acao, pendente] = useActionState<EstadoCadastro, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoCadastro>(
     salvarSetor,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 
       <Campo id="nome" rotulo="Nome do setor">

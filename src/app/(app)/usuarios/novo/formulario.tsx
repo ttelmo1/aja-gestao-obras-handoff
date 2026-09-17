@@ -1,14 +1,13 @@
 "use client";
 
-import { useActionState } from "react";
-
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao } from "@/components/ui/formulario";
 
 import { criarUsuario, type EstadoUsuario } from "../acoes";
 import { CamposUsuario, LinkDeSenha } from "../campos";
 
 export function FormularioNovoUsuario() {
-  const [estado, acao, pendente] = useActionState<EstadoUsuario, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoUsuario>(
     criarUsuario,
     undefined,
   );
@@ -25,7 +24,7 @@ export function FormularioNovoUsuario() {
   }
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       <CamposUsuario />
       <p className="text-xs text-[var(--muted)]">
         A senha não é definida aqui. Ao salvar, o sistema gera um link que a

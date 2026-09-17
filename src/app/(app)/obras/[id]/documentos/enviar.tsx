@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
-
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { TipoDocumento } from "@/generated/prisma/enums";
 import { acceptHtml, TAMANHO_MAXIMO_BYTES } from "@/modules/documentos/formatos";
@@ -38,14 +37,14 @@ export function EnviarDocumentos({
   rerratificacaoId?: string;
   titulo?: string;
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoDocumento, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoDocumento>(
     enviarDocumentos,
     undefined,
   );
   const sufixo = movimentoId ?? medicaoId ?? etapaObraId ?? obraId;
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       <input type="hidden" name="obraId" value={obraId} />
       {medicaoId && <input type="hidden" name="medicaoId" value={medicaoId} />}
       {etapaObraId && (

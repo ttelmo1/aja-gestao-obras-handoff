@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 
 import { ConfirmarExclusao } from "@/components/ui/confirmar-exclusao";
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { StatusMedicao } from "@/generated/prisma/enums";
 import { bloqueioExclusaoMedicao } from "@/modules/medicoes/exclusao";
@@ -55,13 +55,13 @@ export function FormularioMedicao({
   numeroSugerido: number;
   competenciaSugerida: string;
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoMedicao, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoMedicao>(
     salvarMedicao,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-5">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-5">
       <input type="hidden" name="obraId" value={obraId} />
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 

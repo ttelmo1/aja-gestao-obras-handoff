@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao } from "@/components/ui/formulario";
 import type { Perfil } from "@/generated/prisma/enums";
 
@@ -20,13 +21,13 @@ export function FormularioEditarUsuario({
   usuario: { id: string; nome: string; email: string; perfil: Perfil; ativo: boolean };
   ehVoce: boolean;
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoUsuario, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoUsuario>(
     atualizarUsuario,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       <input type="hidden" name="id" value={usuario.id} />
       <CamposUsuario padrao={usuario} />
 

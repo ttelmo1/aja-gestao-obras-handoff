@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { StatusEtapa } from "@/generated/prisma/enums";
 import {
@@ -44,13 +45,13 @@ export function FormEntrada({
   setores: Opcao[];
   hoje: string;
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoTramitacao, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoTramitacao>(
     registrarEntrada,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       <input type="hidden" name="etapaObraId" value={etapaObraId} />
       {medicaoId && <input type="hidden" name="medicaoId" value={medicaoId} />}
 
@@ -111,13 +112,13 @@ export function FormSaida({
   movimentoId: string;
   hoje: string;
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoTramitacao, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoTramitacao>(
     registrarSaida,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-2">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-2">
       <input type="hidden" name="movimentoId" value={movimentoId} />
       <div className="flex flex-wrap items-end gap-2">
         <input
@@ -150,13 +151,13 @@ export function FormEtapa({
     observacoes: string | null;
   };
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoTramitacao, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoTramitacao>(
     salvarEtapa,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       <input type="hidden" name="etapaObraId" value={etapaObraId} />
 
       <div className="grid gap-4 sm:grid-cols-3">

@@ -10,7 +10,6 @@ function entrada(over: Partial<Parameters<typeof calcularFarol>[0]> = {}) {
     status: StatusObra.EM_ANDAMENTO,
     dataOrdemInicio: new Date("2026-01-01"),
     dataPrevistaTermino: new Date("2026-12-31"),
-    diasParado: null,
     diasParaMedicao: null,
     agora: AGORA,
     ...over,
@@ -59,11 +58,6 @@ describe("calcularFarol", () => {
     assert.equal(r.farol, Farol.AMARELO);
   });
 
-  it("processo parado 20 dias é amarelo; 40 dias é vermelho", () => {
-    assert.equal(calcularFarol(entrada({ diasParado: 20 })).farol, Farol.AMARELO);
-    assert.equal(calcularFarol(entrada({ diasParado: 40 })).farol, Farol.VERMELHO);
-  });
-
   // Número dado pelo cliente em 09/09/2026, confirmado duas vezes: dez dias
   // antes do vencimento acende o amarelo. Numa obra mensal, é o 20º dia.
   it("medição a vencer em dez dias é amarela; em onze, ainda verde", () => {
@@ -91,27 +85,33 @@ describe("calcularFarol", () => {
 
   // Confirmado pelo engenheiro em 07/09/2026: "qualquer problema" acende.
   it("basta um critério para acender, mesmo com o resto em dia", () => {
-    const r = calcularFarol(entrada({ diasParado: 40 }));
+    const r = calcularFarol(entrada({ diasParaMedicao: -3 }));
     assert.equal(r.farol, Farol.VERMELHO);
-    assert.match(r.motivos.join(" "), /parado/);
+    assert.match(r.motivos.join(" "), /Medição vencida/);
   });
 
   it("acumula os motivos quando mais de um critério acende", () => {
     const r = calcularFarol(
-      entrada({ dataPrevistaTermino: new Date("2026-06-20"), diasParado: 40 }),
+      entrada({
+        dataPrevistaTermino: new Date("2026-06-20"),
+        diasParaMedicao: -3,
+      }),
     );
     assert.equal(r.farol, Farol.VERMELHO);
-    assert.equal(r.motivos.length, 2); // prazo próximo e processo parado
+    assert.equal(r.motivos.length, 2); // prazo próximo e medição vencida
   });
 
   it("o motivo principal é o do pior nível, não o primeiro da lista", () => {
-    // Prazo próximo (amarelo) vem antes de processo parado (vermelho) na
+    // Prazo próximo (amarelo) vem antes de medição vencida (vermelho) na
     // ordem de avaliação — o cartão precisa mostrar o segundo.
     const r = calcularFarol(
-      entrada({ dataPrevistaTermino: new Date("2026-06-20"), diasParado: 40 }),
+      entrada({
+        dataPrevistaTermino: new Date("2026-06-20"),
+        diasParaMedicao: -3,
+      }),
     );
     assert.equal(r.farol, Farol.VERMELHO);
-    assert.match(r.motivoPrincipal ?? "", /parado/);
+    assert.match(r.motivoPrincipal ?? "", /Medição vencida/);
   });
 
   it("obra em dia também tem motivo principal", () => {

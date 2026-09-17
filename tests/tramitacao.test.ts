@@ -11,7 +11,6 @@ import {
   validarNovaEntrada,
   validarSaida,
 } from "@/modules/tramitacao/movimentos";
-import { DIAS_PARA_CONTAR_PARADO, resumoDaObra, totaisDoPainel } from "@/modules/obras/resumo";
 
 const d = (iso: string) => new Date(`${iso}T12:00:00Z`);
 const mov = (entrada: string, saida?: string) => ({
@@ -139,52 +138,6 @@ describe("dias parado da obra", () => {
     const s = situacaoDaTramitacao([mov("2026-08-01")], d("2026-08-20"));
     assert.equal(estaParadoDemais(s, 15), true);
     assert.equal(estaParadoDemais(s, 30), false);
-  });
-});
-
-describe("tramitação no farol e no painel", () => {
-  // Dez dias depois da ordem de início: a primeira medição da obra mensal
-  // vence em 09/02, então nada aqui acende por prazo de medição — o que este
-  // bloco testa é o critério de processo parado, isolado.
-  const AGORA = d("2026-01-20");
-
-  const obra = {
-    status: "EM_ANDAMENTO" as const,
-    valorContratado: "1000000.00",
-    valorAditivado: "0",
-    dataOrdemInicio: d("2026-01-10"),
-    dataPrevistaTermino: d("2027-12-31"),
-    periodicidadeMedicao: "MENSAL" as const,
-    intervaloMedicaoDias: null,
-  };
-
-  it("processo parado acende o farol", () => {
-    const emDia = resumoDaObra(obra, [], null, AGORA);
-    const parada = resumoDaObra(obra, [], 40, AGORA);
-
-    assert.equal(emDia.farol, "VERDE");
-    assert.equal(parada.farol, "VERMELHO");
-    assert.ok(parada.motivosFarol.some((m) => m.includes("parado há 40 dias")));
-  });
-
-  it("o resumo carrega o tempo parado para a tela", () => {
-    assert.equal(resumoDaObra(obra, [], 12, AGORA).diasParado, 12);
-    assert.equal(resumoDaObra(obra, [], null, AGORA).diasParado, null);
-  });
-
-  it("conta processos parados a partir do limite do mockup", () => {
-    const comDias = (dias: number | null) => ({
-      status: "EM_ANDAMENTO" as const,
-      resumo: resumoDaObra(obra, [], dias, AGORA),
-    });
-
-    const totais = totaisDoPainel([
-      comDias(null),
-      comDias(DIAS_PARA_CONTAR_PARADO - 1),
-      comDias(DIAS_PARA_CONTAR_PARADO),
-      comDias(40),
-    ]);
-    assert.equal(totais.processosParados, 2);
   });
 });
 

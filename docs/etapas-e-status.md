@@ -1276,6 +1276,19 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
 
    **Só apagar schema e tabelas depois** que a lista de documentos estiver de
    pé e aprovada. Migration destrutiva é o último passo, nunca o primeiro.
+6. ✅ **Farol com dois critérios — 17/09/2026.** Decisão do cliente depois de
+   ver as três opções do ponto #23: em vez de inventar um substituto para
+   "processo parado", o critério sai. Restam **término do contrato** (amarelo
+   30 dias antes, vermelho depois de vencido) e **vencimento da medição**
+   (amarelo dez dias antes, vermelho ao vencer).
+
+   Saíram junto o indicador "Processos parados" do painel, o "Maior tempo
+   parado" da aba Resumo, o campo `diasParado` de `resumoDaObra` e as consultas
+   de movimento que só existiam para alimentá-lo. `modules/tramitacao/` fica de
+   pé, com testes, marcado como em espera — nada em `src/app/` o chama.
+
+   **Consequência a dizer ao cliente:** obra parada, dentro do prazo e com
+   medição em dia, agora fica verde.
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 

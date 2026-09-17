@@ -10,7 +10,7 @@ import { ROTULOS_ESFERA } from "@/modules/cadastros/rotulos";
 import { exigeOperador, situacaoDoOperador } from "@/modules/obras/operador";
 import { resumoDaObra } from "@/modules/obras/resumo";
 
-import { carregarObra, diasParadoDe } from "./dados";
+import { carregarObra } from "./dados";
 import { BlocoOperador } from "./operador";
 
 export const metadata = { title: "Resumo da obra" };
@@ -28,8 +28,11 @@ export default async function ResumoObraPage({
   if (!obra) notFound();
 
   const agora = new Date();
-  const { financeiro, prazo, medicao, diasParado, farol, motivosFarol } =
-    resumoDaObra(obra, obra.medicoes, diasParadoDe(obra, agora), agora);
+  const { financeiro, prazo, medicao, farol, motivosFarol } = resumoDaObra(
+    obra,
+    obra.medicoes,
+    agora,
+  );
 
   const operador = situacaoDoOperador({
     operadorId: obra.operadorId,
@@ -58,15 +61,6 @@ export default async function ResumoObraPage({
             <span className="tabular">{formatarBRL(financeiro.saldoAMedir)}</span>
           </Dado>
           <Dado rotulo="Medições">{financeiro.quantidadeMedicoes}</Dado>
-          <Dado rotulo="Maior tempo parado">
-            {diasParado === null ? (
-              "—"
-            ) : (
-              <span className={diasParado >= 10 ? "text-[var(--danger)]" : undefined}>
-                {diasParado} dia(s)
-              </span>
-            )}
-          </Dado>
           <Dado rotulo="Próxima medição">
             {medicao ? (
               <span

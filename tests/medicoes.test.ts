@@ -165,13 +165,13 @@ describe("resumo da obra com medições", () => {
   ];
 
   it("acha a última medição mesmo com a lista fora de ordem", () => {
-    const r = resumoDaObra(obra, [...medicoes].reverse(), null, d("2026-08-10"));
+    const r = resumoDaObra(obra, [...medicoes].reverse(), d("2026-08-10"));
     assert.ok(r.medicao);
     assert.equal(r.medicao.ultima?.toISOString().slice(0, 10), "2026-07-31");
   });
 
   it("aponta o vencimento do próximo ciclo", () => {
-    const r = resumoDaObra(obra, medicoes, null, d("2026-08-10"));
+    const r = resumoDaObra(obra, medicoes, d("2026-08-10"));
     assert.ok(r.medicao);
     assert.equal(r.medicao.proxima.toISOString().slice(0, 10), "2026-08-30");
     assert.equal(r.medicao.atrasada, false);
@@ -180,11 +180,11 @@ describe("resumo da obra com medições", () => {
   it("conta as obras com ciclo vencido no painel", () => {
     const emDia = {
       status: "EM_ANDAMENTO" as const,
-      resumo: resumoDaObra(obra, medicoes, null, d("2026-08-10")),
+      resumo: resumoDaObra(obra, medicoes, d("2026-08-10")),
     };
     const atrasada = {
       status: "EM_ANDAMENTO" as const,
-      resumo: resumoDaObra(obra, medicoes, null, d("2026-10-10")),
+      resumo: resumoDaObra(obra, medicoes, d("2026-10-10")),
     };
 
     assert.equal(totaisDoPainel([emDia, atrasada]).medicoesAtrasadas, 1);

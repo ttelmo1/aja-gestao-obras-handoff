@@ -3,8 +3,6 @@ import "server-only";
 import { cache } from "react";
 
 import { prisma } from "@/lib/prisma";
-import { etapasIniciais } from "@/modules/tramitacao/fluxo";
-import { diasParadoDaObra } from "@/modules/tramitacao/movimentos";
 
 /**
  * Carrega a obra uma vez por requisição. O layout precisa dela para o
@@ -24,16 +22,6 @@ export const carregarObra = cache(async (id: string) => {
           valorMedido: true,
           competencia: true,
           dataMedicao: true,
-        },
-      },
-      // Movimentos em aberto de todas as etapas: é deles que sai o
-      // "processo parado há N dias" do farol e do resumo.
-      etapas: {
-        select: {
-          movimentos: {
-            where: { dataSaida: null },
-            select: { dataEntrada: true, dataSaida: true },
-          },
         },
       },
       _count: {
@@ -96,58 +84,6 @@ export const carregarMedicoes = cache(async (obraId: string) => {
 export type MedicaoCarregada = Awaited<
   ReturnType<typeof carregarMedicoes>
 >[number];
-
-/**
- * As 11 etapas do fluxo fixo com seus movimentos.
- *
- * `garantirEtapas` cria as que faltarem: obras cadastradas antes da etapa 6
- * não têm nenhuma, e uma etapa nova no enum precisaria aparecer nas obras
- * existentes sem script de migração de dados.
- */
-export const carregarEtapas = cache(async (obraId: string) => {
-  await garantirEtapas(obraId);
-  return prisma.etapaObra.findMany({
-    where: { obraId },
-    orderBy: { ordem: "asc" },
-    include: {
-      movimentos: {
-        orderBy: { dataEntrada: "asc" },
-        include: {
-          setorDestino: { select: { id: true, nome: true, sigla: true } },
-          setorOrigem: { select: { nome: true } },
-          registradoPor: { select: { nome: true } },
-          medicao: { select: { id: true, numero: true } },
-        },
-      },
-    },
-  });
-});
-
-export type EtapaCarregada = Awaited<ReturnType<typeof carregarEtapas>>[number];
-export type MovimentoCarregado = EtapaCarregada["movimentos"][number];
-
-async function garantirEtapas(obraId: string): Promise<void> {
-  const existentes = await prisma.etapaObra.findMany({
-    where: { obraId },
-    select: { tipo: true },
-  });
-  const tem = new Set(existentes.map((e) => e.tipo));
-  const faltando = etapasIniciais().filter((e) => !tem.has(e.tipo));
-  if (faltando.length === 0) return;
-
-  await prisma.etapaObra.createMany({
-    data: faltando.map((e) => ({ ...e, obraId })),
-    skipDuplicates: true,
-  });
-}
-
-/** Maior tempo parado da obra, a partir do que `carregarObra` já trouxe. */
-export function diasParadoDe(obra: ObraCarregada, agora: Date = new Date()) {
-  return diasParadoDaObra(
-    obra.etapas.flatMap((e) => e.movimentos),
-    agora,
-  );
-}
 
 /**
  * Todos os documentos vivos da obra, com o que a central precisa mostrar.

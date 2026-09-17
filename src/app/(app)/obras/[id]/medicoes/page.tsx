@@ -50,7 +50,7 @@ export default async function MedicoesPage({
   if (!obra) notFound();
 
   const agora = new Date();
-  const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes, null, agora);
+  const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes, agora);
   const estourou = financeiro.saldoAMedir.isNegative();
   const documentosPorMedicao = contarDocumentosPorMedicao(documentos);
 

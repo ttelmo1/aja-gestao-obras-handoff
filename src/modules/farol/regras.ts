@@ -16,9 +16,17 @@ import { diasEntre } from "@/lib/date-br";
  * número: **amarelo dez dias antes do vencimento**, vermelho quando vencer.
  * Confirmado duas vezes na mesma conversa.
  *
- * OS DEMAIS LIMITES CONTINUAM PROVISÓRIOS. Ele confirmou a lógica, não os
- * números — quantos dias de prazo, quantos dias parado. Calibrar com a tela
- * aberta.
+ * O critério de PROCESSO PARADO NUM SETOR saiu em 17/09/2026, junto com a
+ * tramitação (ver docs/pontos-para-reuniao.md, ponto #23). Ele lia o movimento
+ * sem data de saída; sem tela que registre movimento, o dado não existe mais.
+ * Decisão do cliente: o farol fica com dois critérios em vez de inventar um
+ * substituto — "sem documento novo há N dias" mede outra coisa e usaria o
+ * mesmo nome. **O que se perde:** obra parada, dentro do prazo e com medição
+ * em dia agora fica verde. O farol passa a ser alerta de prazo, não de
+ * andamento.
+ *
+ * O LIMITE DE PRAZO CONTINUA PROVISÓRIO. Ele confirmou a lógica, não o número
+ * de dias. Calibrar com a tela aberta.
  *
  * Todo o resto do sistema consome apenas `calcularFarol`, e o resultado nunca
  * é persistido: obra fica amarela pela passagem do tempo, sem ninguém salvar
@@ -29,10 +37,6 @@ import { diasEntre } from "@/lib/date-br";
 export const LIMITES_PROVISORIOS = {
   /** Dias de antecedência do término em que a obra passa a AMARELO. */
   diasAlertaPrazo: 30,
-  /** Dias sem movimentação de tramitação até AMARELO. */
-  diasParadoAlerta: 15,
-  /** Dias sem movimentação de tramitação até VERMELHO. */
-  diasParadoCritico: 30,
   /**
    * Dias de antecedência do vencimento da medição em que a obra passa a
    * AMARELO. **Não é provisório**: número dado pelo cliente em 09/09/2026.
@@ -45,8 +49,6 @@ export type EntradaFarol = {
   status: StatusObra;
   dataOrdemInicio: Date | null;
   dataPrevistaTermino: Date | null;
-  /** Dias desde a entrada no setor atual sem saída registrada. */
-  diasParado: number | null;
   /**
    * Dias até o vencimento da próxima medição, negativo quando já venceu.
    * `null` quando não há prazo a cobrar — obra sem ordem de início,
@@ -65,7 +67,7 @@ export type ResultadoFarol = {
    * O motivo que determinou a cor — o primeiro entre os do pior nível.
    *
    * Existe porque o cartão do painel tem uma linha, não seis: numa obra
-   * vermelha por prazo vencido *e* processo parado, mostrar "faltam 12 dias
+   * vermelha por medição vencida *e* prazo apertado, mostrar "faltam 12 dias
    * para o término" seria mostrar o motivo errado.
    */
   motivoPrincipal: string | null;
@@ -122,16 +124,7 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
     }
   }
 
-  // 2. Processo parado em um setor.
-  if (e.diasParado !== null) {
-    if (e.diasParado >= LIMITES_PROVISORIOS.diasParadoCritico) {
-      subir(2, `Processo parado há ${e.diasParado} dias.`);
-    } else if (e.diasParado >= LIMITES_PROVISORIOS.diasParadoAlerta) {
-      subir(1, `Processo parado há ${e.diasParado} dias.`);
-    }
-  }
-
-  // 3. Prazo da próxima medição.
+  // 2. Prazo da próxima medição.
   if (e.diasParaMedicao !== null) {
     if (e.diasParaMedicao < 0) {
       subir(2, `Medição vencida há ${Math.abs(e.diasParaMedicao)} dia(s).`);

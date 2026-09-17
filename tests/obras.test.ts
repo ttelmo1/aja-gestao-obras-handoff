@@ -143,7 +143,7 @@ describe("resumo da obra", () => {
   };
 
   it("sem medição, o saldo é o contrato inteiro", () => {
-    const r = resumoDaObra(base, [], null, d("2026-09-04"));
+    const r = resumoDaObra(base, [], d("2026-09-04"));
     assert.equal(r.financeiro.quantidadeMedicoes, 0);
     assert.equal(r.financeiro.valorMedidoTotal.toString(), "0");
     assert.equal(r.financeiro.saldoAMedir.toString(), "1200000");
@@ -156,7 +156,6 @@ describe("resumo da obra", () => {
         { valorMedido: "300000", competencia: d("2026-06-30") },
         { valorMedido: "348000", competencia: d("2026-07-31") },
       ],
-      null,
       d("2026-09-04"),
     );
     assert.equal(r.financeiro.valorMedidoTotal.toString(), "648000");
@@ -168,7 +167,6 @@ describe("resumo da obra", () => {
     const r = resumoDaObra(
       { ...base, status: "PLANEJAMENTO", dataOrdemInicio: null, dataPrevistaTermino: null },
       [],
-      null,
       d("2026-09-04"),
     );
     assert.equal(r.farol, "CINZA");
@@ -176,7 +174,7 @@ describe("resumo da obra", () => {
   });
 
   it("obra paralisada fica vermelha independentemente do prazo", () => {
-    const r = resumoDaObra({ ...base, status: "PARALISADA" }, [], null, d("2026-04-01"));
+    const r = resumoDaObra({ ...base, status: "PARALISADA" }, [], d("2026-04-01"));
     assert.equal(r.farol, "VERMELHO");
   });
 });
@@ -197,7 +195,6 @@ describe("totais do painel", () => {
       medido === "0"
         ? []
         : [{ valorMedido: medido, competencia: d("2026-06-30") }],
-      null,
       d("2026-07-01"),
     ),
   });

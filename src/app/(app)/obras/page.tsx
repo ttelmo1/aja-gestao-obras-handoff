@@ -12,8 +12,7 @@ import {
   lerFiltros,
   temFiltroAtivo,
 } from "@/modules/obras/filtros";
-import { DIAS_PARA_CONTAR_PARADO, resumoDaObra, totaisDoPainel } from "@/modules/obras/resumo";
-import { diasParadoDaObra } from "@/modules/tramitacao/movimentos";
+import { resumoDaObra, totaisDoPainel } from "@/modules/obras/resumo";
 
 import { CartaoObra, type ObraNoPainel } from "./cartao";
 import { BarraDeFiltros } from "./filtros";
@@ -64,16 +63,6 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
             dataMedicao: true,
           },
         },
-        // Só os movimentos em aberto: `dataSaida IS NULL` é a definição de
-        // processo parado, e é o que o índice do schema serve.
-        etapas: {
-          select: {
-            movimentos: {
-              where: { dataSaida: null },
-              select: { dataEntrada: true, dataSaida: true },
-            },
-          },
-        },
       },
     }),
     // Operadores são usuários do sistema, não o cadastro de responsáveis:
@@ -92,15 +81,7 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
 
   const obras: ObraNoPainel[] = registros.map((o) => ({
     ...o,
-    resumo: resumoDaObra(
-      o,
-      o.medicoes,
-      diasParadoDaObra(
-        o.etapas.flatMap((e) => e.movimentos),
-        agora,
-      ),
-      agora,
-    ),
+    resumo: resumoDaObra(o, o.medicoes, agora),
   }));
 
   const visiveis = filtrarPorFarol(
@@ -148,11 +129,6 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
           rotulo="Medições atrasadas"
           valor={String(totais.medicoesAtrasadas)}
           detalhe="Ciclo de medição vencido"
-        />
-        <Indicador
-          rotulo="Processos parados"
-          valor={String(totais.processosParados)}
-          detalhe={`Há ${DIAS_PARA_CONTAR_PARADO} dias ou mais num setor`}
         />
       </div>
 

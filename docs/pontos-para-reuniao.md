@@ -1017,6 +1017,40 @@ parado" da aba Resumo e o campo `diasParado` de `resumoDaObra`.
 suposição nossa. Com um critério a menos, esse número passou a pesar mais —
 vale calibrar com a tela aberta.
 
+## 24. Pagamento pendente: o prazo, e onde o filtro fica 🟡 parcialmente respondido
+
+O Junior pediu um jeito de ver medição com pagamento pendente. Perguntamos três
+coisas; ele respondeu uma, pela Fernanda (17/09/2026): *"que essa opção fique na
+aba de medições, pra poder marcar como pendente, aparecer quando for filtrar"*.
+
+**Respondido:** o lugar é a aba Medições da obra, não o painel de obras.
+
+**Como foi implementado, e por quê:** sem campo novo. A pendência é lida do
+`status` da medição — não paga e não rejeitada é pagamento pendente. Um marcador
+manual em paralelo ao status poderia discordar dele (medição "Paga" marcada como
+pendente) e o sistema passaria a dar duas respostas para a mesma pergunta. Na
+prática o que o Junior chama de "marcar como pendente" é o que ele já faz hoje
+ao deixar a medição em Protocolada ou Aprovada.
+
+**Continua sem resposta, e é o que importa:** *pendente* não é *atrasado*. Toda
+obra em andamento tem medição não paga; um filtro que devolve todas não separa
+nada. O que separa é o pagamento estar fora do prazo — e não sabemos de onde sai
+o prazo:
+
+- conta do **protocolo no órgão**, da **aprovação da medição**, ou de outra data?
+- existe **prazo fixo em contrato** (30, 60 dias)?
+- o prazo **varia por órgão**, e teria que ser informado obra a obra?
+
+Enquanto não houver resposta, a tela mostra pendência, não atraso: o filtro "só
+pagamento pendente" e o total em vermelho na faixa de indicadores.
+
+**Também sem resposta:** pagamento parado deve **acender o farol**? Hoje não
+acende — o farol tem dois critérios (ponto #23) e nenhum olha pagamento.
+
+**Custo de mudar:** baixo enquanto a pendência for derivada. Vira alto se
+entrarmos em prazo por obra — passa a ser campo no contrato, migration e
+recálculo do farol.
+
 ## Pontos já resolvidos 🟢
 
 Registrados para não voltarem à mesa:

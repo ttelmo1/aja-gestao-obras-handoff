@@ -1377,6 +1377,33 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
    e `ESPERADOS_DA_MEDICAO` mudaram de casa para `acervo.ts`, com a
    justificativa original.
 
+10. ✅ **Filtro de pagamento pendente na aba Medições — 17/09/2026.** Pedido do
+    Junior, pela Fernanda: *"que essa opção fique na aba de medições, pra poder
+    marcar como pendente, aparecer quando for filtrar"*.
+
+    **Sem campo novo.** A pendência é derivada do `status` que a medição já tem:
+    não paga e não rejeitada é pagamento pendente. Um marcador manual em
+    paralelo ao status poderia contradizê-lo — medição "Paga" marcada como
+    pendente — e o sistema passaria a dar duas respostas para a mesma pergunta.
+    Marcar como pendente, na prática, é o que já se faz ao deixar a medição em
+    Protocolada ou Aprovada.
+
+    A aba ganhou filtro por situação e a caixa "só pagamento pendente"
+    (`<form method="get">`, o filtro vira query na URL como no painel e na
+    central de documentos), o título do histórico passa a dizer "N de M" quando
+    há filtro, e a faixa de indicadores ganhou **"Pagamento pendente"** com o
+    valor somado em vermelho. Regra em `modules/medicoes/filtros.ts`, com teste.
+
+    **A faixa de indicadores não responde ao filtro**, só a tabela: um total que
+    mudasse junto com o filtro deixaria de ser o valor do contrato.
+
+    **O que falta, e é o que importa — ponto #24:** *pendente* não é *atrasado*.
+    Toda obra em andamento tem medição não paga, então o filtro sozinho não
+    separa nada. Separar exige saber de onde sai o prazo de pagamento (protocolo?
+    aprovação? prazo fixo de contrato? varia por órgão?), e o cliente ainda não
+    respondeu. Também não foi respondido se pagamento parado deve acender o
+    farol — hoje não acende.
+
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o

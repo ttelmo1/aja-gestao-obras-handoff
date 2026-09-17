@@ -20,6 +20,9 @@
 # production
 /build
 
+# pacote de instalação montado por scripts/empacotar (leva o build inteiro dentro)
+/dist
+
 # misc
 .DS_Store
 *.pem

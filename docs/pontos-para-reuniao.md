@@ -28,7 +28,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 5 | Percentual executado — avanço físico sai do sistema | 🟢 | ~~Médio~~ — resolvido |
 | 6 | Setores de tramitação | 🟡 | Baixo |
 | 7 | Numeração de medições e rerratificações | 🟡 | Médio |
-| 8 | Exclusão de registros — cascata reversa aceita, só administrador apaga | 🟢 | ~~Médio~~ — resolvido |
+| 8 | Exclusão de registros — só documento ativo trava; senha do administrador em aberto | 🟡 | Baixo |
 | 9 | Retenções além do ISS | 🔴 | Médio |
 | 10 | Conteúdo dos relatórios — público e layout confirmados | 🟡 | Médio |
 | 11 | Forma de instalação no servidor | 🔴 | Médio |
@@ -362,10 +362,14 @@ medição anterior à instalação.
 **Assumimos:**
 
 - **Documentos:** exclusão lógica (`excluidoEm`). O arquivo some da tela, o
-  registro fica para a auditoria.
-- **Obras, medições, etapas:** exclusão física, em cascata. **Refinado na
-  etapa 5:** só medição em *Rascunho* é apagável; a partir de *Protocolada*
-  existe processo no órgão e a saída é marcá-la como *Rejeitada*.
+  registro fica para a auditoria. Quando a obra ou a medição dona dele é
+  apagada, registro e arquivo saem de vez (15/09/2026).
+- **Obras, medições, etapas:** exclusão física, em cascata. **Alterado em
+  15/09/2026, no período de teste:** a única trava é **documento ativo**.
+  Medição sai em qualquer situação — a regra da etapa 5, de só apagar
+  *Rascunho*, caiu — e obra sai levando medições, rerratificações e
+  tramitação, desde que a aba Documentos esteja vazia. As duas exclusões pedem
+  confirmação numa janela que mostra o que vai ser apagado.
 - **Auditoria:** nunca. Trigger no banco bloqueia UPDATE e DELETE.
 - **Contratantes, responsáveis e setores:** exclusão física só quando ninguém
   os referencia. Em uso, o sistema recusa e oferece desativar — some das
@@ -390,6 +394,18 @@ medição anterior à instalação.
 > (ponto [#3](#3-detalhamento-das-permissões-por-perfil-)) — vale confirmar com
 > o Diego antes de mexer, porque ele opera junto com a equipe e é quem sente o
 > custo de ter que apagar tudo em nome deles.
+>
+> **Revisto em 15/09/2026.** A Fernanda, limpando as obras de exemplo da
+> homologação, bateu na trava das medições: *"quando há medições não dá pra
+> apagar a obra, seria uma opção com senha somente pro administrador"*. Ficou
+> assim: o **documento** é a única trava. O "de trás pra frente" encolhe para um
+> passo — esvaziar a aba Documentos — e a obra sai em cascata. Medição também
+> ganhou exclusão direto na tabela, em qualquer situação.
+>
+> **Não implementado:** a senha do administrador na confirmação. Hoje só o
+> administrador exclui obra, e a janela de confirmação mostra contrato, objeto
+> e quantas medições vão junto. Confirmar se isso basta ou se a senha é
+> exigência.
 
 **Perguntar:** apagar uma obra deve mesmo levar junto medições, documentos e
 tramitação? Ou obra encerrada por engano deveria ser "arquivada" e

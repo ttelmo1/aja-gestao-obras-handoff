@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 
+import { ConfirmarExclusao } from "@/components/ui/confirmar-exclusao";
 import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { PeriodicidadeMedicao, StatusObra } from "@/generated/prisma/enums";
@@ -10,13 +10,13 @@ import {
   PERIODICIDADES,
   ROTULOS_PERIODICIDADE,
 } from "@/modules/medicoes/periodicidade";
+import { bloqueioExclusaoObra } from "@/modules/obras/exclusao";
 import { ROTULOS_STATUS, STATUS_OBRA } from "@/modules/obras/filtros";
 
 import { excluirObra, salvarObra, type EstadoObra } from "./acoes";
 
 export type ObraNoFormulario = {
   id: string;
-  codigo: string;
   objeto: string;
   numeroContrato: string;
   numeroProcesso: string | null;
@@ -80,21 +80,7 @@ export function FormularioObra({
           />
         </Campo>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Campo
-            id="codigo"
-            rotulo="Código interno"
-            dica={padrao ? undefined : "Em branco, o sistema numera sozinho."}
-          >
-            <input
-              id="codigo"
-              name="codigo"
-              defaultValue={padrao?.codigo}
-              placeholder="OBR-2026-001"
-              className={classeInput}
-            />
-          </Campo>
-
+        <div className="grid gap-4 sm:grid-cols-2">
           <Campo id="numeroContrato" rotulo="Número do contrato">
             <input
               id="numeroContrato"
@@ -294,25 +280,39 @@ export function FormularioObra({
   );
 }
 
+/** O que a janela de confirmação mostra sobre a obra. */
+export type ObraParaExcluir = {
+  id: string;
+  numeroContrato: string;
+  objeto: string;
+  contratante: string;
+  medicoes: number;
+  rerratificacoes: number;
+  documentosAtivos: number;
+};
+
 /**
  * Excluir obra é separado do formulário e só aparece para quem tem a
- * permissão. A ação recusa quando há medições, documentos ou rerratificações.
+ * permissão. Só documento ativo trava; o resto sai em cascata, e por isso a
+ * confirmação diz quantas medições e rerratificações vão junto.
  */
-export function BotaoExcluirObra({ id }: { id: string }) {
-  const [estado, acao, pendente] = useActionState<EstadoObra, FormData>(
-    excluirObra,
-    undefined,
-  );
-
+export function BotaoExcluirObra({ obra }: { obra: ObraParaExcluir }) {
   return (
-    <div className="flex flex-col gap-2">
-      <form action={acao}>
-        <input type="hidden" name="id" value={id} />
-        <Botao type="submit" variante="perigo" disabled={pendente}>
-          {pendente ? "Excluindo…" : "Excluir obra"}
-        </Botao>
-      </form>
-      {estado?.erro && <Alerta tipo="erro">{estado.erro}</Alerta>}
-    </div>
+    <ConfirmarExclusao
+      acao={excluirObra}
+      campos={{ id: obra.id }}
+      titulo="Excluir esta obra?"
+      detalhes={[
+        { rotulo: "Contrato", valor: obra.numeroContrato },
+        { rotulo: "Objeto", valor: obra.objeto },
+        { rotulo: "Contratante", valor: obra.contratante },
+        { rotulo: "Medições", valor: String(obra.medicoes) },
+        { rotulo: "Rerratificações", valor: String(obra.rerratificacoes) },
+      ]}
+      bloqueio={bloqueioExclusaoObra(obra.documentosAtivos)}
+      aviso="A obra é apagada de vez, junto com medições, rerratificações e tramitação. A auditoria continua registrando a exclusão."
+      gatilho="botao"
+      rotuloGatilho="Excluir obra"
+    />
   );
 }

@@ -1200,6 +1200,63 @@ continuar testando processo parado isolado.
   físico-financeiro** — levantados e descartados na conversa que removeu o
   físico.
 
+### Ajustes do período de teste — 15/09/2026
+
+Pedidos da Fernanda ao lançar as obras reais na homologação.
+
+1. ✅ **Formulário de obra não apaga o que foi digitado quando dá erro.** Com
+   `<form action>`, o React 19 limpa os campos ao fim de todo envio, inclusive
+   quando a action devolve erro. `useEnvioSemReset` envia pelo `onSubmit`.
+   Aplicado primeiro só no formulário de obra; a Fernanda reencontrou o mesmo
+   comportamento na medição em 17/09, e o hook passou a valer em todo
+   formulário com campo digitado — medição, rerratificação, cadastros,
+   tramitação, usuários, envio de documento, observação do operador, login e
+   "esqueci minha senha". Ficaram de fora os que só têm botão, que não têm o
+   que perder, e a redefinição de senha, onde redigitar é o certo.
+2. ✅ **Exclusão: só documento ativo trava.** Medição sai em qualquer situação
+   (caiu a regra de só apagar *Rascunho*), com link de exclusão em cada linha
+   da tabela. Obra sai com medições, rerratificações e tramitação em cascata,
+   desde que a aba Documentos esteja vazia. As duas passam por uma janela de
+   confirmação (`ConfirmarExclusao`, `<dialog>` nativo) que mostra o que vai
+   sair e, quando há documento, explica a trava em vez de oferecer o botão.
+   Regras em `modules/medicoes/exclusao.ts` e `modules/obras/exclusao.ts`.
+
+   **O documento da tramitação conta para a medição.** Arquivo enviado num
+   movimento da medição fica com `movimentoId`, não `medicaoId`, mas o
+   movimento sai em cascata com ela — sem contar esse caminho, a exclusão
+   levaria documento ativo junto sem avisar.
+
+   **Os arquivos saem junto.** Documento excluído na aba Documentos é só
+   marcado (`excluidoEm`); o arquivo continua no armazenamento. Quando obra
+   ou medição é apagada, a cascata leva as linhas desses documentos, e o
+   arquivo ficaria sem nada que apontasse para ele. Por isso a action lê os
+   caminhos na mesma transação e, depois do commit, apaga os arquivos
+   (`apagarArquivos`, em `lib/storage`) — no disco ou na `ArquivoBlob`. Falha
+   ao apagar vai para o log e não desfaz a exclusão. Na instalação local, a
+   pasta vazia `storage/obras/<id>/` continua existindo.
+   **Em aberto:** a senha do administrador na confirmação, que a Fernanda
+   sugeriu — ver ponto #8.
+3. ✅ **Código interno sai da tela.** A Fernanda: *"o código interno não é
+   necessário pois já tem o número do contrato"*. Saiu do cartão do painel,
+   do cabeçalho da obra e do formulário. **A lógica fica:** a coluna `codigo`
+   continua, o cadastro gera `OBR-ano-seq` quando o campo vem vazio (que agora
+   é sempre) e a edição mantém o atual; a busca do painel ainda encontra por
+   ele. Voltar é devolver o input e os dois rótulos.
+
+   **Histórico passa a citar o contrato.** As mensagens novas de auditoria
+   dizem "obra do contrato 015/2026" em vez de "obra OBR-2026-001". As antigas
+   ficam como foram gravadas — a trilha é append-only —, então a aba Histórico
+   de uma obra antiga mostra os dois formatos.
+
+   **Perde-se:** o código era citado como a chave entre a obra no sistema e a
+   pasta dela na rede. Se a pasta for organizada pelo código, quem procura
+   passa a depender da busca do painel para descobrir qual é.
+4. ⏸️ **Upload de PDF grande falha na homologação.** A Vercel limita o corpo
+   da requisição a ~4,5 MB; é limite da plataforma, e fica sem ação. **A
+   verificar na instalação local:** o `proxy.ts` do Next 16 guarda em memória
+   só os primeiros 10 MB do corpo (`proxyClientMaxBodySize`), abaixo dos 320 MB
+   configurados para Server Actions.
+
 ## Etapa 14 — Empacotamento e instalação on-premise 🟡
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o

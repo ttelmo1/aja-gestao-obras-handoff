@@ -1,20 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
-
 import { CampoSenha } from "@/components/ui/campo-senha";
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 
 import { entrar, type EstadoFormulario } from "../acoes";
 
 export function FormularioLogin({ destino }: { destino?: string }) {
-  const [estado, acao, pendente] = useActionState<EstadoFormulario, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoFormulario>(
     entrar,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       {destino && <input type="hidden" name="destino" value={destino} />}
 
       <Campo id="email" rotulo="E-mail">

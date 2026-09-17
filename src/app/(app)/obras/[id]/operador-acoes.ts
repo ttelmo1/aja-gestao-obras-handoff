@@ -30,7 +30,7 @@ async function carregar(obraId: string) {
     where: { id: obraId },
     select: {
       id: true,
-      codigo: true,
+      numeroContrato: true,
       operadorId: true,
       operadorAssumidoEm: true,
       operadorLiberadoEm: true,
@@ -102,8 +102,8 @@ export async function assumirObra(
         entidadeId: obraId,
         obraId,
         descricao: jaEra
-          ? `${permissao.usuario.nome} atualizou a observação da obra ${obra.codigo}.`
-          : `${permissao.usuario.nome} assumiu a obra ${obra.codigo} como operador.`,
+          ? `${permissao.usuario.nome} atualizou a observação da obra do contrato ${obra.numeroContrato}.`
+          : `${permissao.usuario.nome} assumiu a obra do contrato ${obra.numeroContrato} como operador.`,
         dadosAntes: {
           operador: situacao.nome,
           operadorObservacao: obra.operadorObservacao,
@@ -156,7 +156,7 @@ export async function liberarObra(
         entidade: "Obra",
         entidadeId: obraId,
         obraId,
-        descricao: `${permissao.usuario.nome} liberou a obra ${obra.codigo}.`,
+        descricao: `${permissao.usuario.nome} liberou a obra do contrato ${obra.numeroContrato}.`,
         dadosAntes: { operadorObservacao: obra.operadorObservacao },
         dadosDepois: { operadorObservacao: null },
       },

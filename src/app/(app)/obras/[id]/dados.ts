@@ -164,7 +164,13 @@ export const carregarDocumentos = cache(async (obraId: string) => {
       medicao: { select: { id: true, numero: true } },
       etapaObra: { select: { id: true, tipo: true } },
       movimento: {
-        select: { id: true, setorDestino: { select: { nome: true } } },
+        // `medicaoId` do movimento: documento enviado na tramitação de uma
+        // medição pesa sobre ela na hora de apagá-la.
+        select: {
+          id: true,
+          medicaoId: true,
+          setorDestino: { select: { nome: true } },
+        },
       },
       rerratificacao: { select: { id: true, numero: true } },
     },

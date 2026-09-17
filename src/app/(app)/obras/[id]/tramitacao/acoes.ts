@@ -73,7 +73,7 @@ async function contexto(etapaObraId: string) {
       tipo: true,
       status: true,
       obraId: true,
-      obra: { select: { codigo: true } },
+      obra: { select: { numeroContrato: true } },
     },
   });
 }
@@ -177,7 +177,7 @@ export async function registrarEntrada(
         entidade: "TramitacaoMovimento",
         entidadeId: movimento.id,
         obraId: etapa.obraId,
-        descricao: `Processo de ${ROTULOS_ETAPA[etapa.tipo]} da obra ${etapa.obra.codigo} entrou em ${movimento.setorDestino.nome}.`,
+        descricao: `Processo de ${ROTULOS_ETAPA[etapa.tipo]} da obra do contrato ${etapa.obra.numeroContrato} entrou em ${movimento.setorDestino.nome}.`,
         dadosDepois: {
           setor: movimento.setorDestino.nome,
           dataEntrada: movimento.dataEntrada,
@@ -230,7 +230,7 @@ export async function registrarSaida(
     include: {
       setorDestino: { select: { nome: true } },
       etapaObra: {
-        select: { id: true, tipo: true, obraId: true, obra: { select: { codigo: true } } },
+        select: { id: true, tipo: true, obraId: true, obra: { select: { numeroContrato: true } } },
       },
     },
   });
@@ -276,7 +276,7 @@ export async function registrarSaida(
         entidade: "TramitacaoMovimento",
         entidadeId: movimento.id,
         obraId: movimento.etapaObra.obraId,
-        descricao: `Processo de ${ROTULOS_ETAPA[movimento.etapaObra.tipo]} da obra ${movimento.etapaObra.obra.codigo} saiu de ${movimento.setorDestino.nome} após ${dias} dia(s).`,
+        descricao: `Processo de ${ROTULOS_ETAPA[movimento.etapaObra.tipo]} da obra do contrato ${movimento.etapaObra.obra.numeroContrato} saiu de ${movimento.setorDestino.nome} após ${dias} dia(s).`,
         dadosDepois: { dataSaida: dados.dataSaida, diasPermanencia: dias },
       },
       tx,
@@ -315,7 +315,7 @@ export async function salvarEtapa(
   const antes = await prisma.etapaObra.findUnique({
     where: { id: etapaObraId },
     include: {
-      obra: { select: { codigo: true } },
+      obra: { select: { numeroContrato: true } },
       _count: { select: { movimentos: true } },
     },
   });
@@ -353,7 +353,7 @@ export async function salvarEtapa(
         entidade: "EtapaObra",
         entidadeId: etapaObraId,
         obraId: antes.obraId,
-        descricao: `Etapa ${ROTULOS_ETAPA[antes.tipo]} da obra ${antes.obra.codigo} atualizada.`,
+        descricao: `Etapa ${ROTULOS_ETAPA[antes.tipo]} da obra do contrato ${antes.obra.numeroContrato} atualizada.`,
         dadosAntes: mudancas.antes,
         dadosDepois: mudancas.depois,
       },
@@ -379,7 +379,7 @@ export async function excluirMovimento(
     include: {
       setorDestino: { select: { nome: true } },
       etapaObra: {
-        select: { id: true, tipo: true, obraId: true, obra: { select: { codigo: true } } },
+        select: { id: true, tipo: true, obraId: true, obra: { select: { numeroContrato: true } } },
       },
       _count: { select: { documentos: { where: { excluidoEm: null } } } },
     },
@@ -407,7 +407,7 @@ export async function excluirMovimento(
         entidade: "TramitacaoMovimento",
         entidadeId: id,
         obraId: movimento.etapaObra.obraId,
-        descricao: `Movimento em ${movimento.setorDestino.nome} (${ROTULOS_ETAPA[movimento.etapaObra.tipo]}) da obra ${movimento.etapaObra.obra.codigo} excluído.`,
+        descricao: `Movimento em ${movimento.setorDestino.nome} (${ROTULOS_ETAPA[movimento.etapaObra.tipo]}) da obra do contrato ${movimento.etapaObra.obra.numeroContrato} excluído.`,
         dadosAntes: {
           setor: movimento.setorDestino.nome,
           dataEntrada: movimento.dataEntrada,

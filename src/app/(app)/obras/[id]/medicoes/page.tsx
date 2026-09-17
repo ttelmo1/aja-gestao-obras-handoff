@@ -11,10 +11,13 @@ import { formatarCompetencia, formatarData } from "@/lib/date-br";
 import { exigirPermissao } from "@/lib/guarda";
 import { formatarBRL, formatarPercentual } from "@/lib/money";
 import { pode } from "@/modules/auth/permissoes";
+import { contarDocumentosPorMedicao } from "@/modules/medicoes/exclusao";
 import { resumoDaObra } from "@/modules/obras/resumo";
 import { situacaoDaTramitacao } from "@/modules/tramitacao/movimentos";
 
-import { carregarMedicoes, carregarObra } from "../dados";
+import { carregarDocumentos, carregarMedicoes, carregarObra } from "../dados";
+import { medicaoParaExcluir } from "./exclusao";
+import { BotaoExcluirMedicao } from "./formulario";
 
 export const metadata = { title: "Medições" };
 export const dynamic = "force-dynamic";
@@ -35,16 +38,22 @@ export default async function MedicoesPage({
   const { id } = await params;
   const { salva } = await searchParams;
 
-  const [obra, medicoes] = await Promise.all([
+  const podeEditar = pode(usuario.perfil, "medicao", "editar");
+  const podeExcluir = pode(usuario.perfil, "medicao", "excluir");
+
+  const [obra, medicoes, documentos] = await Promise.all([
     carregarObra(id),
     carregarMedicoes(id),
+    // Só quem exclui precisa saber quais medições têm documento ativo: é o
+    // que decide se a confirmação oferece o botão ou explica a trava.
+    podeExcluir ? carregarDocumentos(id) : [],
   ]);
   if (!obra) notFound();
 
   const agora = new Date();
   const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes, null, agora);
   const estourou = financeiro.saldoAMedir.isNegative();
-  const podeEditar = pode(usuario.perfil, "medicao", "editar");
+  const documentosPorMedicao = contarDocumentosPorMedicao(documentos);
 
   // A situação da tramitação entra pronta em cada linha: calcular dentro do
   // JSX repetiria a mesma soma três vezes por medição.
@@ -140,6 +149,7 @@ export default async function MedicoesPage({
               "Setor atual",
               "Tempo",
               "Docs",
+              ...(podeExcluir ? [""] : []),
             ]}
           >
             {linhas.map(({ medicao: m, tramitacao }) => (
@@ -193,6 +203,14 @@ export default async function MedicoesPage({
                 <Celula tabular apagada>
                   {m._count.documentos}
                 </Celula>
+                {podeExcluir && (
+                  <Celula>
+                    <BotaoExcluirMedicao
+                      medicao={medicaoParaExcluir(m, documentosPorMedicao)}
+                      gatilho="link"
+                    />
+                  </Celula>
+                )}
               </Linha>
             ))}
           </Tabela>

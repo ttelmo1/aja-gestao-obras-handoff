@@ -10,8 +10,10 @@ import { autorizar } from "@/lib/guarda";
 import { dec } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
+import { apagarArquivos } from "@/lib/storage";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { proximoCodigo } from "@/modules/obras/codigo";
+import { bloqueioExclusaoObra } from "@/modules/obras/exclusao";
 import { terminoPrevisto } from "@/modules/obras/prazo";
 import { etapasIniciais } from "@/modules/tramitacao/fluxo";
 
@@ -19,6 +21,9 @@ export type EstadoObra = { erro?: string; sucesso?: string } | undefined;
 
 const obraSchema = z
   .object({
+    // O campo saiu da tela em 15/09/2026 (o número do contrato já identifica
+    // a obra), mas a lógica fica: vazio gera o código na criação e mantém o
+    // atual na edição. Voltar com ele é só devolver o input ao formulário.
     codigo: z.string().trim(),
     objeto: z.string().trim().min(5, "Descreva o objeto da obra."),
     numeroContrato: z.string().trim().min(1, "Informe o número do contrato."),
@@ -130,7 +135,7 @@ export async function salvarObra(
             entidade: "Obra",
             entidadeId: id,
             obraId: id,
-            descricao: `Obra ${antes.codigo} alterada.`,
+            descricao: `Obra do contrato ${antes.numeroContrato} alterada.`,
             dadosAntes: mudancas.antes,
             dadosDepois: mudancas.depois,
           },
@@ -164,7 +169,7 @@ export async function salvarObra(
           entidade: "Obra",
           entidadeId: obra.id,
           obraId: obra.id,
-          descricao: `Obra ${obra.codigo} cadastrada: ${obra.objeto}.`,
+          descricao: `Obra do contrato ${obra.numeroContrato} cadastrada: ${obra.objeto}.`,
           dadosDepois: { codigo: obra.codigo, objeto: obra.objeto, status: obra.status },
         },
         tx,
@@ -210,6 +215,7 @@ export async function excluirObra(
     select: {
       id: true,
       codigo: true,
+      numeroContrato: true,
       objeto: true,
       _count: {
         select: {
@@ -224,16 +230,19 @@ export async function excluirObra(
   });
   if (!obra) return { erro: "Obra não encontrada." };
 
-  const dependentes =
-    obra._count.medicoes + obra._count.documentos + obra._count.rerratificacoes;
-  if (dependentes > 0) {
-    return {
-      erro: `Esta obra tem ${dependentes} registro(s) vinculados (medições, documentos ou rerratificações). Cancele-a pelo campo de situação em vez de apagar — o histórico do contrato precisa continuar existindo.`,
-    };
-  }
+  // Medições, rerratificações e tramitação saem em cascata; só documento
+  // ativo trava. Ver modules/obras/exclusao.
+  const bloqueio = bloqueioExclusaoObra(obra._count.documentos);
+  if (bloqueio) return { erro: bloqueio };
 
   const { ip } = await origemDaRequisicao();
-  await prisma.$transaction(async (tx) => {
+  const caminhos = await prisma.$transaction(async (tx) => {
+    // Lidos na mesma transação da exclusão: são os documentos já excluídos
+    // logicamente que a cascata leva junto, e cujos arquivos saem depois.
+    const documentos = await tx.documento.findMany({
+      where: { obraId: id },
+      select: { caminhoRelativo: true },
+    });
     await tx.obra.delete({ where: { id } });
     await registrar(
       {
@@ -242,12 +251,21 @@ export async function excluirObra(
         entidade: "Obra",
         entidadeId: id,
         obraId: id,
-        descricao: `Obra ${obra.codigo} excluída: ${obra.objeto}.`,
-        dadosAntes: { codigo: obra.codigo, objeto: obra.objeto },
+        descricao: `Obra do contrato ${obra.numeroContrato} excluída: ${obra.objeto}.`,
+        // As contagens ficam na trilha porque as linhas saem em cascata, sem
+        // registro próprio de exclusão.
+        dadosAntes: {
+          codigo: obra.codigo,
+          objeto: obra.objeto,
+          medicoes: obra._count.medicoes,
+          rerratificacoes: obra._count.rerratificacoes,
+        },
       },
       tx,
     );
+    return documentos.map((d) => d.caminhoRelativo);
   });
+  await apagarArquivos(caminhos);
 
   revalidatePath("/obras");
   redirect("/obras");

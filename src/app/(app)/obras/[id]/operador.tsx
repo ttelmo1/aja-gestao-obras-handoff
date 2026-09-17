@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, classeInput } from "@/components/ui/formulario";
 import { formatarData } from "@/lib/date-br";
 import {
@@ -35,7 +36,7 @@ export function BlocoOperador({
   /** A obra está assumida por quem está olhando a tela. */
   souEu: boolean;
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoOperador, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoOperador>(
     assumirObra,
     undefined,
   );
@@ -76,7 +77,7 @@ export function BlocoOperador({
 
       {souEu && situacao.assumida ? (
         <div className="flex flex-col gap-3">
-          <form action={acao} className="flex flex-col gap-2">
+          <form onSubmit={aoEnviar} className="flex flex-col gap-2">
             <input type="hidden" name="obraId" value={obraId} />
             <label
               htmlFor="operadorObservacao"
@@ -109,7 +110,7 @@ export function BlocoOperador({
         </div>
       ) : (
         !situacao.assumida && (
-          <form action={acao} className="flex flex-col gap-2">
+          <form onSubmit={aoEnviar} className="flex flex-col gap-2">
             <input type="hidden" name="obraId" value={obraId} />
             <label
               htmlFor="operadorObservacao"

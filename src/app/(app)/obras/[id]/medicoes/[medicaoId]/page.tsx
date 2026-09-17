@@ -7,6 +7,7 @@ import { exigirPermissao } from "@/lib/guarda";
 import { paraCampoDinheiro } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
+import { contarDocumentosPorMedicao } from "@/modules/medicoes/exclusao";
 import { situacaoDaTramitacao } from "@/modules/tramitacao/movimentos";
 
 import {
@@ -21,6 +22,7 @@ import { EnviarDocumentos } from "../../documentos/enviar";
 import { ListaDocumentos } from "../../documentos/lista";
 import { FormEntrada } from "../../tramitacao/formularios";
 import { TabelaMovimentos } from "../../tramitacao/tabela-movimentos";
+import { medicaoParaExcluir } from "../exclusao";
 import { BotaoExcluirMedicao, FormularioMedicao } from "../formulario";
 
 export const metadata = { title: "Medição" };
@@ -180,11 +182,17 @@ export default async function EditarMedicaoPage({
         <Card titulo="Excluir medição">
           <div className="flex flex-col gap-3 text-sm">
             <p className="text-[var(--muted)]">
-              Só medição em rascunho pode ser apagada. Depois de protocolada, o
-              caminho é marcá-la como <strong>Rejeitada</strong> — o processo já
-              existe no órgão e o histórico precisa continuar existindo.
+              A exclusão apaga a medição e a tramitação dela. Medição com
+              documento ativo não pode ser apagada: exclua os documentos antes,
+              na aba Documentos.
             </p>
-            <BotaoExcluirMedicao id={medicao.id} />
+            <BotaoExcluirMedicao
+              medicao={medicaoParaExcluir(
+                medicao,
+                contarDocumentosPorMedicao(documentos),
+              )}
+              gatilho="botao"
+            />
           </div>
         </Card>
       )}

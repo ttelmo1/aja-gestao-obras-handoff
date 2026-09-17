@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { StatusRerratificacao } from "@/generated/prisma/enums";
 import {
@@ -47,13 +48,13 @@ export function FormularioRerratificacao({
   padrao?: RerratificacaoNoFormulario;
   numeroSugerido: number;
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoRerratificacao, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoRerratificacao>(
     salvarRerratificacao,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-5">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-5">
       <input type="hidden" name="obraId" value={obraId} />
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 

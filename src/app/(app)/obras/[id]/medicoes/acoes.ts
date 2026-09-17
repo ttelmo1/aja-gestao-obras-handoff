@@ -18,8 +18,14 @@ import { autorizar } from "@/lib/guarda";
 import { dec } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
+import { apagarArquivos } from "@/lib/storage";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { calcularIss, proximoNumero } from "@/modules/medicoes/calculos";
+import {
+  bloqueioExclusaoMedicao,
+  ondeDocumentosAtivosDaMedicao,
+  ondeDocumentosDaMedicao,
+} from "@/modules/medicoes/exclusao";
 
 export type EstadoMedicao = { erro?: string; sucesso?: string } | undefined;
 
@@ -121,7 +127,7 @@ export async function salvarMedicao(
 
   const obra = await prisma.obra.findUnique({
     where: { id: obraId },
-    select: { id: true, codigo: true },
+    select: { id: true, numeroContrato: true },
   });
   if (!obra) return { erro: "Obra não encontrada." };
 
@@ -149,7 +155,7 @@ export async function salvarMedicao(
             entidade: "Medicao",
             entidadeId: id,
             obraId,
-            descricao: `Medição ${antes.numero} da obra ${obra.codigo} alterada.`,
+            descricao: `Medição ${antes.numero} da obra do contrato ${obra.numeroContrato} alterada.`,
             dadosAntes: mudancas.antes,
             dadosDepois: mudancas.depois,
           },
@@ -184,7 +190,7 @@ export async function salvarMedicao(
           entidade: "Medicao",
           entidadeId: medicao.id,
           obraId,
-          descricao: `Medição ${medicao.numero} lançada na obra ${obra.codigo}.`,
+          descricao: `Medição ${medicao.numero} lançada na obra do contrato ${obra.numeroContrato}.`,
           dadosDepois: {
             numero: medicao.numero,
             valorMedido: medicao.valorMedido,
@@ -222,28 +228,27 @@ export async function excluirMedicao(
       obraId: true,
       status: true,
       valorMedido: true,
-      obra: { select: { codigo: true } },
-      _count: { select: { documentos: { where: { excluidoEm: null } } } },
+      obra: { select: { numeroContrato: true } },
     },
   });
   if (!medicao) return { erro: "Medição não encontrada." };
 
-  // Medição que já saiu do rascunho virou processo no órgão: existe protocolo,
-  // nota e gente esperando. Apagar seria perder o rastro; o caminho é
-  // Rejeitada, que continua no histórico.
-  if (medicao.status !== StatusMedicao.RASCUNHO) {
-    return {
-      erro: "Só medição em rascunho pode ser apagada. Uma medição já protocolada deve ser marcada como Rejeitada — o histórico do processo precisa continuar existindo.",
-    };
-  }
-  if (medicao._count.documentos > 0) {
-    return {
-      erro: `Esta medição tem ${medicao._count.documentos} documento(s) vinculado(s). Remova-os antes de apagá-la.`,
-    };
-  }
+  // Qualquer situação sai; só documento ativo trava — contando o que entrou
+  // pela tramitação, que iria junto em cascata. Ver modules/medicoes/exclusao.
+  const documentosAtivos = await prisma.documento.count({
+    where: ondeDocumentosAtivosDaMedicao(id),
+  });
+  const bloqueio = bloqueioExclusaoMedicao(documentosAtivos);
+  if (bloqueio) return { erro: bloqueio };
 
   const { ip } = await origemDaRequisicao();
-  await prisma.$transaction(async (tx) => {
+  const caminhos = await prisma.$transaction(async (tx) => {
+    // Lidos na mesma transação da exclusão: são os documentos já excluídos
+    // logicamente que a cascata leva junto, e cujos arquivos saem depois.
+    const documentos = await tx.documento.findMany({
+      where: ondeDocumentosDaMedicao(id),
+      select: { caminhoRelativo: true },
+    });
     await tx.medicao.delete({ where: { id } });
     await registrar(
       {
@@ -252,12 +257,18 @@ export async function excluirMedicao(
         entidade: "Medicao",
         entidadeId: id,
         obraId: medicao.obraId,
-        descricao: `Medição ${medicao.numero} da obra ${medicao.obra.codigo} excluída.`,
-        dadosAntes: { numero: medicao.numero, valorMedido: medicao.valorMedido },
+        descricao: `Medição ${medicao.numero} da obra do contrato ${medicao.obra.numeroContrato} excluída.`,
+        dadosAntes: {
+          numero: medicao.numero,
+          valorMedido: medicao.valorMedido,
+          status: medicao.status,
+        },
       },
       tx,
     );
+    return documentos.map((d) => d.caminhoRelativo);
   });
+  await apagarArquivos(caminhos);
 
   revalidatePath(`/obras/${medicao.obraId}`, "layout");
   revalidatePath("/obras");

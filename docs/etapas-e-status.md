@@ -1289,6 +1289,35 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
 
    **Consequência a dizer ao cliente:** obra parada, dentro do prazo e com
    medição em dia, agora fica verde.
+7. ✅ **Lista de conferência de documentos — 17/09/2026.** É a tela que
+   substitui a leitura que a aba Tramitação dava. A aba Documentos ganhou o
+   bloco "Conferência do contrato", com os 20 tipos do seletor na ordem do
+   processo: em vermelho o que falta, em verde o anexado com data e contagem.
+   A tela da medição ganhou o mesmo bloco, com os cinco tipos que o mockup já
+   sugeria ali (ponto #18 — quais são os necessários da medição é suposição
+   nossa).
+
+   **"Não se aplica" é botão por linha**, com motivo opcional: o tipo fica
+   cinza e desce para o fim, exatamente como foi pedido. Guardado em
+   `DocumentoDispensado`, por par (obra, tipo) ou (medição, tipo) — a mesma
+   obra dispensa ISS e a vizinha exige. A unicidade são **dois índices
+   parciais** na migration, porque `medicaoId` é nulo na dispensa do contrato
+   e no Postgres dois NULL nunca são iguais.
+
+   **A regra fica em `modules/documentos/conferencia.ts`**, sem React e com
+   teste: ordenação, dispensa vencendo anexo, tipo fora da lista caindo no fim
+   e a contagem do cabeçalho.
+
+   **A conferência do contrato ignora documento de medição** — e também o que
+   está preso a um movimento de tramitação, que pertence ao percurso de uma
+   medição. Sem isso, a nota fiscal da medição 3 marcaria "Nota fiscal
+   anexada" no contrato.
+
+   **O que a lista não diz, e convém não prometer:** a data é a do upload, não
+   a do fato. Aceite assinado em março e anexado em junho aparece como junho.
+
+   Validado no navegador com o banco local: marcar, ver descer para o fim em
+   cinza, voltar a exigir, e as duas ações no histórico da obra.
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 

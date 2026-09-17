@@ -5,6 +5,11 @@ import { Dado } from "@/components/ui/dados";
 import { exigirPermissao } from "@/lib/guarda";
 import { pode } from "@/modules/auth/permissoes";
 import {
+  conferenciaDeDocumentos,
+  ESPERADOS_DA_OBRA,
+  resumoDaConferencia,
+} from "@/modules/documentos/conferencia";
+import {
   filtrarPorOrigem,
   lerFiltrosDocumento,
   temFiltroDocumento,
@@ -12,7 +17,8 @@ import {
 import { origensDisponiveis } from "@/modules/documentos/origem";
 import { formatarTamanho, TIPOS_DOCUMENTO } from "@/modules/documentos/rotulos";
 
-import { carregarDocumentos, carregarObra } from "../dados";
+import { carregarDispensas, carregarDocumentos, carregarObra } from "../dados";
+import { ConferenciaDocumentos } from "./conferencia";
 import { EnviarDocumentos } from "./enviar";
 import { FiltrosDaCentral } from "./filtros";
 import { ListaDocumentos } from "./lista";
@@ -35,11 +41,24 @@ export default async function DocumentosPage({
   const { id } = await params;
   const filtros = lerFiltrosDocumento(await searchParams);
 
-  const [obra, todos] = await Promise.all([
+  const [obra, todos, dispensas] = await Promise.all([
     carregarObra(id),
     carregarDocumentos(id),
+    carregarDispensas(id),
   ]);
   if (!obra) notFound();
+
+  // A conferência do contrato só olha o que é do próprio contrato: documento
+  // de medição é cobrado na tela da medição, e contá-lo aqui marcaria "Nota
+  // fiscal anexada" na obra por causa da nota da medição 3. O anexo de um
+  // movimento de tramitação também fica de fora — ele pertence ao percurso de
+  // uma medição, e a tramitação saiu da tela em 17/09.
+  const conferencia = conferenciaDeDocumentos({
+    esperados: ESPERADOS_DA_OBRA,
+    documentos: todos.filter((d) => !d.medicaoId && !d.movimentoId),
+    dispensados: dispensas.filter((d) => d.medicaoId === null),
+  });
+  const resumo = resumoDaConferencia(conferencia);
 
   // As opções do seletor saem do acervo inteiro, não do resultado filtrado:
   // um filtro que apaga as próprias opções trava o usuário na escolha atual.
@@ -83,6 +102,34 @@ export default async function DocumentosPage({
             <span className="tabular">{formatarTamanho(espaco)}</span>
           </Dado>
         </div>
+      </Card>
+
+      <Card
+        titulo="Conferência do contrato"
+        acao={
+          <span
+            className="text-sm font-bold"
+            style={{
+              color: resumo.faltando > 0 ? "var(--danger)" : "var(--success)",
+            }}
+          >
+            {resumo.faltando > 0
+              ? `${resumo.faltando} de ${resumo.cobrados} não anexado(s)`
+              : "Nada em falta"}
+          </span>
+        }
+      >
+        <p className="mb-4 text-sm text-[var(--muted)]">
+          Em vermelho o que ainda não foi anexado. O que não se aplica a este
+          contrato pode ser marcado: fica cinza e desce para o fim da lista.
+          Documento de medição é cobrado na tela da própria medição.
+        </p>
+
+        <ConferenciaDocumentos
+          obraId={obra.id}
+          linhas={conferencia}
+          podeEditar={pode(usuario.perfil, "documento", "editar")}
+        />
       </Card>
 
       <Card titulo={`Documentos (${visiveis.length})`}>

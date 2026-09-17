@@ -11,6 +11,7 @@ import { origemDaRequisicao } from "@/lib/sessao";
 import { apagarArquivo, salvarArquivo } from "@/lib/storage";
 import { AcaoAuditoria, registrar } from "@/modules/auditoria/registrar";
 import { validarArquivo } from "@/modules/documentos/formatos";
+import { ROTULOS_TIPO_DOCUMENTO } from "@/modules/documentos/rotulos";
 
 export type EstadoDocumento = { erro?: string; sucesso?: string } | undefined;
 
@@ -235,4 +236,131 @@ export async function excluirDocumento(
 
   if (documento.obraId) revalidatePath(`/obras/${documento.obraId}`, "layout");
   return { sucesso: "Documento excluído." };
+}
+
+const dispensaSchema = z.object({
+  obraId: z.string().min(1),
+  medicaoId: textoOpcional,
+  tipo: z.enum(TipoDocumento),
+  motivo: textoOpcional,
+});
+
+/**
+ * Marca um tipo como "não se aplica" nesta obra — ou nesta medição.
+ *
+ * A lista de conferência cobra o que falta em vermelho, e nem todo contrato
+ * entrega tudo: sem esta marcação, a obra sem garantia carregaria uma linha
+ * vermelha para sempre e o vermelho deixaria de significar alguma coisa. Na
+ * tela o tipo fica cinza e desce para o fim da lista.
+ */
+export async function dispensarDocumento(
+  _estado: EstadoDocumento,
+  formData: FormData,
+): Promise<EstadoDocumento> {
+  const permissao = await autorizar("documento", "editar");
+  if (!permissao.ok) return { erro: permissao.erro };
+
+  const bruto: Record<string, unknown> = {};
+  for (const c of ["obraId", "medicaoId", "tipo", "motivo"]) {
+    bruto[c] = String(formData.get(c) ?? "");
+  }
+  const analise = dispensaSchema.safeParse(bruto);
+  if (!analise.success) {
+    return { erro: analise.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const { obraId, medicaoId, tipo, motivo } = analise.data;
+
+  // Medição de outra obra não pode ser dispensada por aqui: o id vem de campo
+  // oculto, que é entrada de usuário como qualquer outra.
+  if (medicaoId) {
+    const m = await prisma.medicao.findUnique({
+      where: { id: medicaoId },
+      select: { obraId: true },
+    });
+    if (m?.obraId !== obraId) return { erro: "Medição não pertence a esta obra." };
+  }
+
+  const jaExiste = await prisma.documentoDispensado.findFirst({
+    where: { obraId, medicaoId: medicaoId ?? null, tipo },
+    select: { id: true },
+  });
+  if (jaExiste) return { sucesso: "Este documento já estava dispensado." };
+
+  const { ip } = await origemDaRequisicao();
+  await prisma.$transaction(async (tx) => {
+    const dispensa = await tx.documentoDispensado.create({
+      data: {
+        obraId,
+        medicaoId: medicaoId ?? null,
+        tipo,
+        motivo,
+        marcadoPorId: permissao.usuario.id,
+      },
+    });
+    await registrar(
+      {
+        ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
+        acao: AcaoAuditoria.ATUALIZAR,
+        entidade: "DocumentoDispensado",
+        entidadeId: dispensa.id,
+        obraId,
+        descricao: `Documento "${ROTULOS_TIPO_DOCUMENTO[tipo]}" marcado como não se aplica${
+          medicaoId ? " nesta medição" : ""
+        }.`,
+        dadosDepois: { tipo, medicaoId: medicaoId ?? null, motivo },
+      },
+      tx,
+    );
+  });
+
+  revalidatePath(`/obras/${obraId}`, "layout");
+  return { sucesso: "Documento marcado como não se aplica." };
+}
+
+/** Desfaz a dispensa: o tipo volta a ser cobrado na lista. */
+export async function exigirDocumento(
+  _estado: EstadoDocumento,
+  formData: FormData,
+): Promise<EstadoDocumento> {
+  const permissao = await autorizar("documento", "editar");
+  if (!permissao.ok) return { erro: permissao.erro };
+
+  const analise = dispensaSchema.safeParse({
+    obraId: String(formData.get("obraId") ?? ""),
+    medicaoId: String(formData.get("medicaoId") ?? ""),
+    tipo: String(formData.get("tipo") ?? ""),
+    motivo: "",
+  });
+  if (!analise.success) {
+    return { erro: analise.error.issues[0]?.message ?? "Dados inválidos." };
+  }
+  const { obraId, medicaoId, tipo } = analise.data;
+
+  const dispensa = await prisma.documentoDispensado.findFirst({
+    where: { obraId, medicaoId: medicaoId ?? null, tipo },
+    select: { id: true, motivo: true },
+  });
+  if (!dispensa) return { erro: "Este documento já era exigido." };
+
+  const { ip } = await origemDaRequisicao();
+  await prisma.$transaction(async (tx) => {
+    await tx.documentoDispensado.delete({ where: { id: dispensa.id } });
+    await registrar(
+      {
+        ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
+        acao: AcaoAuditoria.ATUALIZAR,
+        entidade: "DocumentoDispensado",
+        entidadeId: dispensa.id,
+        obraId,
+        descricao: `Documento "${ROTULOS_TIPO_DOCUMENTO[tipo]}" voltou a ser exigido${
+          medicaoId ? " nesta medição" : ""
+        }.`,
+        dadosAntes: { tipo, medicaoId: medicaoId ?? null, motivo: dispensa.motivo },
+      },
+      tx,
+    );
+  });
+
+  revalidatePath(`/obras/${obraId}`, "layout");
+  return { sucesso: "Documento voltou a ser exigido." };
 }

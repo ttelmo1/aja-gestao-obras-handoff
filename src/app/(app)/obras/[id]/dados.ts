@@ -131,3 +131,19 @@ export const carregarRerratificacoes = cache(async (obraId: string) => {
 export type RerratificacaoCarregada = Awaited<
   ReturnType<typeof carregarRerratificacoes>
 >[number];
+
+/**
+ * Dispensas de documento da obra — as do contrato e as das medições, numa
+ * consulta só. Quem separa é a tela: a aba Documentos usa as de `medicaoId
+ * null`, e cada medição usa as suas.
+ */
+export const carregarDispensas = cache(async (obraId: string) => {
+  return prisma.documentoDispensado.findMany({
+    where: { obraId },
+    select: { tipo: true, motivo: true, medicaoId: true },
+  });
+});
+
+export type DispensaCarregada = Awaited<
+  ReturnType<typeof carregarDispensas>
+>[number];

@@ -818,36 +818,45 @@ aditivado — é assim que o limite legal é apurado.
 
 ---
 
-## 18. Quais são os documentos padrão da lista de conferência 🔴
+## 18. Quais são os documentos padrão da lista de conferência 🟡
 
-**Pedido novo, surgido na apresentação de 09/09/2026.** A aba Documentos hoje
-lista o que foi anexado. O Júnior quer o inverso: que ela liste **o que se
-espera** de cada obra, dizendo *não anexado* ou *anexado em tal data*, com um
-espaço livre no fim para o que não está na lista.
+**Pedido de 09/09/2026, respondido em parte em 17/09 e implementado.** A aba
+Documentos deixou de listar só o que foi anexado: agora lista **o que se
+espera**, com *não anexado* em vermelho e a data de quem já chegou. O que o
+Junior queria: *"acaba, não tem erro da pessoa esquecer"*.
 
-O motivo é o que interessa: *"acaba, não tem erro da pessoa esquecer"*. A lista
-não é catálogo — é conferência, e serve para o operador saber o que falta sem
-depender de memória. Encaixa no requisito transversal que ele repetiu a reunião
-toda, de que o sistema tem que entregar a informação sem exigir esforço.
+**Respondido pelo cliente em 17/09:**
 
-**Assumimos:** nada ainda. **Não implementado** — falta o insumo.
+1. **A lista é a do próprio seletor de tipo**, os 20 que já estavam na tela,
+   na ordem em que ele já os mostrava — que é a ordem do processo. A Fernanda,
+   com a tela aberta: *"esses mesmo, listando eles e ficar em vermelho o que
+   não foi anexado"*.
+2. **Documento que não se aplica ganha botão.** Marcado, fica cinza e desce
+   para o fim da lista, com motivo opcional em texto livre. Sem isso, o
+   contrato sem garantia carregaria linha vermelha para sempre.
+3. **Mais de um arquivo por tipo continua valendo**, e a descrição continua
+   existindo — *"porque 'outros' pode haver mais de um documento"*.
+4. **A medição tem lista própria**: *"listada em cada medição os documentos
+   necessários"*, no mesmo formato.
 
-**Perguntar — é a pergunta que trava o item:** qual é a lista? Ele citou de
-exemplo **contrato, ordem de início, ART, publicação e empenho**, e disse que a
-documentação é *"quase que padrão"*. Faltam três respostas:
+**Assumimos, e é o que falta confirmar:**
 
-1. A **lista completa**, com o nome que eles usam para cada documento.
-2. A lista é a **mesma para todo contrato**, ou varia por contratante? Se
-   variar, é lista por contratante e não constante no código.
-3. Documento da lista que não se aplica a uma obra: fica marcado *"não se
-   aplica"* — como nas etapas de tramitação — ou fica pendente para sempre?
+- **Quais são os documentos necessários da medição.** Implementado com os
+  cinco que o mockup já sugeria no upload da medição: medição, processo /
+  protocolo, nota fiscal, ISS e planilha. Ele não disse quais são.
+- **A lista é igual para todo contratante.** Nenhuma fala sugeriu o contrário,
+  e a dispensa por obra resolve a variação caso a caso. Se um dia variar por
+  órgão, vira cadastro.
+- **ART, publicação e empenho**, citados por ele em 09/09, **não existem como
+  tipo** no seletor. Ou entram no enum, ou continuam entrando como "Outro"
+  com descrição. É a pergunta mais concreta que sobrou.
 
-**Custo de mudar:** baixo. Se a lista é fixa, é constante mais uma consulta que
-cruza o esperado com o anexado — a estrutura documental já guarda tipo de
-documento. Vira médio se a lista variar por contratante (cadastro novo) ou se
-pedirem que a pendência documental **acenda no farol**, que é decisão de regra,
-não de tela.
-**Onde:** `src/modules/documentos/` e a aba Documentos da obra.
+**Ainda não decidido:** se a pendência documental deve **acender o farol**.
+Hoje não acende — o farol tem dois critérios (ponto #23) e nenhum olha
+documento. Com a lista no ar, é a pergunta natural seguinte.
+
+**Onde:** `src/modules/documentos/conferencia.ts`, a aba Documentos e a tela da
+medição.
 
 ## 19. Cards de totais no topo do painel: ficam ou saem 🔴
 

@@ -38,6 +38,7 @@ model Usuario {
   obrasOperadas Obra[]                @relation("ObraOperador")
   documentos    Documento[]
   movimentos    TramitacaoMovimento[]
+  dispensas     DocumentoDispensado[]
 
   @@index([ativo])
 }
@@ -228,6 +229,7 @@ model Obra {
   etapas          EtapaObra[]
   rerratificacoes Rerratificacao[]
   documentos      Documento[]
+  dispensas       DocumentoDispensado[]
 
   @@index([status])
   @@index([contratanteId])
@@ -292,6 +294,7 @@ model Medicao {
 
   documentos Documento[]
   movimentos TramitacaoMovimento[]
+  dispensas  DocumentoDispensado[]
 
   @@unique([obraId, numero])
   @@index([obraId, competencia])
@@ -510,6 +513,46 @@ model Documento {
   @@index([nomeOriginal])
   @@index([excluidoEm])
   @@index([hashSha256])
+}
+
+/// Tipo de documento que este contrato — ou esta medição — não precisa
+/// entregar (requisitos.md 1.6).
+///
+/// A aba Documentos deixou de listar só o que foi enviado: ela lista o que se
+/// **espera**, em vermelho o que falta. Sem uma forma de dizer "aqui não se
+/// aplica", uma obra sem garantia carregaria uma linha vermelha para sempre e
+/// a lista perderia o sentido — vermelho que nunca apaga vira decoração.
+///
+/// A dispensa é do par (obra, tipo) ou (medição, tipo), nunca do tipo em si:
+/// o mesmo contrato dispensa ISS e o vizinho exige.
+///
+/// `obraId` está sempre preenchido, inclusive na dispensa de medição, para a
+/// exclusão da obra levar tudo em cascata e para a consulta da aba não
+/// precisar de `join`. A unicidade é garantida por **dois índices parciais**
+/// criados na migration — `medicaoId IS NULL` e `medicaoId IS NOT NULL` —,
+/// que o Prisma Schema não consegue expressar: um `@@unique` comum deixaria
+/// passar dispensas repetidas, porque no Postgres dois NULL não são iguais.
+model DocumentoDispensado {
+  id String @id @default(uuid())
+
+  obraId String
+  obra   Obra   @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  /// Nulo = dispensa do contrato. Preenchido = dispensa daquela medição.
+  medicaoId String?
+  medicao   Medicao? @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+
+  tipo TipoDocumento
+
+  /// Por que não se aplica — texto livre, opcional.
+  motivo String?
+
+  marcadoPorId String?
+  marcadoPor   Usuario? @relation(fields: [marcadoPorId], references: [id])
+  criadoEm     DateTime @default(now())
+
+  @@index([obraId])
+  @@index([medicaoId])
 }
 
 // ============================================================

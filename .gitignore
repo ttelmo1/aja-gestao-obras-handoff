@@ -23,6 +23,9 @@
 # pacote de instalação montado por scripts/empacotar (leva o build inteiro dentro)
 /dist
 
+# saída do navegador de teste (capturas e snapshots)
+/.playwright-mcp
+
 # misc
 .DS_Store
 *.pem

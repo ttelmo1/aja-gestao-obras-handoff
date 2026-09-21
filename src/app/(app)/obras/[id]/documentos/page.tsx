@@ -34,8 +34,9 @@ export const dynamic = "force-dynamic";
  * cada linha é um tipo esperado, e a coluna "Ação" traz o que se pode fazer
  * com ela — incluir o arquivo, abrir, excluir, marcar que não se aplica.
  *
- * O envio passa a ser **um arquivo por tipo**; o segundo arquivo do mesmo
- * assunto entra como "Outro", o único tipo que aceita repetição.
+ * O envio é **um arquivo por tipo**, com cinco exceções — "Outros", medições,
+ * apólice, licenças e ART/RRT (ver `ACEITAM_REPETICAO`). Nos demais, o segundo
+ * arquivo do mesmo assunto entra como "Outros".
  */
 export default async function DocumentosPage({
   params,
@@ -93,10 +94,10 @@ export default async function DocumentosPage({
         */}
         <p className="mb-4 rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
           A lista mostra todos os documentos esperados do contrato, na ordem do
-          processo. Cada tipo é anexado uma vez, use{" "}
-          <strong>&ldquo;Outros&rdquo;</strong> caso queira anexar mais de um. As{" "}
-          <strong>medições contratuais</strong> entram por aqui e também pela
-          tela de cada medição.
+          processo. Cada tipo é anexado uma vez — <strong>apólice</strong>,{" "}
+          <strong>ART/RRT</strong>, <strong>licenças</strong> e{" "}
+          <strong>medições contratuais</strong> aceitam vários. Para o segundo
+          arquivo dos demais, use <strong>&ldquo;Outros&rdquo;</strong>.
         </p>
 
         <FiltrosDaCentral

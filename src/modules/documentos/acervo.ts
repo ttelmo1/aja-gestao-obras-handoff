@@ -17,9 +17,9 @@ import { TIPOS_DOCUMENTO, TIPOS_POR_CONTEXTO } from "./rotulos";
  * As duas telas que usam isto têm regras diferentes de repetição, e é a
  * diferença que justifica o parâmetro:
  *
- * - **Contrato:** cada tipo entra uma vez. Precisando de um segundo arquivo do
- *   mesmo assunto, ele vai como "Outros" — que, com as medições, é o que
- *   aceita repetição ali.
+ * - **Contrato:** cada tipo entra uma vez, salvo os cinco de
+ *   `ACEITAM_REPETICAO`. Precisando de um segundo arquivo de um assunto que
+ *   não se repete, ele vai como "Outros".
  * - **Medição:** todo tipo se repete. A mesma medição pode ter duas planilhas
  *   de memória de cálculo, e cobrar "uma nota fiscal por medição" seria
  *   inventar uma regra que o cliente não pediu.
@@ -28,13 +28,29 @@ import { TIPOS_DOCUMENTO, TIPOS_POR_CONTEXTO } from "./rotulos";
 /**
  * Tipos que podem se repetir no contrato.
  *
- * "Outros" é a porta do que não tem tipo próprio. "Medições contratuais" se
- * repete porque um contrato tem várias: a linha da lista é o assunto, e cada
- * boletim anexado nas medições aparece nela.
+ * A regra da aba continua sendo **um arquivo por tipo** — linha que se
+ * desdobra desfaz a leitura de "o que falta". Estes cinco são a exceção, e
+ * cada um por um motivo concreto:
+ *
+ * - **Outros** é a porta do que não tem tipo próprio.
+ * - **Medições contratuais** porque um contrato tem várias, e cada boletim
+ *   anexado na tela da medição aparece nesta linha.
+ * - **Apólice de seguro / Risco engenharia** porque o nome junta dois seguros
+ *   distintos, e ainda recebe endosso e renovação ao longo da obra.
+ * - **Licenças** porque são quase sempre mais de uma — prefeitura, ambiental,
+ *   bombeiros.
+ * - **Emissão de ART/RRT** porque é uma por profissional, e mais uma a cada
+ *   aditivo.
+ *
+ * Sem isso, o segundo papel de cada um ia para "Outros" e sumia da linha onde
+ * alguém o procuraria.
  */
 const ACEITAM_REPETICAO = new Set<TipoDocumento>([
   TipoDocumento.OUTRO,
   TipoDocumento.MEDICAO,
+  TipoDocumento.APOLICE_SEGURO,
+  TipoDocumento.LICENCA,
+  TipoDocumento.ART_RRT,
 ]);
 
 export function aceitaMaisDeUm(tipo: TipoDocumento): boolean {

@@ -859,6 +859,11 @@ não existiam como tipo.
   conta de "não anexado". Se o cliente quiser os dois em vermelho até serem
   dispensados na mão, é trocar dois valores em
   `src/modules/documentos/acervo.ts`.
+- **Cinco tipos aceitam mais de um arquivo:** "Outros", medições contratuais,
+  apólice / risco engenharia, licenças e ART/RRT. Os três últimos foram
+  liberados porque são naturalmente mais de um papel — dois seguros no mesmo
+  item, licenças de três órgãos, uma ART por profissional. Nos demais doze
+  segue um arquivo por tipo. **Perguntar** se falta algum nessa lista.
 - **"Medições contratuais" é cumprida pelos boletins da tela da medição.** É
   onde eles entram; a linha do contrato ficaria vermelha para sempre se
   ignorasse isso. A alternativa seria a linha cobrar um arquivo consolidado,

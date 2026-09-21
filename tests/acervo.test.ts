@@ -72,7 +72,7 @@ describe("acervo do contrato", () => {
     assert.equal(contrato[0]?.aceitaInclusao, false);
   });
 
-  it("“Outro” aceita repetição e continua oferecendo inclusão", () => {
+  it("“Outros” aceita repetição e continua oferecendo inclusão", () => {
     assert.ok(aceitaMaisDeUm(TipoDocumento.OUTRO));
     assert.equal(aceitaMaisDeUm(TipoDocumento.CONTRATO), false);
 
@@ -201,6 +201,47 @@ describe("os documentos necessários de cada tela", () => {
     // Dezessete linhas, catorze cobradas: os três opcionais ficam de fora.
     assert.equal(linhas.length, ESPERADOS_DA_OBRA.length);
     assert.equal(resumoDoAcervo(linhas).cobrados, ESPERADOS_DA_OBRA.length - 3);
+  });
+
+  // Um seguro-garantia e um risco de engenharia; três licenças; uma ART por
+  // profissional. Mandados repetir em 21/09, depois de a lista subir.
+  it("apólice, licenças e ART/RRT aceitam mais de um arquivo no contrato", () => {
+    for (const tipo of [
+      TipoDocumento.APOLICE_SEGURO,
+      TipoDocumento.LICENCA,
+      TipoDocumento.ART_RRT,
+    ]) {
+      assert.ok(aceitaMaisDeUm(tipo), tipo);
+
+      const linhas = acervoDoContrato({
+        esperados: ESPERADOS_DA_OBRA,
+        documentos: [
+          doc("a", tipo, "2026-03-01"),
+          doc("b", tipo, "2026-04-01"),
+        ],
+        dispensados: [],
+      });
+      const doTipo = linhas.filter((l) => l.tipo === tipo);
+
+      // Os dois arquivos aparecem, na ordem de envio, e a linha continua
+      // convidando a incluir o próximo.
+      assert.deepEqual(doTipo.map((l) => l.documento?.id), ["a", "b"]);
+      assert.ok(doTipo.every((l) => l.aceitaInclusao));
+      // Dois arquivos, um tipo: a cobrança conta o tipo uma vez só.
+      assert.equal(resumoDoAcervo(linhas).anexados, 1);
+    }
+  });
+
+  // Continua valendo para o resto da lista: um tipo, um arquivo.
+  it("os demais tipos do contrato seguem aceitando um arquivo só", () => {
+    for (const tipo of [
+      TipoDocumento.CONTRATO,
+      TipoDocumento.EMPENHO,
+      TipoDocumento.ORDEM_INICIO,
+      TipoDocumento.RECEBIMENTO_DEFINITIVO,
+    ]) {
+      assert.equal(aceitaMaisDeUm(tipo), false, tipo);
+    }
   });
 
   // Item 11 da lista. Os boletins são anexados na tela de cada medição — a

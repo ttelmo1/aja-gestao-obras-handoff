@@ -73,7 +73,12 @@ O documento fica ligado à entidade que o originou (requisito 1.6).
 - [ ] **DOC-33** **Termo aditivo**, **apostilamento** e **Outros** aparecem
   como *Opcional* em cinza, não em vermelho, e não entram no "N de M não
   anexado(s)" — o cliente pediu os dois primeiros "em caso de necessidade".
-- [ ] **DOC-34** Anexar um boletim na tela de uma medição → a linha **Medições
+- [ ] **DOC-34** Anexar **duas apólices** (ou duas licenças, ou duas ART) na
+  mesma obra → as duas ficam na linha do tipo, na ordem de envio, e o
+  cabeçalho continua contando o tipo uma vez. No **contrato** ou em outro tipo
+  de arquivo único, o segundo envio é recusado com a mensagem que manda usar
+  "Outros".
+- [ ] **DOC-35** Anexar um boletim na tela de uma medição → a linha **Medições
   contratuais** da aba Documentos da obra passa a "Anexado", mostrando
   "Medição NN" na coluna "Vinculado a".
 - [ ] **DOC-32** Filtrar por **origem** → idem.

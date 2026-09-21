@@ -1494,6 +1494,15 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     já tinha. Cobrá-los abriria duas linhas vermelhas eternas na maioria das
     obras. São 14 tipos cobrados de 17 linhas.
 
+    **Cinco tipos aceitam mais de um arquivo** (21/09, depois de a lista
+    subir): "Outros" e medições contratuais, que já repetiam, mais **apólice /
+    risco engenharia** (o nome junta dois seguros, e ainda há endosso e
+    renovação), **licenças** (prefeitura, ambiental, bombeiros) e **ART/RRT**
+    (uma por profissional, mais uma a cada aditivo). Nos outros doze continua
+    valendo um arquivo por tipo — linha que se desdobra desfaz a leitura de "o
+    que falta" —, e o segundo arquivo vai como "Outros". A contagem do
+    cabeçalho não muda: ela conta tipo, não arquivo.
+
     **"Medições contratuais" é cumprida pela tela da medição.** Os boletins são
     anexados em cada medição; se a linha do contrato só olhasse os arquivos do
     próprio contrato, ficaria vermelha para sempre numa obra com tudo em dia.

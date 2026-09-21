@@ -30,13 +30,14 @@ administrador.
   obra nova, mas a obra existente continua mostrando o nome dele.
 - [ ] **OBR-10** Excluir contratante **sem vínculo** → apaga.
 
-### Responsável e setor
+### Setor
 
-- [ ] **OBR-11** Criar responsável (com e-mail e telefone) → salva. Confirmar
-  que responsável é **separado de usuário do sistema** (requisito 1.2): criar
-  um responsável não cria login.
-- [ ] **OBR-12** Excluir responsável vinculado a uma obra → recusa, mesma
-  lógica do OBR-08.
+> O **cadastro de responsáveis saiu** em 21/09/2026, a pedido da Fernanda: o
+> nome de quem assina a medição é digitado na própria medição (MED-43). Os
+> antigos OBR-11 e OBR-12 deixaram de existir.
+
+- [ ] **OBR-11** `/cadastros` abre com duas abas — Contratantes e Setores — e
+  `/cadastros/responsaveis` não existe mais.
 - [ ] **OBR-13** Criar setor com sigla → aparece nas opções de tramitação
   (verificar em [04-tramitacao.md](04-tramitacao.md)).
 - [ ] **OBR-14** Excluir setor que já recebeu um movimento → recusa.
@@ -67,8 +68,8 @@ administrador.
   dias → recusa com a mensagem sobre não saber quando a próxima medição vence.
 - [ ] **OBR-30** Periodicidade "Personalizada" com intervalo `0` ou negativo →
   recusa.
-- [ ] **OBR-31** Salvar sem contratante ou sem responsável → recusa com
-  mensagem de campo obrigatório (não erro genérico).
+- [ ] **OBR-31** Salvar sem contratante → recusa com mensagem de campo
+  obrigatório (não erro genérico).
 - [ ] **OBR-32** Criar obra em Planejamento, sem ordem de início → salva, e o
   farol dela fica **cinza** no painel.
 

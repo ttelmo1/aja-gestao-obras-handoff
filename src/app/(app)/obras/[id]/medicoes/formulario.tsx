@@ -29,13 +29,11 @@ export type MedicaoNoFormulario = {
   notaFiscalValor: string | null;
   issAliquota: string | null;
   issValor: string | null;
-  responsavelId: string | null;
+  responsavelNome: string | null;
   status: StatusMedicao;
   dataPagamento: string | null;
   observacoes: string | null;
 };
-
-type Opcao = { id: string; nome: string };
 
 /**
  * Formulário da medição, em três blocos: o que foi medido, o protocolo no
@@ -45,13 +43,11 @@ type Opcao = { id: string; nome: string };
 export function FormularioMedicao({
   obraId,
   padrao,
-  responsaveis,
   numeroSugerido,
   competenciaSugerida,
 }: {
   obraId: string;
   padrao?: MedicaoNoFormulario;
-  responsaveis: Opcao[];
   numeroSugerido: number;
   competenciaSugerida: string;
 }) {
@@ -144,20 +140,19 @@ export function FormularioMedicao({
             />
           </Campo>
 
-          <Campo id="responsavelId" rotulo="Responsável AJA">
-            <select
-              id="responsavelId"
-              name="responsavelId"
-              defaultValue={padrao?.responsavelId ?? ""}
+          {/*
+            Nome digitado, não escolhido: o cadastro de responsáveis saiu em
+            21/09/2026 a pedido da Fernanda — "pode deixar só pra colocar o
+            nome do responsável pela medição mesmo".
+          */}
+          <Campo id="responsavelNome" rotulo="Responsável pela medição">
+            <input
+              id="responsavelNome"
+              name="responsavelNome"
+              defaultValue={padrao?.responsavelNome ?? ""}
+              placeholder="Quem assinou o boletim"
               className={classeInput}
-            >
-              <option value="">Não definido</option>
-              {responsaveis.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nome}
-                </option>
-              ))}
-            </select>
+            />
           </Campo>
         </div>
       </fieldset>

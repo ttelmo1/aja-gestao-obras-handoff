@@ -116,18 +116,9 @@ async function seedDemo() {
     },
   });
 
-  // `Responsavel` não tem coluna única para servir de chave de upsert, então
-  // a idempotência é por busca — rodar o seed duas vezes não duplica ninguém.
-  const responsavel =
-    (await prisma.responsavel.findFirst({ where: { nome: "João Silva" } })) ??
-    (await prisma.responsavel.create({
-      data: {
-        nome: "João Silva",
-        cargo: "Engenheiro civil",
-        registro: "CREA-BA 000000",
-        email: "joao.silva@exemplo.local",
-      },
-    }));
+  // Quem assina os boletins da demonstração. Desde 21/09/2026 é texto na
+  // própria medição, não mais um cadastro à parte.
+  const RESPONSAVEL_DEMO = "João Silva";
 
   const hoje = new Date();
   const dias = (n: number) => {
@@ -281,7 +272,7 @@ async function seedDemo() {
           notaFiscalValor: m.valor,
           issAliquota: "5.00",
           issValor: (Number(m.valor) * 0.05).toFixed(2),
-          responsavelId: responsavel.id,
+          responsavelNome: RESPONSAVEL_DEMO,
           status: m.status,
           dataPagamento: m.status === StatusMedicao.PAGA ? dias(-m.diasAtras + 30) : null,
         },
@@ -626,9 +617,7 @@ async function seedDemo() {
     }
   }
 
-  console.log(
-    `  demo: contratante ${contratante.nome}, responsável ${responsavel.nome}`,
-  );
+  console.log(`  demo: contratante ${contratante.nome}`);
   console.log(`  demo: ${obras.length} obras, com faróis diferentes`);
   console.log(`  demo: ${totalMedicoes} medições, uma obra com ciclo vencido`);
   console.log(

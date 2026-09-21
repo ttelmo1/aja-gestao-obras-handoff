@@ -110,3 +110,6 @@ Sequência prevista: Rascunho → Protocolada → Aprovada → Paga (ou Rejeitad
   vírgula. Nenhum ponto decimal escapando.
 - [ ] **MED-42** Em ~768px, a tabela de medições rola dentro dela mesma, sem
   empurrar a página inteira para o lado.
+- [ ] **MED-43** **Responsável pela medição** é campo de texto, digitado na
+  própria medição — não há mais seletor nem cadastro por trás (21/09/2026). O
+  nome digitado aparece na coluna "Responsável" da lista.

@@ -62,7 +62,6 @@ export const carregarMedicoes = cache(async (obraId: string) => {
     where: { obraId },
     orderBy: [{ numero: "desc" }],
     include: {
-      responsavel: { select: { id: true, nome: true } },
       // O percurso da medição pelos setores: o mockup mostra "Setor atual" e
       // "Tempo" em cada linha da tabela de medições.
       movimentos: {

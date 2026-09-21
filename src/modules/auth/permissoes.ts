@@ -17,7 +17,7 @@ export const RECURSOS = [
   "relatorio",
   "auditoria",
   "usuario",
-  "cadastro", // contratantes, responsáveis, setores
+  "cadastro", // contratantes, setores
 ] as const;
 
 export type Recurso = (typeof RECURSOS)[number];

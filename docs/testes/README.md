@@ -40,7 +40,7 @@ O seed base cria **um único usuário**:
 (sobrescritos por `SEED_ADMIN_EMAIL` / `SEED_ADMIN_SENHA`, se definidos)
 
 O `--demo` acrescenta: contratante "Prefeitura Municipal de Exemplo",
-responsável "João Silva", 7 setores (Protocolo, Engenharia, Fiscalização,
+7 setores (Protocolo, Engenharia, Fiscalização,
 Controladoria, Jurídico, Financeiro, Gabinete) e 4 obras desenhadas para
 acender os quatro faróis:
 
@@ -83,7 +83,7 @@ carrossel de logout.
 | # | Arquivo | Cobre | Prefixo |
 |---|---|---|---|
 | 01 | [Acesso e permissões](01-acesso.md) | login, freio, senha, RBAC nos 4 perfis, usuários | `ACS` |
-| 02 | [Obras e cadastros](02-obras-e-cadastros.md) | CRUD de obras, código, prazo, contratante/responsável/setor, CNPJ | `OBR` |
+| 02 | [Obras e cadastros](02-obras-e-cadastros.md) | CRUD de obras, código, prazo, contratante/setor, CNPJ | `OBR` |
 | 03 | [Medições](03-medicoes.md) | cálculos, ISS, numeração, status, periodicidade | `MED` |
 | 04 | [Tramitação](04-tramitacao.md) | fluxo fixo, entrada/saída, dias parado, "não se aplica" | `TRA` |
 | 05 | [Documentos](05-documentos.md) | upload múltiplo, formatos, origem, central, exclusão | `DOC` |

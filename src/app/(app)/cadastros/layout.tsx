@@ -5,13 +5,16 @@ import { TituloPagina } from "@/components/ui/card";
 import { exigirPermissao } from "@/lib/guarda";
 
 /**
- * Os três cadastros de apoio vivem sob uma página só, com abas — são listas
- * curtas, consultadas de vez em quando, e não merecem cada uma um item no
- * menu principal.
+ * Os cadastros de apoio vivem sob uma página só, com abas — são listas curtas,
+ * consultadas de vez em quando, e não merecem cada uma um item no menu
+ * principal.
+ *
+ * Eram três: o cadastro de responsáveis técnicos saiu em 21/09/2026, a pedido
+ * da Fernanda. O nome de quem assina a medição passou a ser digitado na
+ * própria medição.
  */
 const ABAS = [
   { href: "/cadastros/contratantes", rotulo: "Contratantes" },
-  { href: "/cadastros/responsaveis", rotulo: "Responsáveis" },
   { href: "/cadastros/setores", rotulo: "Setores" },
 ];
 
@@ -26,7 +29,7 @@ export default async function CadastrosLayout({
     <div>
       <TituloPagina
         titulo="Cadastros"
-        descricao="Contratantes, responsáveis técnicos e setores de tramitação."
+        descricao="Contratantes e setores de tramitação."
       />
       <nav className="mb-4 flex gap-1.5 overflow-x-auto">
         {ABAS.map((aba) => (

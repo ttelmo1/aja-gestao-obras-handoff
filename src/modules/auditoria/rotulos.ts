@@ -60,6 +60,8 @@ export const ROTULOS_ENTIDADE: Record<string, string> = {
   Documento: "Documento",
   Rerratificacao: "Rerratificação",
   Contratante: "Contratante",
+  // O cadastro de responsáveis saiu em 21/09/2026; o rótulo fica para os
+  // registros antigos da trilha, que são append-only e continuam lá.
   Responsavel: "Responsável",
   Setor: "Setor",
   Usuario: "Usuário",
@@ -79,7 +81,6 @@ export const ENTIDADES_AUDITAVEIS = [
   "Documento",
   "Rerratificacao",
   "Contratante",
-  "Responsavel",
   "Setor",
   "Usuario",
 ] as const;

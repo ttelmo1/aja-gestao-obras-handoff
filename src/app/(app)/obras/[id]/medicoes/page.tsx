@@ -213,7 +213,7 @@ export default async function MedicoesPage({
                 <Celula tabular apagada>
                   {m.issValor ? formatarBRL(m.issValor) : "—"}
                 </Celula>
-                <Celula apagada>{m.responsavel?.nome ?? "—"}</Celula>
+                <Celula apagada>{m.responsavelNome ?? "—"}</Celula>
                 <Celula>
                   <BadgeMedicao status={m.status} />
                 </Celula>

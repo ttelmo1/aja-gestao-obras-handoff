@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { Card } from "@/components/ui/card";
 import { exigirPermissao } from "@/lib/guarda";
 import { paraCampoDinheiro } from "@/lib/money";
-import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
 import {
   acervoDaMedicao,
@@ -33,16 +32,11 @@ export default async function EditarMedicaoPage({
   const usuario = await exigirPermissao("medicao", "editar");
   const { id, medicaoId } = await params;
 
-  const [obra, medicoes, documentos, dispensas, responsaveis] = await Promise.all([
+  const [obra, medicoes, documentos, dispensas] = await Promise.all([
     carregarObra(id),
     carregarMedicoes(id),
     carregarDocumentos(id),
     carregarDispensas(id),
-    prisma.responsavel.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
   ]);
   if (!obra) notFound();
 
@@ -81,7 +75,6 @@ export default async function EditarMedicaoPage({
       >
         <FormularioMedicao
           obraId={obra.id}
-          responsaveis={responsaveis}
           numeroSugerido={medicao.numero}
           competenciaSugerida={paraCampoMes(medicao.competencia) ?? ""}
           padrao={{
@@ -99,7 +92,7 @@ export default async function EditarMedicaoPage({
             notaFiscalValor: paraCampoDinheiro(medicao.notaFiscalValor),
             issAliquota: medicao.issAliquota?.toFixed(2).replace(".", ",") ?? null,
             issValor: paraCampoDinheiro(medicao.issValor),
-            responsavelId: medicao.responsavelId,
+            responsavelNome: medicao.responsavelNome,
             status: medicao.status,
             dataPagamento: paraCampoData(medicao.dataPagamento),
             observacoes: medicao.observacoes,

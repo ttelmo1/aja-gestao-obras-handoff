@@ -15,9 +15,17 @@
 - Perfis/papéis de acesso (ex.: Administrador e outros níveis de permissão por tela/ação).
 - Recuperação de senha e gestão de conta.
 
-### 1.2 Gestão de Obras — [VALIDADO, com ajuste em 09/09]
-- CRUD completo de obras (contratante, contrato, datas, responsável).
-- Cadastro de responsáveis/equipe, separado do cadastro de usuários do sistema.
+### 1.2 Gestão de Obras — [VALIDADO, com ajustes em 09/09 e 21/09]
+- CRUD completo de obras (contratante, contrato, datas).
+- ~~Cadastro de responsáveis/equipe, separado do cadastro de usuários do
+  sistema.~~ **[AJUSTADO 21/09 — implementado] O cadastro de responsáveis sai
+  do sistema.** Pedido da Fernanda: *"retirar o cadastro de responsáveis"* e,
+  na medição, *"pode deixar só pra colocar o nome do responsável pela medição
+  mesmo"*. São poucas pessoas, sempre as mesmas, e o nome só era usado em um
+  campo — manter uma tela de cadastro para isso cobrava duas visitas (cadastrar
+  antes, escolher depois) para guardar um texto. O campo **Responsável pela
+  medição** passa a ser digitado na própria medição, e os nomes já lançados
+  foram copiados para lá na migration.
 - **[AJUSTADO 09/09 — implementado] Não existe responsável fixo por obra.** São
   15 a 20 contratos para três pessoas no setor: quem estiver disponível trata, e
   às vezes duas pessoas tratam a mesma obra. O "responsável técnico" do cadastro
@@ -25,9 +33,10 @@
   resumo, apenas enquanto a obra estiver em atenção ou crítico — e o nome fica
   registrado como o último que mexeu. Qualquer regra que amarre uma pessoa a um
   contrato está errada.
-  - O operador é um **usuário do sistema** (quem assume é quem está logado), não
-    o cadastro de responsáveis técnicos — que continua existindo, vinculado à
-    medição ("Responsável AJA").
+  - O operador é um **usuário do sistema** (quem assume é quem está logado). É
+    o único vínculo de pessoa com a obra: desde 21/09 não há mais cadastro de
+    responsáveis técnicos, e o nome de quem assinou o boletim é texto na
+    medição.
   - A atribuição carrega **observação em texto livre** (a justificativa do
     atraso), que é apagada ao liberar; o nome, não.
   - **Ninguém toma a obra de quem está com ela**: é preciso liberar antes. Ponto

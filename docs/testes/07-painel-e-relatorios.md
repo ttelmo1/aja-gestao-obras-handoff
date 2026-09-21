@@ -82,12 +82,12 @@ Limites **provisórios** hoje:
 - [ ] **PNL-31** Buscar pelo **objeto** (texto parcial, com acento) → encontra.
 - [ ] **PNL-32** Buscar por **número do contrato** → encontra.
 - [ ] **PNL-33** Buscar por **protocolo** → encontra.
-- [ ] **PNL-34** Filtrar por **responsável** → reduz corretamente.
+- [ ] **PNL-34** Filtrar por **operador** → reduz corretamente.
 - [ ] **PNL-35** Filtrar por **contratante** → idem.
 - [ ] **PNL-36** Filtrar por **situação** (status da obra) → idem.
 - [ ] **PNL-37** Filtrar por **farol vermelho** → só as vermelhas. Como o farol
   é calculado e não é coluna, conferir na mão que nenhuma escapou.
-- [ ] **PNL-38** Combinar farol + responsável → os dois aplicam juntos.
+- [ ] **PNL-38** Combinar farol + operador → os dois aplicam juntos.
 - [ ] **PNL-39** Editar a URL com valor inválido (`?farol=ROXO`) → vira "sem
   filtro", nunca erro de tela.
 - [ ] **PNL-40** Limpar os filtros → volta a lista completa, e a URL limpa.

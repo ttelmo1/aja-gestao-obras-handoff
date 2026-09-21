@@ -79,27 +79,6 @@ model Sessao {
   @@index([expiraEm])
 }
 
-/// Equipe da obra — cadastro separado dos usuários do sistema (requisitos.md 1.2).
-model Responsavel {
-  id       String  @id @default(uuid())
-  nome     String
-  cargo    String?
-  registro String? // CREA / CAU
-  email    String?
-  telefone String?
-  ativo    Boolean @default(true)
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  /// Sem `obras`: o responsável técnico deixou de existir por obra em
-  /// 09/09/2026 (requisitos.md 1.2). Continua ligado à medição, onde o
-  /// "Responsável AJA" é de quem assinou aquele boletim.
-  medicoes Medicao[]
-
-  @@index([ativo])
-}
-
 /// Órgão público contratante.
 model Contratante {
   id       String  @id @default(uuid())
@@ -187,8 +166,7 @@ model Obra {
   /// São 15 a 20 contratos para três pessoas: quem está disponível assume, e o
   /// nome fica como o último que mexeu depois de liberada. Não é responsável
   /// fixo pela obra nem fila de tarefas — é registro de quem cuidou por
-  /// último. Aponta para `Usuario`, e não para `Responsavel`, porque quem
-  /// assume é quem está logado.
+  /// último. Aponta para `Usuario` porque quem assume é quem está logado.
   operadorId         String?
   operador           Usuario?  @relation("ObraOperador", fields: [operadorId], references: [id])
   /// Quando a atribuição atual começou. Nulo = ninguém assumiu agora, mesmo
@@ -281,9 +259,14 @@ model Medicao {
   issAliquota      Decimal?  @db.Decimal(5, 2)
   issValor         Decimal?  @db.Decimal(15, 2)
 
-  /// Responsável da AJA por esta medição (mockup: "RESPONSÁVEL AJA").
-  responsavelId String?
-  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
+  /// Quem assinou o boletim, digitado na própria medição.
+  ///
+  /// Era uma FK para `Responsavel`, um cadastro de equipe à parte dos
+  /// usuários do sistema. A Fernanda pediu a retirada do cadastro em
+  /// 21/09/2026 — "nas medições pode deixar só pra colocar o nome do
+  /// responsável pela medição mesmo": são poucas pessoas, sempre as mesmas, e
+  /// manter cadastro para isso é uma tela a mais para ganhar nada.
+  responsavelNome String?
 
   status        StatusMedicao @default(RASCUNHO)
   dataPagamento DateTime?

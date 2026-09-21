@@ -150,7 +150,6 @@ export function FormularioMedicao({
               id="responsavelNome"
               name="responsavelNome"
               defaultValue={padrao?.responsavelNome ?? ""}
-              placeholder="Quem assinou o boletim"
               className={classeInput}
             />
           </Campo>

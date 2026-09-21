@@ -7,6 +7,7 @@ import {
   acervoDoContrato,
   aceitaMaisDeUm,
   ehDoContrato,
+  ehOpcional,
   ESPERADOS_DA_MEDICAO,
   ESPERADOS_DA_OBRA,
   resumoDoAcervo,
@@ -37,11 +38,11 @@ const doc = (id: string, tipo: TipoDocumento, iso: string, vinculo = {}): Doc =>
 
 const ESPERADOS = [
   TipoDocumento.CONTRATO,
-  TipoDocumento.GARANTIA,
+  TipoDocumento.APOLICE_SEGURO,
   TipoDocumento.OUTRO,
 ];
 
-/** "Outro" tem linha, mas não é cobrado: é a porta do que não tem tipo. */
+/** "Outros" tem linha, mas não é cobrado: é a porta do que não tem tipo. */
 const COBRADOS = ESPERADOS.length - 1;
 
 const acervo = (documentos: Doc[] = [], dispensados: { tipo: TipoDocumento; motivo: string | null }[] = []) =>
@@ -88,39 +89,39 @@ describe("acervo do contrato", () => {
     assert.ok(outros.every((l) => l.aceitaInclusao));
   });
 
-  it("arquivo de medição entra depois dos esperados, sem botão de incluir", () => {
-    const daMedicao = doc("m", TipoDocumento.MEDICAO, "2026-06-01", {
-      medicao: { numero: 3 },
+  it("arquivo de outra tela entra depois dos esperados, sem botão de incluir", () => {
+    const daRerratificacao = doc("r", TipoDocumento.PARECER, "2026-06-01", {
+      rerratificacao: { numero: 1 },
     });
-    assert.equal(ehDoContrato(daMedicao), false);
+    assert.equal(ehDoContrato(daRerratificacao), false);
 
-    const linhas = acervo([daMedicao]);
+    const linhas = acervo([daRerratificacao]);
     const ultima = linhas.at(-1);
 
-    assert.equal(ultima?.documento?.id, "m");
+    assert.equal(ultima?.documento?.id, "r");
     assert.equal(ultima?.classe, "OUTRA_TELA");
     assert.equal(ultima?.aceitaInclusao, false);
-    // Não pesa na cobrança: quem cobra a medição é a tela dela.
+    // Não pesa na cobrança: quem cobra o anexo é a tela de origem.
     assert.equal(resumoDoAcervo(linhas).cobrados, COBRADOS);
   });
 
   it("dispensado fica cinza, desce para o fim e para de aceitar inclusão", () => {
     const linhas = acervo(
       [],
-      [{ tipo: TipoDocumento.GARANTIA, motivo: "contrato sem garantia" }],
+      [{ tipo: TipoDocumento.APOLICE_SEGURO, motivo: "contrato sem garantia" }],
     );
-    const garantia = linhaDe(linhas, TipoDocumento.GARANTIA);
+    const garantia = linhaDe(linhas, TipoDocumento.APOLICE_SEGURO);
 
     assert.equal(garantia?.situacao, "DISPENSADO");
     assert.equal(garantia?.motivo, "contrato sem garantia");
     assert.equal(garantia?.aceitaInclusao, false);
-    assert.equal(linhas.at(-1)?.tipo, TipoDocumento.GARANTIA);
+    assert.equal(linhas.at(-1)?.tipo, TipoDocumento.APOLICE_SEGURO);
   });
 
   it("dispensa vence anexo: o arquivo continua listado, mas no fim e sem cobrança", () => {
     const linhas = acervo(
-      [doc("g", TipoDocumento.GARANTIA, "2026-02-01")],
-      [{ tipo: TipoDocumento.GARANTIA, motivo: null }],
+      [doc("g", TipoDocumento.APOLICE_SEGURO, "2026-02-01")],
+      [{ tipo: TipoDocumento.APOLICE_SEGURO, motivo: null }],
     );
 
     assert.equal(linhas.at(-1)?.documento?.id, "g");
@@ -140,7 +141,7 @@ describe("acervo do contrato", () => {
     const resumo = resumoDoAcervo(linhas);
 
     // Contrato tem dois arquivos e conta uma vez; proposta está fora da lista
-    // cobrada e não conta. Falta a garantia.
+    // cobrada e não conta. Falta a apólice.
     assert.equal(resumo.anexados, 1);
     assert.equal(resumo.faltando, 1);
     assert.equal(resumo.cobrados, COBRADOS);
@@ -161,6 +162,67 @@ describe("acervo do contrato", () => {
 });
 
 describe("os documentos necessários de cada tela", () => {
+  // A lista que a Fernanda mandou em 21/09/2026, na ordem em que ela veio.
+  it("o contrato cobra os dezessete documentos do cliente, na ordem", () => {
+    assert.deepEqual(ESPERADOS_DA_OBRA, [
+      TipoDocumento.TERMO_ADJUDICACAO,
+      TipoDocumento.TERMO_HOMOLOGACAO,
+      TipoDocumento.EMPENHO,
+      TipoDocumento.CONTRATO,
+      TipoDocumento.PUBLICACAO_EXTRATO_CONTRATO,
+      TipoDocumento.APOLICE_SEGURO,
+      TipoDocumento.PUBLICACAO_COMISSAO_FISCALIZACAO,
+      TipoDocumento.ORDEM_INICIO,
+      TipoDocumento.ART_RRT,
+      TipoDocumento.CNO,
+      TipoDocumento.MEDICAO,
+      TipoDocumento.TERMO_ADITIVO,
+      TipoDocumento.APOSTILAMENTO,
+      TipoDocumento.RECEBIMENTO_PROVISORIO,
+      TipoDocumento.RECEBIMENTO_DEFINITIVO,
+      TipoDocumento.LICENCA,
+      TipoDocumento.OUTRO,
+    ]);
+  });
+
+  // "(Em caso de necessidade)", nas palavras do cliente: contrato sem aditivo
+  // não está em falta com nada.
+  it("termo aditivo e apostilamento têm linha, mas não são cobrados", () => {
+    assert.ok(ehOpcional(TipoDocumento.TERMO_ADITIVO));
+    assert.ok(ehOpcional(TipoDocumento.APOSTILAMENTO));
+    assert.ok(ehOpcional(TipoDocumento.OUTRO));
+    assert.equal(ehOpcional(TipoDocumento.CONTRATO), false);
+
+    const linhas = acervoDoContrato({
+      esperados: ESPERADOS_DA_OBRA,
+      documentos: [],
+      dispensados: [],
+    });
+    // Dezessete linhas, catorze cobradas: os três opcionais ficam de fora.
+    assert.equal(linhas.length, ESPERADOS_DA_OBRA.length);
+    assert.equal(resumoDoAcervo(linhas).cobrados, ESPERADOS_DA_OBRA.length - 3);
+  });
+
+  // Item 11 da lista. Os boletins são anexados na tela de cada medição — a
+  // linha do contrato ficaria vermelha para sempre se ignorasse isso.
+  it("o boletim anexado na medição cumpre a linha “Medições contratuais”", () => {
+    const linhas = acervoDoContrato({
+      esperados: ESPERADOS_DA_OBRA,
+      documentos: [
+        doc("b", TipoDocumento.MEDICAO, "2026-06-01", { medicao: { numero: 3 } }),
+      ],
+      dispensados: [],
+    });
+    const medicao = linhaDe(linhas, TipoDocumento.MEDICAO);
+
+    assert.equal(medicao?.classe, "ESPERADO");
+    assert.equal(medicao?.situacao, "ANEXADO");
+    assert.equal(medicao?.documento?.id, "b");
+    // Um contrato tem várias medições: a linha continua aceitando arquivo.
+    assert.ok(medicao?.aceitaInclusao);
+    assert.equal(resumoDoAcervo(linhas).anexados, 1);
+  });
+
   // Ditos pelo cliente em 17/09/2026, nesta ordem, mais a linha "Outro".
   it("a medição cobra os seis que o cliente nomeou, na ordem", () => {
     assert.deepEqual(ESPERADOS_DA_MEDICAO, [

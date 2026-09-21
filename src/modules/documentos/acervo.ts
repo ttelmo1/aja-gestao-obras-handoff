@@ -1,7 +1,7 @@
 import { TipoDocumento } from "@/generated/prisma/enums";
 
 import type { VinculosDoDocumento } from "./origem";
-import { TIPOS_POR_CONTEXTO, tiposOrdenados } from "./rotulos";
+import { TIPOS_DOCUMENTO, TIPOS_POR_CONTEXTO } from "./rotulos";
 
 /**
  * A lista de documentos de uma tela, em uma tabela só.
@@ -18,17 +18,48 @@ import { TIPOS_POR_CONTEXTO, tiposOrdenados } from "./rotulos";
  * diferença que justifica o parâmetro:
  *
  * - **Contrato:** cada tipo entra uma vez. Precisando de um segundo arquivo do
- *   mesmo assunto, ele vai como "Outro" — o único tipo que aceita repetição.
+ *   mesmo assunto, ele vai como "Outros" — que, com as medições, é o que
+ *   aceita repetição ali.
  * - **Medição:** todo tipo se repete. A mesma medição pode ter duas planilhas
  *   de memória de cálculo, e cobrar "uma nota fiscal por medição" seria
  *   inventar uma regra que o cliente não pediu.
  */
 
-/** Tipos que podem se repetir no contrato. */
-const ACEITAM_REPETICAO = new Set<TipoDocumento>([TipoDocumento.OUTRO]);
+/**
+ * Tipos que podem se repetir no contrato.
+ *
+ * "Outros" é a porta do que não tem tipo próprio. "Medições contratuais" se
+ * repete porque um contrato tem várias: a linha da lista é o assunto, e cada
+ * boletim anexado nas medições aparece nela.
+ */
+const ACEITAM_REPETICAO = new Set<TipoDocumento>([
+  TipoDocumento.OUTRO,
+  TipoDocumento.MEDICAO,
+]);
 
 export function aceitaMaisDeUm(tipo: TipoDocumento): boolean {
   return ACEITAM_REPETICAO.has(tipo);
+}
+
+/**
+ * Tipos que têm linha na lista mas não são cobrados: não contam no "N de M
+ * não anexado(s)", não ficam vermelhos e não oferecem "não se aplica".
+ *
+ * - **Outros** é a porta de entrada do que não tem tipo próprio — cobrá-lo
+ *   deixaria toda obra com uma pendência que nunca fecha.
+ * - **Termo aditivo** e **apostilamento** vieram do cliente com a ressalva
+ *   "(em caso de necessidade)": contrato que não precisou de aditivo não está
+ *   em falta com nada, e cobrar os dois abriria duas linhas vermelhas eternas
+ *   na maioria das obras.
+ */
+const OPCIONAIS = new Set<TipoDocumento>([
+  TipoDocumento.OUTRO,
+  TipoDocumento.TERMO_ADITIVO,
+  TipoDocumento.APOSTILAMENTO,
+]);
+
+export function ehOpcional(tipo: TipoDocumento): boolean {
+  return OPCIONAIS.has(tipo);
 }
 
 /**
@@ -40,32 +71,38 @@ export function ehDoContrato(d: VinculosDoDocumento): boolean {
 }
 
 /**
+ * Tipos cuja linha do contrato é cumprida pelo arquivo de outra tela.
+ *
+ * Hoje é só "Medições contratuais", item 11 da lista do cliente. Os boletins
+ * são anexados na tela de cada medição — se a linha do contrato só olhasse os
+ * arquivos do próprio contrato, ela ficaria vermelha para sempre numa obra
+ * que tem todas as medições em dia.
+ */
+const CUMPREM_DE_OUTRA_TELA = new Set<TipoDocumento>([TipoDocumento.MEDICAO]);
+
+export function cobradoNoContrato(
+  d: VinculosDoDocumento & { tipo: TipoDocumento },
+): boolean {
+  return ehDoContrato(d) || CUMPREM_DE_OUTRA_TELA.has(d.tipo);
+}
+
+/**
  * Os tipos esperados em cada contexto.
  *
- * **Obra:** a lista inteira do seletor, na ordem em que ele já aparece na tela
- * — que é a ordem do processo (edital, proposta, contrato, garantia, ordem de
- * início…). Foi o que o cliente apontou na conversa, com a tela aberta.
+ * **Obra:** a lista de dezessete documentos que a Fernanda mandou em
+ * 21/09/2026, na ordem em que ela veio — que é a ordem do processo: termo de
+ * adjudicação, homologação, empenho, contrato, publicação do extrato… até
+ * recebimento definitivo e licenças, com "Outros" fechando.
  *
- * **Medição:** os seis que o cliente nomeou em 17/09/2026 — medição, memória de
- * cálculo, cronograma, relatório fotográfico, diário de obra e nota fiscal —
- * mais a linha "Outro", por onde entra o que não tem tipo próprio. Deixou de
- * ser suposição nossa: até então eram os cinco sugeridos pelo mockup.
+ * **Medição:** os seis que o cliente nomeou em 17/09/2026 — medição, memória
+ * de cálculo, cronograma, relatório fotográfico, diário de obra e nota fiscal
+ * — mais a linha "Outros".
  *
- * Os quatro tipos novos **não entram na lista do contrato**: são documentos de
- * medição, e cobrá-los no contrato deixaria quatro linhas vermelhas eternas em
- * toda obra. Continuam podendo ser anexados lá, e aparecem como "fora da
- * lista" se alguém o fizer.
+ * Tipo fora das duas listas (edital, proposta, atestado, despacho…) continua
+ * existindo no vocabulário e anexável onde faz sentido; no contrato ele
+ * aparece como "fora da lista" se alguém o usar, sem ser cobrado.
  */
-const SO_DA_MEDICAO = new Set<TipoDocumento>([
-  TipoDocumento.MEMORIA_CALCULO,
-  TipoDocumento.CRONOGRAMA,
-  TipoDocumento.RELATORIO_FOTOGRAFICO,
-  TipoDocumento.DIARIO_OBRA,
-]);
-
-export const ESPERADOS_DA_OBRA: TipoDocumento[] = tiposOrdenados("obra").filter(
-  (t) => !SO_DA_MEDICAO.has(t),
-);
+export const ESPERADOS_DA_OBRA: TipoDocumento[] = [...TIPOS_POR_CONTEXTO.obra];
 export const ESPERADOS_DA_MEDICAO: TipoDocumento[] = [
   ...TIPOS_POR_CONTEXTO.medicao,
 ];
@@ -125,7 +162,7 @@ type Entrada<D> = {
  * Monta a lista da tela.
  *
  * A ordem é a de leitura do processo: os tipos esperados na ordem em que
- * acontecem (edital, proposta, contrato, garantia, ordem de início…), faltando
+ * acontecem (adjudicação, homologação, empenho, contrato…), faltando
  * e anexados misturados, para quem lê de cima para baixo ver onde o processo
  * parou. Depois o que é desta tela mas está fora da lista, e o que veio de
  * outras telas. Por último, em cinza, o que foi marcado como "não se aplica".
@@ -203,7 +240,7 @@ export function montarAcervo<D extends DocumentoDoAcervo>({
   // Tipos que esta tela não cobra mas têm arquivo: entram depois, na ordem em
   // que o vocabulário os declara, para a tela não mudar de ordem sozinha.
   const esperado = new Set(esperados);
-  for (const tipo of tiposOrdenados("obra")) {
+  for (const tipo of TIPOS_DOCUMENTO) {
     if (esperado.has(tipo)) continue;
     if ((porTipo.get(tipo)?.length ?? 0) === 0) continue;
     distribuir(tipo, "EXTRA");
@@ -225,13 +262,16 @@ export function montarAcervo<D extends DocumentoDoAcervo>({
   return [...cobradas, ...outras, ...dispensadas];
 }
 
-/** A aba Documentos da obra: um arquivo por tipo, o resto como "Outro". */
+/**
+ * A aba Documentos da obra: um arquivo por tipo — menos "Outros" e as
+ * medições —, e o que estiver preso a outra tela entra como linha de leitura.
+ */
 export function acervoDoContrato<D extends DocumentoDoAcervo>(
   entrada: Omit<Entrada<D>, "pertence" | "permiteRepeticao">,
 ): Array<LinhaAcervo<D>> {
   return montarAcervo({
     ...entrada,
-    pertence: ehDoContrato,
+    pertence: cobradoNoContrato,
     permiteRepeticao: aceitaMaisDeUm,
   });
 }
@@ -259,15 +299,16 @@ export type ResumoAcervo = {
  * que esta tela cobra: arquivo de outra tela, ou de tipo fora da lista, não
  * entra na conta de "o que falta".
  *
- * "Outro" também não entra. Ele tem linha própria nas duas telas, mas é a
- * porta de entrada do que não tem tipo — não é documento necessário, e contá-lo
- * deixaria toda obra e toda medição com uma pendência que nunca fecha.
+ * Os tipos opcionais também não entram — "Outros" nas duas telas, mais termo
+ * aditivo e apostilamento, que o cliente pediu "em caso de necessidade". Têm
+ * linha, mas não são documento necessário: contá-los deixaria toda obra com
+ * uma pendência que nunca fecha.
  */
 export function resumoDoAcervo(linhas: Array<LinhaAcervo<unknown>>): ResumoAcervo {
   const situacaoPorTipo = new Map<TipoDocumento, SituacaoLinha>();
   for (const l of linhas) {
     if (l.classe !== "ESPERADO") continue;
-    if (l.tipo === TipoDocumento.OUTRO) continue;
+    if (ehOpcional(l.tipo)) continue;
     // "Anexado" ganha de "não anexado" no mesmo tipo: onde o tipo se repete, a
     // linha de inclusão convive com os arquivos e não pode contar como falta.
     if (l.situacao === "ANEXADO" || !situacaoPorTipo.has(l.tipo)) {

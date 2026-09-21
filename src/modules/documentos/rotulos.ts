@@ -1,36 +1,51 @@
 import { TipoDocumento } from "@/generated/prisma/enums";
 
 /**
- * Nomes dos tipos de documento como o cliente os escreve no mockup — é o
- * vocabulário do setor público, não o nosso. "Atestado / CAT" e
- * "Autorização / liberação" carregam os dois termos de propósito: o mockup
- * usa ora um, ora outro, e quem procura por um precisa achar pelo outro.
+ * Nomes dos tipos de documento como o cliente os escreve — é o vocabulário do
+ * setor público, não o nosso.
+ *
+ * A ordem é a da lista que a Fernanda mandou em 21/09/2026: os dezessete do
+ * contrato primeiro, na ordem em que o processo acontece, depois os da
+ * medição e por fim o vocabulário das outras telas. É esta ordem que o
+ * seletor de tipo e a lista de conferência seguem.
  */
 export const ROTULOS_TIPO_DOCUMENTO: Record<TipoDocumento, string> = {
-  EDITAL: "Edital",
-  PROPOSTA: "Proposta",
+  TERMO_ADJUDICACAO: "Termo de adjudicação",
+  TERMO_HOMOLOGACAO: "Termo de homologação",
+  EMPENHO: "Empenho",
   CONTRATO: "Contrato",
-  GARANTIA: "Garantia",
+  PUBLICACAO_EXTRATO_CONTRATO: "Publicação do extrato de contrato",
+  APOLICE_SEGURO: "Apólice de seguro / Risco engenharia",
+  PUBLICACAO_COMISSAO_FISCALIZACAO: "Publicação de comissão de fiscalização",
   ORDEM_INICIO: "Ordem de início",
-  PROTOCOLO: "Processo / protocolo",
-  MEDICAO: "Medição",
+  ART_RRT: "Emissão de ART / RRT",
+  CNO: "Emissão da CNO",
+  MEDICAO: "Medições contratuais",
+  TERMO_ADITIVO: "Termo aditivo",
+  APOSTILAMENTO: "Apostilamento",
+  RECEBIMENTO_PROVISORIO: "Termo de recebimento provisório",
+  RECEBIMENTO_DEFINITIVO: "Termo de recebimento definitivo",
+  LICENCA: "Licenças",
+  OUTRO: "Outros",
+
   MEMORIA_CALCULO: "Memória de cálculo",
   CRONOGRAMA: "Cronograma",
   RELATORIO_FOTOGRAFICO: "Relatório fotográfico",
   DIARIO_OBRA: "Diário de obra",
   NOTA_FISCAL: "Nota fiscal",
+
+  PROTOCOLO: "Processo / protocolo",
   ISS: "ISS",
   DESPACHO: "Despacho",
   PARECER: "Parecer",
   AUTORIZACAO: "Autorização / liberação",
   EXIGENCIA: "Exigência / pendência",
   COMPROVANTE: "Comprovante",
-  RERRATIFICACAO: "Rerratificação",
-  ACEITE: "Aceite",
   ATESTADO: "Atestado / CAT",
+  EDITAL: "Edital",
+  PROPOSTA: "Proposta",
   FOTO: "Foto",
   PLANILHA: "Planilha",
-  OUTRO: "Outro",
 };
 
 export const TIPOS_DOCUMENTO = Object.keys(
@@ -42,25 +57,36 @@ export const TIPOS_DOCUMENTO = Object.keys(
  *
  * A lista completa continua disponível em toda tela — isto só reordena, para
  * o tipo provável cair primeiro. Quem envia a nota fiscal da medição não
- * deveria ter que rolar vinte opções até achar "Nota fiscal".
+ * deveria ter que rolar trinta opções até achar "Nota fiscal".
  */
 export const TIPOS_POR_CONTEXTO: Record<
   "obra" | "medicao" | "etapa" | "rerratificacao",
   TipoDocumento[]
 > = {
+  // A lista de documentos do contrato, dita pelo cliente em 21/09/2026 e
+  // nesta ordem. `OUTRO` fecha a lista: é a linha por onde entra o que não
+  // tem tipo próprio, e a única que se repete sem limite.
   obra: [
+    TipoDocumento.TERMO_ADJUDICACAO,
+    TipoDocumento.TERMO_HOMOLOGACAO,
+    TipoDocumento.EMPENHO,
     TipoDocumento.CONTRATO,
-    TipoDocumento.EDITAL,
-    TipoDocumento.PROPOSTA,
-    TipoDocumento.GARANTIA,
+    TipoDocumento.PUBLICACAO_EXTRATO_CONTRATO,
+    TipoDocumento.APOLICE_SEGURO,
+    TipoDocumento.PUBLICACAO_COMISSAO_FISCALIZACAO,
     TipoDocumento.ORDEM_INICIO,
-    TipoDocumento.ACEITE,
-    TipoDocumento.ATESTADO,
-    TipoDocumento.FOTO,
+    TipoDocumento.ART_RRT,
+    TipoDocumento.CNO,
+    TipoDocumento.MEDICAO,
+    TipoDocumento.TERMO_ADITIVO,
+    TipoDocumento.APOSTILAMENTO,
+    TipoDocumento.RECEBIMENTO_PROVISORIO,
+    TipoDocumento.RECEBIMENTO_DEFINITIVO,
+    TipoDocumento.LICENCA,
+    TipoDocumento.OUTRO,
   ],
   // Os documentos necessários de uma medição, ditos pelo cliente em
-  // 17/09/2026 e nesta ordem. `OUTRO` fecha a lista: é a linha por onde entra
-  // o que não tem tipo próprio, e a única que se repete sem limite.
+  // 17/09/2026 e nesta ordem.
   medicao: [
     TipoDocumento.MEDICAO,
     TipoDocumento.MEMORIA_CALCULO,
@@ -80,7 +106,8 @@ export const TIPOS_POR_CONTEXTO: Record<
     TipoDocumento.PROTOCOLO,
   ],
   rerratificacao: [
-    TipoDocumento.RERRATIFICACAO,
+    TipoDocumento.TERMO_ADITIVO,
+    TipoDocumento.APOSTILAMENTO,
     TipoDocumento.PLANILHA,
     TipoDocumento.PARECER,
   ],

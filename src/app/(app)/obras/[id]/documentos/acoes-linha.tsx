@@ -31,7 +31,7 @@ const LIMITE_MB = Math.round(TAMANHO_MAXIMO_BYTES / 1024 / 1024);
  *
  * Na medição todo tipo aceita repetição — duas planilhas de memória de cálculo
  * na mesma medição são normais —, e por isso o texto e o `multiple` mudam
- * conforme a tela. No contrato, só o "Outro".
+ * conforme a tela. No contrato, só "Outros" e as medições contratuais.
  */
 export function IncluirDocumento({
   obraId,
@@ -55,7 +55,7 @@ export function IncluirDocumento({
         medicaoId
           ? `O arquivo fica vinculado a esta medição como ${rotulo}. A medição aceita quantos arquivos precisar de cada tipo.`
           : varios
-            ? "“Outro” é o tipo que aceita repetição: use-o para o segundo arquivo de um assunto que já tem linha própria."
+            ? `“${rotulo}” aceita mais de um arquivo. Os demais tipos entram uma vez cada — para o segundo arquivo de um assunto que já tem linha própria, use “Outros”.`
             : `O arquivo fica vinculado ao contrato da obra como ${rotulo}. Cada tipo entra uma vez — havendo mais de um arquivo do mesmo assunto, envie os demais como “Outro”.`
       }
       rotuloEnvio="Enviar documento"

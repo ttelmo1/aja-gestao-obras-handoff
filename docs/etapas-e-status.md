@@ -5,12 +5,15 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 - **Contrato:** R$ 10.000,00 / 140h (R$70/h), 4 parcelas.
 - **Orçado por módulo:** 143h (folga negativa de 3h — ver
   [`escopo-e-orcamento.md`](escopo-e-orcamento.md)).
-- **Última atualização:** 09/09/2026 — **apresentação do sistema à diretoria**,
-  com o ambiente de homologação na mão do cliente, e os **quatro itens firmes
-  da etapa 13 já implementados no mesmo dia**: o avanço físico saiu do sistema,
-  o responsável técnico virou operador com atribuição momentânea, o farol passou
-  a acender dez dias antes do vencimento da medição e o seed exercita o desenho
-  novo. Notas da reunião em
+- **Última atualização:** 21/09/2026 — pedidos da Fernanda no período de teste:
+  o **cadastro de responsáveis saiu** (o nome de quem assina a medição virou
+  texto na própria medição) e a **lista de documentos do contrato passou a ser
+  a que o cliente mandou**, com dezessete itens. Itens 12 e 13 da etapa 13.
+  Antes disso, em 09/09/2026, a **apresentação do sistema à diretoria** e os
+  quatro itens firmes da etapa 13 implementados no mesmo dia: o avanço físico
+  saiu do sistema, o responsável técnico virou operador com atribuição
+  momentânea, o farol passou a acender dez dias antes do vencimento da medição
+  e o seed exercita o desenho novo. Notas da reunião em
   [`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md).
 
 ## Legenda
@@ -25,7 +28,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 0.1 | Ambiente de desenvolvimento (PostgreSQL local) | — | ✅ | — |
 | 0.2 | Identidade visual herdada do mockup | — | ✅ | — |
 | 1 | Auth + RBAC | 12h | ✅ | 0 |
-| 2 | Cadastros base (contratante, responsável, setor) | ~3h | ✅ | 1 |
+| 2 | Cadastros base (contratante, setor) | ~3h | ✅ | 1 |
 | 3 | Auditoria — camada de gravação | ~3h | ✅ | 0 |
 | 4 | CRUD de obras + dashboard/filtros | 15h | ✅ | 2, 3 |
 | 5 | Medições + cálculos financeiros | 18h | ✅ | 4 |
@@ -1173,12 +1176,11 @@ continuar testando processo parado isolado.
 
 ### Bloqueado por falta de resposta do cliente
 
-5. **Checklist de documentos padrão** (~1,5h, não começa). A aba Documentos
-   deve listar o que se espera de cada obra — *não anexado* ou *anexado em tal
-   data* — com espaço livre no fim para o resto. Motivo do Júnior: *"acaba, não
-   tem erro da pessoa esquecer"*. **Falta a lista dos documentos**, que ficou
-   com eles; ver ponto #18 de
-   [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
+5. ✅ **Checklist de documentos padrão** — desbloqueado. A tela foi feita em
+   17/09 (itens 7 a 9 abaixo) e a **lista dos documentos chegou em 21/09**,
+   com dezessete itens: item 13. Ver ponto #18 de
+   [`pontos-para-reuniao.md`](pontos-para-reuniao.md), onde ficaram as três
+   escolhas de implementação a confirmar.
 
 6. **Matriz de permissões linha a linha.** Os quatro perfis ficam (fechado na
    reunião), mas a devolutiva da matriz ficou com o Diego e o Henrique, junto
@@ -1437,6 +1439,71 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     Verificado no navegador com o banco local, depois da migration: a medição
     lista os seis na ordem pedida com "6 de 6 não anexado(s)", "Outro" como
     opcional ao fim, e a aba da obra segue com os 20 tipos de antes.
+
+12. ✅ **O cadastro de responsáveis sai; o nome fica na medição — 21/09/2026.**
+    Pedido da Fernanda, em duas mensagens: *"retirar o cadastro de
+    responsáveis"* e *"nas medições pode deixar só pra colocar o nome do
+    responsável pela medição mesmo"*.
+
+    **É remoção, não substituição.** Sai a aba `/cadastros/responsaveis` com as
+    três telas (lista, novo, edição), o `FormResponsavel`, a ação
+    `salvarResponsavel` e o model `Responsavel` inteiro. O campo da medição
+    deixa de ser `<select>` com FK e passa a ser `<input>` de texto,
+    **"Responsável pela medição"**.
+
+    **Os nomes já lançados não se perdem.** A migration cria
+    `Medicao.responsavelNome`, copia o nome da tabela antes de derrubá-la e só
+    então apaga a coluna e o model. Quem tinha "João Silva" na medição 3
+    continua com "João Silva" ali, agora como texto.
+
+    **O rótulo "Responsavel" fica na auditoria.** A trilha é append-only e tem
+    registros antigos de criação e edição de responsáveis; sem o rótulo eles
+    apareceriam como o nome cru do model. Some do **filtro** de entidades, que
+    é a lista do que ainda se pode auditar.
+
+    **Por que não virou cadastro opcional:** o cliente tem três pessoas no
+    setor e o nome era usado em um único campo. Cadastro cobra duas visitas —
+    cadastrar antes, escolher depois — para guardar um texto que ninguém
+    consulta por outro caminho. O preço é perder a padronização do nome
+    ("João Silva" e "Joao silva" viram dois), e é um preço que o cliente
+    escolheu.
+
+13. ✅ **A lista de documentos do contrato é a do cliente — 21/09/2026.** A
+    Fernanda mandou os dezessete, numerados, na mesma conversa. Fecha o que o
+    ponto #18 chamava de *"a pergunta mais concreta que sobrou"*: ART,
+    publicação e empenho não existiam como tipo.
+
+    **A lista, na ordem em que veio:** termo de adjudicação, termo de
+    homologação, empenho, contrato, publicação do extrato de contrato, apólice
+    de seguro / risco engenharia, publicação de comissão de fiscalização, ordem
+    de início, emissão de ART/RRT, emissão da CNO, medições contratuais, termo
+    aditivo, apostilamento, termo de recebimento provisório, termo de
+    recebimento definitivo, licenças e outros.
+
+    **Dez tipos novos no enum, três renomeados.** Renomear preserva o que já
+    foi anexado e evita dois nomes para a mesma coisa no seletor: `GARANTIA`
+    virou `APOLICE_SEGURO`, `RERRATIFICACAO` virou `TERMO_ADITIVO` e `ACEITE`
+    virou `RECEBIMENTO_PROVISORIO`. **Nada foi removido**: edital, proposta,
+    atestado/CAT, despacho, parecer e os demais continuam no vocabulário das
+    outras telas — fora da lista cobrada do contrato, e aparecendo como "fora
+    da lista" onde já existirem.
+
+    **"Em caso de necessidade" virou linha opcional.** Termo aditivo e
+    apostilamento têm linha, mas não contam no "N de M não anexado(s)", não
+    ficam vermelhos e não oferecem "não se aplica" — mesma regra que "Outros"
+    já tinha. Cobrá-los abriria duas linhas vermelhas eternas na maioria das
+    obras. São 14 tipos cobrados de 17 linhas.
+
+    **"Medições contratuais" é cumprida pela tela da medição.** Os boletins são
+    anexados em cada medição; se a linha do contrato só olhasse os arquivos do
+    próprio contrato, ficaria vermelha para sempre numa obra com tudo em dia.
+    A linha aceita repetição — um contrato tem várias medições — e mostra
+    "Medição NN" na coluna "Vinculado a".
+
+    **O que isso não resolve:** a lista é igual para todo contratante. Nenhuma
+    fala sugeriu o contrário, e a dispensa por obra ("não se aplica") cobre a
+    variação caso a caso. Se um dia variar por órgão, vira cadastro — ponto #18.
+
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 

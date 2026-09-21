@@ -99,7 +99,21 @@
 - **[AJUSTADO 09/09] Lista de documentos padrão por obra**: a aba deve listar o
   que se **espera** de cada obra, dizendo *não anexado* ou *anexado em tal data*,
   com espaço livre no fim para o que estiver fora da lista — para o operador não
-  depender de memória. A lista dos documentos ainda não veio do cliente.
+  depender de memória.
+- **[AJUSTADO 21/09 — implementado] A lista veio do cliente**, com dezessete
+  itens nesta ordem: termo de adjudicação, termo de homologação, empenho,
+  contrato, publicação do extrato de contrato, apólice de seguro / risco
+  engenharia, publicação de comissão de fiscalização, ordem de início, emissão
+  de ART/RRT, emissão da CNO, medições contratuais, termo aditivo,
+  apostilamento, termo de recebimento provisório, termo de recebimento
+  definitivo, licenças e outros.
+  - **Termo aditivo e apostilamento vieram com "(em caso de necessidade)"**:
+    têm linha, mas não são cobrados — contrato sem aditivo não está em falta.
+  - **"Medições contratuais" é cumprida pelos boletins anexados em cada
+    medição**, que é onde eles entram. Cobrar no contrato um arquivo que mora
+    em outra tela deixaria a linha vermelha para sempre.
+  - A lista da **medição** (17/09) não muda: medição, memória de cálculo,
+    cronograma, relatório fotográfico, diário de obra, nota fiscal e outros.
 - Arquivos podem ser grandes (mencionado até ~300MB), mas **isso não é um problema técnico
   crítico** porque o sistema roda 100% na rede local da empresa — os arquivos residem no
   servidor da própria empresa, sem upload para nuvem.
@@ -159,8 +173,10 @@ apresentado ao órgão público.
   **só o administrador apagar** qualquer registro. Uma linha já foi decidida no
   código e precisa de confirmação: **assumir uma obra exige apenas permissão de
   ver**, para que o perfil operacional consiga fazê-lo.
-- **Quais são os documentos padrão** da lista de conferência (item 1.6), se ela
-  é a mesma para todo contratante, e como marcar documento que não se aplica.
+- ~~**Quais são os documentos padrão** da lista de conferência (item 1.6)~~ —
+  **respondida em 21/09**: a lista veio com dezessete itens e está no ar. Falta
+  só saber se ela **varia por contratante** — hoje é igual para todos, com
+  "não se aplica" por obra resolvendo caso a caso.
 - **Se os cards de totais do topo do painel ficam** — pedido de remoção pela
   diretoria e defendido pelo setor de engenharia na mesma reunião; o cliente
   ficou de resolver internamente.

@@ -1,8 +1,7 @@
 import { Celula, Linha, Tabela } from "@/components/ui/tabela";
-import { TipoDocumento } from "@/generated/prisma/enums";
 import { Vazio } from "@/components/ui/vazio";
 import { formatarData } from "@/lib/date-br";
-import type { LinhaAcervo } from "@/modules/documentos/acervo";
+import { ehOpcional, type LinhaAcervo } from "@/modules/documentos/acervo";
 import { origemDoDocumento } from "@/modules/documentos/origem";
 import {
   formatarTamanho,
@@ -147,10 +146,12 @@ export function AcervoDeDocumentos({
                       tipo={l.tipo}
                     />
                   ) : (
-                    // "Outro" não se dispensa: não é documento cobrado, é a
-                    // linha por onde entra o que não tem tipo próprio.
+                    // Tipo opcional não se dispensa: "Outros" é a linha por
+                    // onde entra o que não tem tipo próprio, e o aditivo e o
+                    // apostilamento o cliente já pediu "em caso de
+                    // necessidade" — nenhum dos três é cobrado.
                     !d &&
-                    l.tipo !== TipoDocumento.OUTRO && (
+                    !ehOpcional(l.tipo) && (
                       <DispensarDocumento
                         obraId={obraId}
                         medicaoId={medicaoId}
@@ -181,9 +182,10 @@ function SituacaoDaLinha({ linha }: { linha: LinhaAcervo<unknown> }) {
   if (linha.situacao === "ANEXADO") {
     return <span className="whitespace-nowrap text-[var(--success)]">Anexado</span>;
   }
-  // "Outro" vazio não é pendência: é a linha por onde se anexa o que não tem
-  // tipo próprio. Vermelho ali seria uma cobrança que nunca fecha.
-  if (linha.tipo === TipoDocumento.OUTRO) {
+  // Linha opcional vazia não é pendência: "Outros" é por onde entra o que não
+  // tem tipo próprio, e aditivo e apostilamento só existem "em caso de
+  // necessidade". Vermelho ali seria cobrança que nunca fecha.
+  if (ehOpcional(linha.tipo)) {
     return <span className="whitespace-nowrap text-[var(--muted)]">Opcional</span>;
   }
   return <strong className="whitespace-nowrap text-[var(--danger)]">Não anexado</strong>;

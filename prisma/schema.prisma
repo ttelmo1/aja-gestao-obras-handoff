@@ -425,36 +425,57 @@ model Rerratificacao {
 // Gestão documental
 // ============================================================
 
-/// Vocabulário do cliente, tirado do mockup: a central de documentos e o
-/// seletor de documento da etapa listam estes tipos por nome.
+/// Vocabulário do cliente. Os dezessete primeiros são a **lista de documentos
+/// do contrato**, ditada pela Fernanda em 21/09/2026 na ordem em que o
+/// processo acontece; depois vêm os documentos da medição (17/09/2026) e o
+/// vocabulário das outras telas — tramitação, rerratificação e acervo geral.
+///
+/// Três valores foram **renomeados**, e não acrescentados, porque o cliente
+/// nomeia hoje o mesmo papel de antes: `GARANTIA` virou `APOLICE_SEGURO`,
+/// `RERRATIFICACAO` virou `TERMO_ADITIVO` e `ACEITE` virou
+/// `RECEBIMENTO_PROVISORIO`. Rename preserva o que já foi anexado; acrescentar
+/// deixaria dois nomes para a mesma coisa no seletor.
 enum TipoDocumento {
-  EDITAL
-  PROPOSTA
+  // A lista do contrato — 21/09/2026, nesta ordem.
+  TERMO_ADJUDICACAO
+  TERMO_HOMOLOGACAO
+  EMPENHO
   CONTRATO
-  GARANTIA
+  PUBLICACAO_EXTRATO_CONTRATO
+  APOLICE_SEGURO
+  PUBLICACAO_COMISSAO_FISCALIZACAO
   ORDEM_INICIO
-  PROTOCOLO
+  ART_RRT
+  CNO
   MEDICAO
-  /// Os quatro abaixo entraram em 17/09/2026, quando o cliente disse quais são
-  /// os documentos necessários de uma medição. Antes eram cobertos por
-  /// PLANILHA e FOTO, que ficam para o caso genérico.
+  TERMO_ADITIVO
+  APOSTILAMENTO
+  RECEBIMENTO_PROVISORIO
+  RECEBIMENTO_DEFINITIVO
+  LICENCA
+  OUTRO
+
+  // Os documentos necessários da medição — 17/09/2026.
   MEMORIA_CALCULO
   CRONOGRAMA
   RELATORIO_FOTOGRAFICO
   DIARIO_OBRA
   NOTA_FISCAL
+
+  // Vocabulário das outras telas. Fora da lista do contrato, continuam
+  // anexáveis onde fazem sentido — e onde já existirem, seguem aparecendo.
+  PROTOCOLO
   ISS
   DESPACHO
   PARECER
   AUTORIZACAO
   EXIGENCIA
   COMPROVANTE
-  RERRATIFICACAO
-  ACEITE
   ATESTADO
+  EDITAL
+  PROPOSTA
   FOTO
   PLANILHA
-  OUTRO
 }
 
 /// Origem rastreável via FKs explícitas: exatamente uma preenchida.

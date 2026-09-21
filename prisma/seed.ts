@@ -591,7 +591,7 @@ async function seedDemo() {
 
     // Documentos do contrato, presentes em toda obra.
     if (await anexar(registro.id, `contrato_${num}.pdf`, TipoDocumento.CONTRATO, "Contrato assinado.")) totalDocumentos++;
-    if (await anexar(registro.id, `edital_${num}.pdf`, TipoDocumento.EDITAL, "Edital da licitação.")) totalDocumentos++;
+    if (await anexar(registro.id, `empenho_${num}.pdf`, TipoDocumento.EMPENHO, "Nota de empenho.")) totalDocumentos++;
 
     // Documentos da última medição e do setor onde ela está parada.
     const ultima = await prisma.medicao.findFirst({

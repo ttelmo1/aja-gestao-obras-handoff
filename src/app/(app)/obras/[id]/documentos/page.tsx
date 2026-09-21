@@ -92,9 +92,11 @@ export default async function DocumentosPage({
           "Não se aplica" está na linha, e o arquivo de outra tela vem marcado.
         */}
         <p className="mb-4 rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
-          A lista mostra todos os documentos esperados do contrato. Cada tipo é
-          anexado uma vez, use <strong>&ldquo;Outros&rdquo;</strong> caso queira
-          anexar mais de um.
+          A lista mostra todos os documentos esperados do contrato, na ordem do
+          processo. Cada tipo é anexado uma vez, use{" "}
+          <strong>&ldquo;Outros&rdquo;</strong> caso queira anexar mais de um. As{" "}
+          <strong>medições contratuais</strong> entram por aqui e também pela
+          tela de cada medição.
         </p>
 
         <FiltrosDaCentral

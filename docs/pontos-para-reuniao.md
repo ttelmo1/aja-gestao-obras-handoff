@@ -8,7 +8,11 @@ imediato, não retrabalho.
 Ordenados por custo de mudar, do mais caro para o mais barato.
 
 - **Status:** `🔴 aberto` · `🟡 assumido, a confirmar` · `🟢 confirmado`
-- **Última atualização:** 09/09/2026 — **apresentação do sistema à diretoria**
+- **Última atualização:** 21/09/2026 — a Fernanda mandou a **lista de
+  documentos do contrato** (dezessete itens) e pediu a **retirada do cadastro
+  de responsáveis**. Fecha a parte principal do ponto #18 e deixa três escolhas
+  de implementação para confirmar, registradas lá. Antes disso, em
+  09/09/2026, a **apresentação do sistema à diretoria**
   (Júnior, Diego e Henrique). Notas em
   [`raw/apresentacao-diretoria.md`](raw/apresentacao-diretoria.md). Fechou os
   pontos #2, #5 e #8, avançou #1, #3, #11 e #13, e abriu #18, #19 e #20. Os
@@ -38,7 +42,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 15 | Contratos de manutenção não são obras — parcela fixa em Nilópolis | 🟡 | Baixo |
 | 16 | Onde a tramitação mora: por medição ou por etapa | 🟡 | Médio |
 | 17 | Limite legal de acréscimo contratual | 🟡 | Baixo |
-| 18 | Quais são os documentos padrão da lista de conferência | 🔴 | Baixo |
+| 18 | Documentos padrão da lista de conferência — lista recebida em 21/09 | 🟡 | Baixo |
 | 19 | Cards de totais no topo do painel: ficam ou saem | 🔴 | Baixo |
 | 20 | Empresa ou operador no cartão da obra | 🟡 | Baixo |
 | 21 | Dois operadores na mesma obra: quem manda | 🟡 | Baixo |
@@ -818,59 +822,69 @@ aditivado — é assim que o limite legal é apurado.
 
 ---
 
-## 18. Quais são os documentos padrão da lista de conferência 🟡
+## 18. Os documentos padrão da lista de conferência 🟡 respondido, com três escolhas nossas
 
-**Pedido de 09/09/2026, respondido em parte em 17/09 e implementado.** A aba
-Documentos deixou de listar só o que foi anexado: agora lista **o que se
-espera**, com *não anexado* em vermelho e a data de quem já chegou. O que o
-Junior queria: *"acaba, não tem erro da pessoa esquecer"*.
+**Pedido em 09/09/2026, respondido em 17/09 (medição) e em 21/09 (contrato),
+tudo implementado.** A aba Documentos deixou de listar só o que foi anexado:
+lista **o que se espera**, com *não anexado* em vermelho e a data de quem já
+chegou. O que o Junior queria: *"acaba, não tem erro da pessoa esquecer"*.
 
 **Respondido pelo cliente em 17/09:**
 
-1. **A lista é a do próprio seletor de tipo**, os 20 que já estavam na tela,
-   na ordem em que ele já os mostrava — que é a ordem do processo. A Fernanda,
-   com a tela aberta: *"esses mesmo, listando eles e ficar em vermelho o que
-   não foi anexado"*.
-2. **Documento que não se aplica ganha botão.** Marcado, fica cinza e desce
-   para o fim da lista, com motivo opcional em texto livre. Sem isso, o
-   contrato sem garantia carregaria linha vermelha para sempre.
-3. **Mais de um arquivo por tipo continua valendo**, e a descrição continua
+1. **Documento que não se aplica ganha botão.** Marcado, fica cinza e desce
+   para o fim da lista, com motivo opcional em texto livre.
+2. **Mais de um arquivo por tipo continua valendo**, e a descrição continua
    existindo — *"porque 'outros' pode haver mais de um documento"*.
-4. **A medição tem lista própria**: *"listada em cada medição os documentos
-   necessários"*, no mesmo formato.
-
-5. **Quais são os documentos necessários da medição** — respondido em 17/09,
-   nesta ordem: **medição, memória de cálculo, cronograma, relatório
-   fotográfico, diário de obra e nota fiscal**, mais a linha "Outro" para o que
-   não tem tipo próprio. Deixou de ser suposição nossa.
-
-   Quatro deles **não existiam como tipo** e entraram no enum
-   (`MEMORIA_CALCULO`, `CRONOGRAMA`, `RELATORIO_FOTOGRAFICO`, `DIARIO_OBRA`) —
-   antes seriam anexados como "Planilha" ou "Foto". Os quatro ficam fora da
-   lista do contrato: são documentos de medição, e cobrá-los na obra deixaria
-   quatro linhas vermelhas eternas.
-
-   **Saíram da lista da medição:** processo / protocolo, ISS e planilha, que
-   estavam ali por leitura do mockup. Continuam anexáveis pela linha "Outro" e,
-   onde já existirem, aparecem marcados "fora da lista" — nenhum arquivo foi
-   perdido. **Vale confirmar o ISS**, que tem campo próprio no formulário da
+3. **A medição tem lista própria**: *"listada em cada medição os documentos
+   necessários"*, no mesmo formato — **medição, memória de cálculo, cronograma,
+   relatório fotográfico, diário de obra e nota fiscal**, mais "Outros".
+   Quatro deles não existiam como tipo e entraram no enum. **Saíram da lista da
+   medição** processo / protocolo, ISS e planilha, que estavam ali por leitura
+   do mockup. **Vale confirmar o ISS**, que tem campo próprio no formulário da
    medição e pode ter ficado de fora por esquecimento, não por decisão.
+
+**Respondido em 21/09 — a lista do contrato**, com dezessete itens na ordem em
+que a Fernanda mandou: termo de adjudicação, termo de homologação, empenho,
+contrato, publicação do extrato de contrato, apólice de seguro / risco
+engenharia, publicação de comissão de fiscalização, ordem de início, emissão de
+ART/RRT, emissão da CNO, medições contratuais, termo aditivo, apostilamento,
+termo de recebimento provisório, termo de recebimento definitivo, licenças e
+outros. Isso encerra a pergunta de 09/09 sobre ART, publicação e empenho, que
+não existiam como tipo.
 
 **Assumimos, e é o que falta confirmar:**
 
+- **Termo aditivo e apostilamento não são cobrados.** Vieram com "(em caso de
+  necessidade)", então têm linha mas ficam cinzas como *Opcional*, fora da
+  conta de "não anexado". Se o cliente quiser os dois em vermelho até serem
+  dispensados na mão, é trocar dois valores em
+  `src/modules/documentos/acervo.ts`.
+- **"Medições contratuais" é cumprida pelos boletins da tela da medição.** É
+  onde eles entram; a linha do contrato ficaria vermelha para sempre se
+  ignorasse isso. A alternativa seria a linha cobrar um arquivo consolidado,
+  anexado ao contrato — o que duplicaria papel.
+- **Três tipos antigos foram renomeados, não acrescentados**, porque nomeiam o
+  mesmo papel: "Garantia" virou **apólice de seguro / risco engenharia**,
+  "Rerratificação" virou **termo aditivo** e "Aceite" virou **termo de
+  recebimento provisório**. O que já estava anexado seguiu com o nome novo. Se
+  para o cliente "aceite" e "recebimento provisório" forem papéis diferentes,
+  é desfazer o terceiro rename e separar os dois.
+- **Tipos fora da lista continuam existindo** — edital, proposta, atestado/CAT,
+  despacho, parecer, protocolo, foto, planilha —, porque servem às outras
+  telas (tramitação, rerratificação). Não são cobrados no contrato e aparecem
+  marcados "fora da lista" onde já existirem. **Perguntar** se o cliente quer
+  vê-los sumir do seletor de tipo.
 - **A lista é igual para todo contratante.** Nenhuma fala sugeriu o contrário,
   e a dispensa por obra resolve a variação caso a caso. Se um dia variar por
   órgão, vira cadastro.
-- **ART, publicação e empenho**, citados por ele em 09/09, **não existem como
-  tipo** no seletor. Ou entram no enum, ou continuam entrando como "Outro"
-  com descrição. É a pergunta mais concreta que sobrou.
 
 **Ainda não decidido:** se a pendência documental deve **acender o farol**.
 Hoje não acende — o farol tem dois critérios (ponto #23) e nenhum olha
 documento. Com a lista no ar, é a pergunta natural seguinte.
 
-**Onde:** `src/modules/documentos/acervo.ts`, a aba Documentos e a tela da
-medição.
+**Onde:** `src/modules/documentos/rotulos.ts` (a lista e os rótulos),
+`src/modules/documentos/acervo.ts` (o que é cobrado), a aba Documentos e a tela
+da medição.
 
 ## 19. Cards de totais no topo do painel: ficam ou saem 🔴
 
@@ -1093,6 +1107,13 @@ Registrados para não voltarem à mesa:
   reais ao lado.
 - **O engenheiro em campo não acessa o sistema**: levanta em obra, o escritório
   lança. Aplicativo de campo foi mencionado como ideia futura, sem escopo.
+- **O cadastro de responsáveis sai do sistema** (21/09/2026, pedido da
+  Fernanda): o nome de quem assina a medição é digitado na própria medição. Os
+  nomes já lançados foram copiados na migration. O que se perde é a
+  padronização do nome — dois jeitos de escrever a mesma pessoa viram duas —,
+  e foi escolha do cliente.
+- **A lista de documentos do contrato veio do cliente** (21/09/2026), com
+  dezessete itens. As escolhas que fizemos ao implementá-la estão no ponto #18.
 - **Amarelo dez dias antes do vencimento da medição** (ponto #13, número dado
   pelo cliente em 09/09/2026 e confirmado duas vezes). É o único limite do farol
   que não é mais suposição nossa — já implementado, e medição que vence *hoje*

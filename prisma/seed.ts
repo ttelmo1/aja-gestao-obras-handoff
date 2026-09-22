@@ -478,16 +478,19 @@ async function seedDemo() {
       totalRerratificacoes++;
     }
 
-    // O cache do valor aditivado é reescrito a partir das aprovadas, igual
-    // faz a Server Action — a coluna nunca é digitada à mão.
+    // O cache do impacto — valor e prazo — é reescrito a partir das
+    // aprovadas, igual faz a Server Action: as colunas nunca são digitadas à
+    // mão.
     const todas = await prisma.rerratificacao.findMany({
       where: { obraId: registro.id },
       select: { status: true, valorImpactado: true, prazoAdicionalDias: true },
     });
+    const impacto = impactoDasRerratificacoes(todas);
     await prisma.obra.update({
       where: { id: registro.id },
       data: {
-        valorAditivado: impactoDasRerratificacoes(todas).valorAprovado.toFixed(2),
+        valorAditivado: impacto.valorAprovado.toFixed(2),
+        prazoAditivadoDias: impacto.prazoAdicionalDias,
       },
     });
 

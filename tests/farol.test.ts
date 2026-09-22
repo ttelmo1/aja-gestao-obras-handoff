@@ -9,7 +9,7 @@ function entrada(over: Partial<Parameters<typeof calcularFarol>[0]> = {}) {
   return {
     status: StatusObra.EM_ANDAMENTO,
     dataOrdemInicio: new Date("2026-01-01"),
-    dataPrevistaTermino: new Date("2026-12-31"),
+    dataTerminoVigente: new Date("2026-12-31"),
     diasParaMedicao: null,
     agora: AGORA,
     ...over,
@@ -30,7 +30,7 @@ describe("calcularFarol", () => {
     const r = calcularFarol(
       entrada({
         status: StatusObra.FINALIZADA,
-        dataPrevistaTermino: new Date("2026-01-01"),
+        dataTerminoVigente: new Date("2026-01-01"),
       }),
     );
     assert.equal(r.farol, Farol.VERDE);
@@ -45,7 +45,7 @@ describe("calcularFarol", () => {
 
   it("prazo vencido é vermelho", () => {
     const r = calcularFarol(
-      entrada({ dataPrevistaTermino: new Date("2026-05-01") }),
+      entrada({ dataTerminoVigente: new Date("2026-05-01") }),
     );
     assert.equal(r.farol, Farol.VERMELHO);
     assert.match(r.motivos.join(" "), /Prazo vencido/);
@@ -53,7 +53,7 @@ describe("calcularFarol", () => {
 
   it("prazo próximo é amarelo", () => {
     const r = calcularFarol(
-      entrada({ dataPrevistaTermino: new Date("2026-06-20") }),
+      entrada({ dataTerminoVigente: new Date("2026-06-20") }),
     );
     assert.equal(r.farol, Farol.AMARELO);
   });
@@ -93,7 +93,7 @@ describe("calcularFarol", () => {
   it("acumula os motivos quando mais de um critério acende", () => {
     const r = calcularFarol(
       entrada({
-        dataPrevistaTermino: new Date("2026-06-20"),
+        dataTerminoVigente: new Date("2026-06-20"),
         diasParaMedicao: -3,
       }),
     );
@@ -106,7 +106,7 @@ describe("calcularFarol", () => {
     // ordem de avaliação — o cartão precisa mostrar o segundo.
     const r = calcularFarol(
       entrada({
-        dataPrevistaTermino: new Date("2026-06-20"),
+        dataTerminoVigente: new Date("2026-06-20"),
         diasParaMedicao: -3,
       }),
     );

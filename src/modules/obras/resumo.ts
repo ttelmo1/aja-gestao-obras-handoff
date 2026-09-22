@@ -18,7 +18,7 @@ import {
   type SituacaoMedicao,
 } from "@/modules/medicoes/periodicidade";
 
-import { prazoTranscorrido, type Prazo } from "./prazo";
+import { prazoTranscorrido, terminoVigente, type Prazo } from "./prazo";
 
 /**
  * Tudo que o painel e a aba Resumo mostram sobre uma obra, num lugar só.
@@ -32,7 +32,10 @@ export type ObraParaResumo = {
   valorContratado: Decimal | string | number;
   valorAditivado: Decimal | string | number;
   dataOrdemInicio: Date | null;
+  /** Do contrato assinado — nunca reescrito por rerratificação. */
   dataPrevistaTermino: Date | null;
+  /** Prorrogação já aprovada, cache de `impactoDasRerratificacoes`. */
+  prazoAditivadoDias: number;
   periodicidadeMedicao: PeriodicidadeMedicao;
   intervaloMedicaoDias: number | null;
 };
@@ -40,6 +43,12 @@ export type ObraParaResumo = {
 export type ResumoObra = {
   financeiro: ResumoFinanceiro;
   prazo: Prazo | null;
+  /**
+   * Término contratual mais a prorrogação aprovada. Fica no resumo, e não só
+   * dentro de `prazo`, porque o cartão do painel mostra a data mesmo em obra
+   * sem ordem de início — onde `prazo` é `null`.
+   */
+  terminoVigente: Date | null;
   /** Vencimento da próxima medição; `null` quando não há prazo a cobrar. */
   medicao: SituacaoMedicao | null;
   farol: Farol;
@@ -58,10 +67,15 @@ export function resumoDaObra(
     obra.valorAditivado,
     medicoes,
   );
+  const vigente = terminoVigente(
+    obra.dataPrevistaTermino,
+    obra.prazoAditivadoDias,
+  );
   const prazo = prazoTranscorrido(
     obra.dataOrdemInicio,
     obra.dataPrevistaTermino,
     agora,
+    obra.prazoAditivadoDias,
   );
 
   // A lista chega ordenada por competência, mas não custa não depender disso:
@@ -83,7 +97,7 @@ export function resumoDaObra(
   const { farol, motivos, motivoPrincipal } = calcularFarol({
     status: obra.status,
     dataOrdemInicio: obra.dataOrdemInicio,
-    dataPrevistaTermino: obra.dataPrevistaTermino,
+    dataTerminoVigente: vigente,
     diasParaMedicao: medicao?.diasRestantes ?? null,
     agora,
   });
@@ -91,6 +105,7 @@ export function resumoDaObra(
   return {
     financeiro,
     prazo,
+    terminoVigente: vigente,
     medicao,
     farol,
     motivosFarol: motivos,

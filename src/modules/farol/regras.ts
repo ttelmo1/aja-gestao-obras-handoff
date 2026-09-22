@@ -48,7 +48,13 @@ export const LIMITES_PROVISORIOS = {
 export type EntradaFarol = {
   status: StatusObra;
   dataOrdemInicio: Date | null;
-  dataPrevistaTermino: Date | null;
+  /**
+   * Término que vale hoje — o do contrato mais o prazo adicional já aprovado
+   * em rerratificação. Vem de `terminoVigente`, em `modules/obras/prazo.ts`.
+   * Não é `Obra.dataPrevistaTermino` cru: obra prorrogada acenderia vermelho
+   * por um prazo que o órgão já estendeu.
+   */
+  dataTerminoVigente: Date | null;
   /**
    * Dias até o vencimento da próxima medição, negativo quando já venceu.
    * `null` quando não há prazo a cobrar — obra sem ordem de início,
@@ -114,9 +120,9 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
     niveis.push(n);
   };
 
-  // 1. Prazo contratual.
-  if (e.dataPrevistaTermino) {
-    const diasRestantes = diasEntre(agora, e.dataPrevistaTermino);
+  // 1. Prazo contratual, já com as prorrogações aprovadas.
+  if (e.dataTerminoVigente) {
+    const diasRestantes = diasEntre(agora, e.dataTerminoVigente);
     if (diasRestantes < 0) {
       subir(2, `Prazo vencido há ${Math.abs(diasRestantes)} dia(s).`);
     } else if (diasRestantes <= LIMITES_PROVISORIOS.diasAlertaPrazo) {

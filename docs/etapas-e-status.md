@@ -5,10 +5,13 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 - **Contrato:** R$ 10.000,00 / 140h (R$70/h), 4 parcelas.
 - **Orçado por módulo:** 143h (folga negativa de 3h — ver
   [`escopo-e-orcamento.md`](escopo-e-orcamento.md)).
-- **Última atualização:** 21/09/2026 — pedidos da Fernanda no período de teste:
-  o **cadastro de responsáveis saiu** (o nome de quem assina a medição virou
-  texto na própria medição) e a **lista de documentos do contrato passou a ser
-  a que o cliente mandou**, com dezessete itens. Itens 12 e 13 da etapa 13.
+- **Última atualização:** 22/09/2026 — bug relatado pela Fernanda: o **prazo
+  adicional da rerratificação aprovada passou a prorrogar a obra**, com o
+  término do contrato intocado e um "Término vigente" derivado ao lado. Item 14
+  da etapa 13. Antes disso, em 21/09/2026, outros dois pedidos dela no período
+  de teste: o **cadastro de responsáveis saiu** (o nome de quem assina a medição
+  virou texto na própria medição) e a **lista de documentos do contrato passou
+  a ser a que o cliente mandou**, com dezessete itens. Itens 12 e 13.
   Antes disso, em 09/09/2026, a **apresentação do sistema à diretoria** e os
   quatro itens firmes da etapa 13 implementados no mesmo dia: o avanço físico
   saiu do sistema, o responsável técnico virou operador com atribuição
@@ -1513,6 +1516,45 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     fala sugeriu o contrário, e a dispensa por obra ("não se aplica") cobre a
     variação caso a caso. Se um dia variar por órgão, vira cadastro — ponto #18.
 
+
+
+14. ✅ **Prazo adicional da rerratificação prorroga a obra — 22/09/2026.** Bug
+    relatado pela Fernanda no período de teste: rerratificação aprovada com 120
+    dias de prazo adicional não prorrogava nada, e a obra de Nilópolis seguia
+    "vencida há 60". O prazo era gravado na rerratificação e não chegava a
+    lugar nenhum — o valor tinha cache e propagação, o prazo não tinha nenhum
+    dos dois.
+
+    **`Obra.prazoAditivadoDias` entrou como cache**, espelhando `valorAditivado`
+    linha a linha: mesma função de recálculo, mesma transação, mesmo recorte de
+    só contar rerratificação **aprovada** — confirmado por ela: *"Isso só
+    quando estiver aprovada"*. A migration faz backfill das obras que já tinham
+    aprovadas, senão elas só se corrigiriam quando alguém mexesse nelas de novo.
+
+    **O término do contrato não é reescrito.** Pedido explícito dela: *"mas não
+    alterar o contrato"*. `dataPrevistaTermino` continua sendo a data assinada e
+    o **término vigente** é derivado dos dois (`terminoVigente`, em
+    `modules/obras/prazo.ts`), o que faz a prorrogação sumir sozinha se a
+    rerratificação sair de aprovada.
+
+    **O prazo adicional entra no total, não só no que falta.** Se entrasse só em
+    `diasRestantes`, obra prorrogada e em dia apareceria com o prazo
+    transcorrido acima de 100% — o denominador tem que crescer junto.
+
+    **"Término real" virou "Término efetivo".** Ela tinha preenchido o campo à
+    mão com o término prorrogado, e ele não entrava em conta nenhuma: no banco
+    `dataTerminoReal` é "a obra acabou neste dia", não "o término que vale
+    hoje". Ganhou dica de quando preencher e some da aba Resumo enquanto a obra
+    não terminou — a linha vazia era o convite a digitar ali o prorrogado.
+
+    **A ordenação do painel saiu do banco.** Era `orderBy dataPrevistaTermino`;
+    com a prorrogação, obra aditivada aparecia fora de ordem. O prazo aditivado
+    é contador de dias, não dá para somá-lo na data pelo `orderBy` — e são
+    quinze a vinte contratos, então a ordem por término vigente é feita em
+    memória, depois do resumo.
+
+    **O que isso não resolve:** suspensão de prazo continua sem modelagem. Ver
+    ponto #25 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 

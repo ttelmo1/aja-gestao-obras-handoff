@@ -9,7 +9,11 @@ import {
   lerFiltros,
   temFiltroAtivo,
 } from "@/modules/obras/filtros";
-import { prazoTranscorrido, terminoPrevisto } from "@/modules/obras/prazo";
+import {
+  prazoTranscorrido,
+  terminoPrevisto,
+  terminoVigente,
+} from "@/modules/obras/prazo";
 import { resumoDaObra, totaisDoPainel } from "@/modules/obras/resumo";
 
 const d = (iso: string) => new Date(`${iso}T12:00:00-03:00`);
@@ -51,6 +55,101 @@ describe("prazo contratual", () => {
   it("devolve null quando o término não é depois do início", () => {
     assert.equal(prazoTranscorrido(d("2026-05-10"), d("2026-05-10")), null);
     assert.equal(prazoTranscorrido(d("2026-05-10"), d("2026-05-01")), null);
+  });
+});
+
+/**
+ * Bug relatado pelo cliente em 22/09/2026: rerratificação com prazo adicional
+ * aprovado não prorrogava nada, e a obra continuava "vencida há 60 dias".
+ * Os números abaixo são os da tela que ele mandou.
+ */
+describe("prorrogação por rerratificação", () => {
+  it("soma o prazo aprovado ao término do contrato", () => {
+    const fim = terminoVigente(d("2026-07-24"), 120);
+    assert.equal(fim?.toISOString().slice(0, 10), "2026-11-21");
+  });
+
+  it("sem prazo aprovado, o vigente é o próprio término do contrato", () => {
+    const contrato = d("2026-07-24");
+    assert.equal(terminoVigente(contrato, 0), contrato);
+    assert.equal(terminoVigente(null, 120), null);
+  });
+
+  it("obra vencida volta a ficar em dia com o prazo aprovado", () => {
+    const semAditivo = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+    );
+    assert.ok(semAditivo);
+    assert.equal(semAditivo.vencido, true);
+    assert.equal(semAditivo.diasRestantes, -60);
+
+    const comAditivo = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+      120,
+    );
+    assert.ok(comAditivo);
+    assert.equal(comAditivo.vencido, false);
+    assert.equal(comAditivo.diasRestantes, 60);
+  });
+
+  it("o prazo adicional entra também no total, não só no que falta", () => {
+    // Senão obra prorrogada e em dia apareceria com o transcorrido acima de
+    // 100% — o denominador tem que crescer junto.
+    const p = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+      120,
+    );
+    assert.ok(p);
+    assert.equal(p.diasTotais, 480); // 360 do contrato + 120 aprovados
+    assert.ok(p.percentualTranscorrido < 100);
+  });
+
+  it("o término do contrato continua intocado — o cliente pediu isso", () => {
+    const p = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+      120,
+    );
+    assert.ok(p);
+    assert.equal(p.terminoPrevistoContrato.toISOString().slice(0, 10), "2026-07-24");
+    assert.equal(p.terminoVigente.toISOString().slice(0, 10), "2026-11-21");
+    assert.equal(p.prazoAditivadoDias, 120);
+  });
+
+  it("a obra prorrogada sai do vermelho no farol", () => {
+    const obra = {
+      status: "EM_ANDAMENTO" as const,
+      valorContratado: "10349390.52",
+      valorAditivado: "2529161.37",
+      dataOrdemInicio: d("2025-07-29"),
+      dataPrevistaTermino: d("2026-07-24"),
+      prazoAditivadoDias: 0,
+      periodicidadeMedicao: "MENSAL" as const,
+      intervaloMedicaoDias: null,
+    };
+    const medicoes = [{ valorMedido: "500000", competencia: d("2026-09-20") }];
+
+    const antes = resumoDaObra(obra, medicoes, d("2026-09-22"));
+    assert.equal(antes.farol, "VERMELHO");
+    assert.match(antes.motivosFarol.join(" "), /Prazo vencido/);
+
+    const depois = resumoDaObra(
+      { ...obra, prazoAditivadoDias: 120 },
+      medicoes,
+      d("2026-09-22"),
+    );
+    assert.equal(depois.farol, "VERDE");
+    assert.equal(
+      depois.terminoVigente?.toISOString().slice(0, 10),
+      "2026-11-21",
+    );
   });
 });
 
@@ -138,6 +237,7 @@ describe("resumo da obra", () => {
     valorAditivado: "0",
     dataOrdemInicio: d("2026-03-10"),
     dataPrevistaTermino: d("2026-12-31"),
+    prazoAditivadoDias: 0,
     periodicidadeMedicao: "MENSAL" as const,
     intervaloMedicaoDias: null,
   };
@@ -189,6 +289,7 @@ describe("totais do painel", () => {
         valorAditivado: "0",
         dataOrdemInicio: d("2026-01-01"),
         dataPrevistaTermino: d("2026-12-31"),
+        prazoAditivadoDias: 0,
         periodicidadeMedicao: "MENSAL" as const,
         intervaloMedicaoDias: null,
       },

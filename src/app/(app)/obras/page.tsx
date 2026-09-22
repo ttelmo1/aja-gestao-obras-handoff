@@ -37,7 +37,11 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
   const [registros, operadores, contratantes] = await Promise.all([
     prisma.obra.findMany({
       where: condicaoDeBusca(filtros),
-      orderBy: [{ dataPrevistaTermino: "asc" }, { criadoEm: "desc" }],
+      // Ordem só de desempate: a ordenação que vale é por término vigente e
+      // acontece em memória, depois do resumo — o prazo aditivado é um
+      // contador de dias, não dá para somá-lo na data pelo `orderBy`. São
+      // quinze a vinte contratos, cabe de sobra.
+      orderBy: [{ criadoEm: "desc" }],
       select: {
         id: true,
         codigo: true,
@@ -48,6 +52,7 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
         valorAditivado: true,
         dataOrdemInicio: true,
         dataPrevistaTermino: true,
+        prazoAditivadoDias: true,
         periodicidadeMedicao: true,
         intervaloMedicaoDias: true,
         contratante: { select: { nome: true } },
@@ -79,10 +84,18 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
     }),
   ]);
 
-  const obras: ObraNoPainel[] = registros.map((o) => ({
-    ...o,
-    resumo: resumoDaObra(o, o.medicoes, agora),
-  }));
+  const obras: ObraNoPainel[] = registros
+    .map((o) => ({
+      ...o,
+      resumo: resumoDaObra(o, o.medicoes, agora),
+    }))
+    // Quem vence primeiro aparece primeiro, contando a prorrogação já
+    // aprovada. Obra sem término vai para o fim: não tem vencimento a cobrar.
+    .sort((a, b) => {
+      const ta = a.resumo.terminoVigente?.getTime() ?? Infinity;
+      const tb = b.resumo.terminoVigente?.getTime() ?? Infinity;
+      return ta - tb;
+    });
 
   const visiveis = filtrarPorFarol(
     obras.map((o) => ({ ...o, farol: o.resumo.farol })),

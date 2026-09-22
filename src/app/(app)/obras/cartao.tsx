@@ -33,6 +33,7 @@ export type ObraNoPainel = {
   operadorObservacao: string | null;
   dataOrdemInicio: Date | null;
   dataPrevistaTermino: Date | null;
+  prazoAditivadoDias: number;
   resumo: ResumoObra;
 };
 
@@ -95,8 +96,16 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
           </Dado>
         )}
         <Dado rotulo="Início">{formatarData(obra.dataOrdemInicio) || "—"}</Dado>
+        {/* Término vigente, não o do contrato: é a data que decide o farol do
+            cartão, e mostrar a outra ao lado de um alerta de prazo já
+            prorrogado só confunde. O contrato aparece na aba Resumo. */}
         <Dado rotulo="Término previsto">
-          {formatarData(obra.dataPrevistaTermino) || "—"}
+          {formatarData(obra.resumo.terminoVigente) || "—"}
+          {obra.prazoAditivadoDias > 0 && (
+            <span className="block text-[11px] font-normal text-[var(--muted)]">
+              +{obra.prazoAditivadoDias} dia(s) de rerratificação
+            </span>
+          )}
         </Dado>
         <Dado rotulo="Última medição">{formatarData(medicao?.ultima)}</Dado>
         <Dado rotulo="Próxima medição">

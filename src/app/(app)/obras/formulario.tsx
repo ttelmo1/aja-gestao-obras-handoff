@@ -204,7 +204,15 @@ export function FormularioObra({
             />
           </Campo>
 
-          <Campo id="dataTerminoReal" rotulo="Término real">
+          {/* "Real" virava o campo onde se digitava o término prorrogado à
+              mão (relato do cliente em 22/09/2026) — e ele não entra em conta
+              nenhuma. A prorrogação é derivada do prazo aprovado em
+              rerratificação; aqui é só a conclusão de fato. */}
+          <Campo
+            id="dataTerminoReal"
+            rotulo="Término efetivo"
+            dica="Só no fim: quando a obra terminou de fato. Prorrogação de prazo entra pela rerratificação."
+          >
             <input
               id="dataTerminoReal"
               name="dataTerminoReal"

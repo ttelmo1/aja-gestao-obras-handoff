@@ -187,7 +187,17 @@ model Obra {
   dataAssinatura      DateTime?
   dataOrdemInicio     DateTime?
   prazoDias           Int?
+  /// Término do contrato assinado. NÃO muda quando uma rerratificação
+  /// prorroga a obra — o prazo aprovado entra em `prazoAditivadoDias` e o
+  /// término que vale hoje é derivado dos dois (modules/obras/prazo.ts).
   dataPrevistaTermino DateTime?
+  /// Cache da soma do prazo adicional das rerratificações APROVADAS, em dias.
+  /// Mesmo papel de `valorAditivado`: a regra mora em
+  /// modules/rerratificacoes/calculos.ts e a coluna é reescrita a cada
+  /// alteração de rerratificação.
+  prazoAditivadoDias  Int       @default(0)
+  /// Data em que a obra terminou de fato, preenchida à mão no fim. Não é o
+  /// término prorrogado — esse é derivado, ver `prazoAditivadoDias`.
   dataTerminoReal     DateTime?
 
   status StatusObra @default(PLANEJAMENTO)

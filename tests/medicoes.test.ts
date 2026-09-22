@@ -147,6 +147,7 @@ describe("resumo da obra com medições", () => {
     valorAditivado: "0",
     dataOrdemInicio: d("2026-01-10"),
     dataPrevistaTermino: d("2026-12-31"),
+    prazoAditivadoDias: 0,
     periodicidadeMedicao: "MENSAL" as const,
     intervaloMedicaoDias: null,
   };

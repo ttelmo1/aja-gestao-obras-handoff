@@ -69,15 +69,22 @@ const CAMPOS = [
 type Tx = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 /**
- * Reescreve `Obra.valorAditivado` a partir das rerratificações aprovadas.
+ * Reescreve o cache do impacto das rerratificações aprovadas na obra —
+ * `valorAditivado` e `prazoAditivadoDias`.
  *
- * A coluna é cache — a regra mora em `modules/rerratificacoes/calculos.ts`.
+ * As colunas são cache — a regra mora em `modules/rerratificacoes/calculos.ts`.
  * Diferente do farol, que envelhece sozinho com o tempo e por isso é sempre
- * recalculado na leitura, o valor aditivado só muda quando alguém mexe numa
- * rerratificação. Recalcular aqui, na mesma transação da escrita, mantém a
- * coluna sempre correta e evita uma consulta a mais em cada cartão do painel.
+ * recalculado na leitura, o impacto aprovado só muda quando alguém mexe numa
+ * rerratificação. Recalcular aqui, na mesma transação da escrita, mantém as
+ * colunas sempre corretas e evita uma consulta a mais em cada cartão do painel.
+ *
+ * O prazo entrou junto com o valor em 22/09/2026: até então ele era gravado na
+ * rerratificação e não chegava a lugar nenhum, e obra prorrogada continuava
+ * contando os dias pelo término do contrato assinado — aparecia como vencida.
+ * `dataPrevistaTermino` continua intocada; quem soma é
+ * `terminoVigente` em `modules/obras/prazo.ts`.
  */
-async function recalcularAditivado(tx: Tx, obraId: string): Promise<void> {
+async function recalcularImpacto(tx: Tx, obraId: string): Promise<void> {
   const rerratificacoes = await tx.rerratificacao.findMany({
     where: { obraId },
     select: { status: true, valorImpactado: true, prazoAdicionalDias: true },
@@ -85,7 +92,10 @@ async function recalcularAditivado(tx: Tx, obraId: string): Promise<void> {
   const impacto = impactoDasRerratificacoes(rerratificacoes);
   await tx.obra.update({
     where: { id: obraId },
-    data: { valorAditivado: impacto.valorAprovado.toFixed(2) },
+    data: {
+      valorAditivado: impacto.valorAprovado.toFixed(2),
+      prazoAditivadoDias: impacto.prazoAdicionalDias,
+    },
   });
 }
 
@@ -136,7 +146,7 @@ export async function salvarRerratificacao(
 
       await prisma.$transaction(async (tx) => {
         await tx.rerratificacao.update({ where: { id }, data: novo });
-        await recalcularAditivado(tx, obraId);
+        await recalcularImpacto(tx, obraId);
         await registrar(
           {
             ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
@@ -173,7 +183,7 @@ export async function salvarRerratificacao(
             ),
         },
       });
-      await recalcularAditivado(tx, obraId);
+      await recalcularImpacto(tx, obraId);
       await registrar(
         {
           ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
@@ -240,7 +250,7 @@ export async function excluirRerratificacao(
   const { ip } = await origemDaRequisicao();
   await prisma.$transaction(async (tx) => {
     await tx.rerratificacao.delete({ where: { id } });
-    await recalcularAditivado(tx, rerratificacao.obraId);
+    await recalcularImpacto(tx, rerratificacao.obraId);
     await registrar(
       {
         ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },

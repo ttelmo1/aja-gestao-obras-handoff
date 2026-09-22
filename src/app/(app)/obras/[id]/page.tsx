@@ -28,7 +28,7 @@ export default async function ResumoObraPage({
   if (!obra) notFound();
 
   const agora = new Date();
-  const { financeiro, prazo, medicao, farol, motivosFarol } = resumoDaObra(
+  const { financeiro, prazo, terminoVigente, medicao, farol, motivosFarol } = resumoDaObra(
     obra,
     obra.medicoes,
     agora,
@@ -116,15 +116,28 @@ export default async function ResumoObraPage({
             {formatarData(obra.dataOrdemInicio) || "—"}
           </Dado>
           <Dado rotulo="Prazo">{obra.prazoDias ? `${obra.prazoDias} dias` : "—"}</Dado>
+          {/* Do contrato assinado. Rerratificação não mexe nesta data — o
+              prazo aprovado aparece na linha de baixo. */}
           <Dado rotulo="Término previsto">
             {formatarData(obra.dataPrevistaTermino) || "—"}
           </Dado>
-          <Dado rotulo="Término real">
-            {formatarData(obra.dataTerminoReal) || "—"}
+          <Dado rotulo="Término vigente">
+            {formatarData(terminoVigente) || "—"}
+            {obra.prazoAditivadoDias > 0 && (
+              <span className="block text-[11px] font-normal text-[var(--muted)]">
+                +{obra.prazoAditivadoDias} dia(s) de rerratificação
+              </span>
+            )}
           </Dado>
           <Dado rotulo="Dias restantes">
             {prazo ? (prazo.vencido ? `vencido há ${-prazo.diasRestantes}` : prazo.diasRestantes) : "—"}
           </Dado>
+          {/* Só quando a obra acabou de fato: em obra em andamento a linha
+              vazia convidava a digitar ali o término prorrogado, que é
+              derivado e vive acima. */}
+          {obra.dataTerminoReal && (
+            <Dado rotulo="Término efetivo">{formatarData(obra.dataTerminoReal)}</Dado>
+          )}
         </Dados>
 
         {obra.observacoes && (

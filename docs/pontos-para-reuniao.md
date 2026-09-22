@@ -47,6 +47,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 20 | Empresa ou operador no cartão da obra | 🟡 | Baixo |
 | 21 | Dois operadores na mesma obra: quem manda | 🟡 | Baixo |
 | 22 | Filtro do painel: responsável virou operador | 🟡 | Baixo |
+| 25 | Prazo adicional da rerratificação prorroga a obra | 🟢 | ~~Baixo~~ — resolvido |
 
 ---
 
@@ -1084,6 +1085,47 @@ acende — o farol tem dois critérios (ponto #23) e nenhum olha pagamento.
 entrarmos em prazo por obra — passa a ser campo no contrato, migration e
 recálculo do farol.
 
+## 25. Prazo adicional da rerratificação prorroga a obra 🟢 decidido
+
+**Bug relatado pela Fernanda em 22/09/2026:** *"Quando adicionada uma
+rerratificação e colocando prazo adicional, o prazo não é acrescentado e fica
+constando como vencida."* Na tela que ela mandou: Nilópolis, término previsto
+24/07/2026, 120 dias aprovados, e mesmo assim "vencido há 60".
+
+**Causa:** `prazoAdicionalDias` era gravado na rerratificação e não chegava a
+lugar nenhum. O valor tinha cache (`Obra.valorAditivado`) e propagação; o prazo
+não tinha nenhum dos dois. Dias restantes e farol continuavam contando pelo
+término do contrato assinado.
+
+**Ela também preencheu "Término real" à mão** com 21/11/2026 e nada mudou — o
+campo era decorativo, gravado e exibido, sem entrar em conta nenhuma. Aí estava
+a divergência de vocabulário: no banco `dataTerminoReal` foi modelado como "a
+obra acabou neste dia"; ela usava como "o término que vale hoje". Obra
+prorrogada e ainda em execução tem término vigente, não tem término real.
+
+**Perguntado e respondido (22/09/2026):** propusemos manter o término previsto
+do contrato intocado e criar um **Término vigente** ao lado, que soma o prazo
+aprovado, com os dias restantes e o farol contando por ele. Resposta dela:
+*"Desse jeito está ótimo. Isso só quando estiver aprovada."*
+
+**Como ficou:**
+
+- `dataPrevistaTermino` continua sendo a do contrato assinado e **não é
+  reescrita** por rerratificação — pedido explícito: *"mas não alterar o
+  contrato"*.
+- `Obra.prazoAditivadoDias` é cache da soma do prazo das **aprovadas**, mesmo
+  papel e mesmo lugar de escrita do `valorAditivado`. Rerratificação em
+  tramitação não prorroga nada, confirmado por ela na mesma conversa.
+- O término vigente é derivado (`modules/obras/prazo.ts`), some sozinho se a
+  rerratificação sair de aprovada, e alimenta dias restantes, percentual
+  transcorrido e farol.
+- **"Término real" virou "Término efetivo"**, com dica de quando preencher, e
+  só aparece na aba Resumo depois que a obra termina de fato.
+
+**O que fica em aberto:** suspensão de prazo continua sem modelagem — quando
+existir, entra pelo mesmo caminho do prazo aditivado, não por data digitada à
+mão.
+
 ## Pontos já resolvidos 🟢
 
 Registrados para não voltarem à mesa:
@@ -1117,6 +1159,9 @@ Registrados para não voltarem à mesa:
   nomes já lançados foram copiados na migration. O que se perde é a
   padronização do nome — dois jeitos de escrever a mesma pessoa viram duas —,
   e foi escolha do cliente.
+- **Prazo adicional aprovado prorroga a obra** (ponto #25, 22/09/2026): o
+  término do contrato não muda, entra um "Término vigente" derivado, e só
+  rerratificação **aprovada** conta.
 - **A lista de documentos do contrato veio do cliente** (21/09/2026), com
   dezessete itens. As escolhas que fizemos ao implementá-la estão no ponto #18.
 - **Amarelo dez dias antes do vencimento da medição** (ponto #13, número dado

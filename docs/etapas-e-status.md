@@ -1556,6 +1556,33 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     **O que isso não resolve:** suspensão de prazo continua sem modelagem. Ver
     ponto #25 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
+15. 🟡 **Pagamento de medição e pedidos de 24/09/2026.** Pedidos do Junior
+    pela Fernanda, com as escolhas de implementação no ponto #26 de
+    [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
+
+    | Pedido | Estado |
+    | --- | --- |
+    | "Só pagamento pendente" vira "Pagamento pendente" | ✅ |
+    | Marcar como paga na linha, com data; data sai do formulário | ✅ |
+    | Quadro "Pagamento pendente" no painel (valor e quantidade) | ✅ |
+    | O quadro abre a lista de pagamentos pendentes | ✅ `/obras/pagamentos-pendentes` |
+    | Observação do contrato no cartão do painel | ✅ |
+    | Suspensão de prazo na aba Rerratificações | ⬜ bloqueado — ponto #26 |
+
+    **O pagamento tem um caminho só.** A regra mora em
+    `modules/medicoes/pagamento.ts`: o botão aparece em Protocolada e
+    Aprovada, "Desfazer" volta para Aprovada, e o formulário recusa virar ou
+    deixar de ser Paga. Salvar pelo formulário uma medição já paga preserva a
+    data — era o risco de tirar o campo da tela.
+
+    **O quadro e a lista partem das mesmas obras.** A consulta do painel saiu
+    da página para `app/(app)/obras/painel.ts`, e o filtro do painel vai na
+    URL da lista (`filtrosParaQuery`). Sem isso, a soma da lista divergiria
+    do quadro que levou o usuário até ela.
+
+    **Em aberto:** o que conta como pendente (hoje Rascunho, Protocolada e
+    Aprovada — ponto #24) e toda a suspensão de prazo.
+
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o

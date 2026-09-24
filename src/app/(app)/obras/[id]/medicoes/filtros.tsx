@@ -40,7 +40,7 @@ export function FiltrosDasMedicoes({
           value="pendente"
           defaultChecked={filtros.pendentes}
         />
-        Só pagamento pendente
+        Pagamento pendente
       </label>
 
       <div className="flex gap-2">

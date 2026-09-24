@@ -7,7 +7,7 @@ import { Dado } from "@/components/ui/dados";
 import { Alerta } from "@/components/ui/formulario";
 import { Celula, Linha, Tabela } from "@/components/ui/tabela";
 import { Vazio } from "@/components/ui/vazio";
-import { formatarCompetencia, formatarData } from "@/lib/date-br";
+import { dataParaIso, formatarCompetencia, formatarData } from "@/lib/date-br";
 import { exigirPermissao } from "@/lib/guarda";
 import { formatarBRL, formatarPercentual, somar } from "@/lib/money";
 import { pode } from "@/modules/auth/permissoes";
@@ -18,12 +18,14 @@ import {
   pagamentoPendente,
   temFiltroMedicao,
 } from "@/modules/medicoes/filtros";
+import { podeMarcarComoPaga } from "@/modules/medicoes/pagamento";
 import { resumoDaObra } from "@/modules/obras/resumo";
 
 import { carregarDocumentos, carregarMedicoes, carregarObra } from "../dados";
 import { medicaoParaExcluir } from "./exclusao";
 import { FiltrosDasMedicoes } from "./filtros";
 import { BotaoExcluirMedicao } from "./formulario";
+import { PagamentoDaMedicao } from "./pagamento";
 
 export const metadata = { title: "Medições" };
 export const dynamic = "force-dynamic";
@@ -59,6 +61,7 @@ export default async function MedicoesPage({
   if (!obra) notFound();
 
   const agora = new Date();
+  const hoje = dataParaIso(agora);
   const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes, agora);
   const estourou = financeiro.saldoAMedir.isNegative();
   const documentosPorMedicao = contarDocumentosPorMedicao(documentos);
@@ -122,6 +125,9 @@ export default async function MedicoesPage({
             ) : (
               <span className="tabular text-[var(--danger)]">
                 {formatarBRL(valorPendente)}
+                <span className="block text-[11px] font-normal text-[var(--muted)]">
+                  {pendentes.length} medição(ões)
+                </span>
               </span>
             )}
           </Dado>
@@ -182,6 +188,7 @@ export default async function MedicoesPage({
               "ISS",
               "Responsável",
               "Situação",
+              "Pagamento",
               "Docs",
               ...(podeExcluir ? [""] : []),
             ]}
@@ -216,6 +223,16 @@ export default async function MedicoesPage({
                 <Celula apagada>{m.responsavelNome ?? "—"}</Celula>
                 <Celula>
                   <BadgeMedicao status={m.status} />
+                </Celula>
+                <Celula>
+                  <PagamentoDaMedicao
+                    medicaoId={m.id}
+                    paga={m.status === "PAGA"}
+                    dataPagamento={m.dataPagamento ? formatarData(m.dataPagamento) : null}
+                    podeMarcar={podeMarcarComoPaga(m.status)}
+                    podeEditar={podeEditar}
+                    hoje={hoje}
+                  />
                 </Celula>
                 <Celula tabular apagada>
                   {m._count.documentos}

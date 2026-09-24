@@ -8,7 +8,10 @@ imediato, não retrabalho.
 Ordenados por custo de mudar, do mais caro para o mais barato.
 
 - **Status:** `🔴 aberto` · `🟡 assumido, a confirmar` · `🟢 confirmado`
-- **Última atualização:** 21/09/2026 — a Fernanda mandou a **lista de
+- **Última atualização:** 24/09/2026 — pedidos do Junior pela Fernanda sobre
+  **pagamento de medição** e **suspensão de prazo** (ponto #26). O pagamento
+  entrou em dev com duas escolhas nossas a confirmar; a suspensão espera
+  resposta. Antes disso, em 21/09/2026, a Fernanda mandou a **lista de
   documentos do contrato** (dezessete itens) e pediu a **retirada do cadastro
   de responsáveis**. Fecha a parte principal do ponto #18 e deixa três escolhas
   de implementação para confirmar, registradas lá. Antes disso, em
@@ -47,7 +50,9 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 20 | Empresa ou operador no cartão da obra | 🟡 | Baixo |
 | 21 | Dois operadores na mesma obra: quem manda | 🟡 | Baixo |
 | 22 | Filtro do painel: responsável virou operador | 🟡 | Baixo |
+| 24 | Pagamento pendente: o prazo, e o que conta como pendente | 🟡 | Baixo |
 | 25 | Prazo adicional da rerratificação prorroga a obra | 🟢 | ~~Baixo~~ — resolvido |
+| 26 | Pedidos de 24/09: pagamento na linha, quadro no painel, suspensão de prazo | 🟡 | Baixo a alto |
 
 ---
 
@@ -1124,7 +1129,67 @@ aprovado, com os dias restantes e o farol contando por ele. Resposta dela:
 
 **O que fica em aberto:** suspensão de prazo continua sem modelagem — quando
 existir, entra pelo mesmo caminho do prazo aditivado, não por data digitada à
-mão.
+mão. Pedida em 24/09/2026 — ver ponto #26.
+
+## 26. Pedidos de 24/09/2026 — pagamento e suspensão 🟡 parcialmente implementado
+
+Pedidos do Junior, pela Fernanda, por mensagem em 24/09/2026:
+
+1. *"Só pagamento pendente"* vira **"Pagamento pendente"**, mantendo a caixa.
+2. **Suspensão de prazo** na aba Rerratificações — *"depois irá voltar de onde
+   parou, prazo não vai contar"*.
+3. **Marcar como paga na própria linha** da medição, com a data ao lado; a
+   data sai do formulário.
+4. **Quadro no painel** com o valor somado e a quantidade de medições com
+   pagamento pendente; o quadro abre **uma lista** — obra, medição, valor —
+   *"apenas informativa"*: alterar continua dentro da medição.
+5. A **observação da aba Contrato** também no cartão do painel.
+
+**Implementado em dev (24/09/2026):** 1, 3, 4 e 5. Escolhas nossas, a
+confirmar com a tela aberta:
+
+- **O botão "Marcar como paga" só aparece em Protocolada e Aprovada.** Rascunho
+  ainda não tem protocolo, e o formulário exige protocolo a partir de
+  Protocolada — pagar um rascunho seria um atalho em volta dessa trava.
+- **"Desfazer" volta a medição para Aprovada** e apaga a data. O sistema não
+  guarda a situação anterior ao pagamento, e pagamento só sai depois do aceite.
+- **O formulário não escolhe mais "Paga"** nem mexe na data. Medição paga
+  mostra a situação fixa. Dois caminhos para o mesmo dado eram o risco: o
+  formulário salvo sem o campo apagaria a data gravada pelo botão.
+- **Data do pagamento no futuro é recusada.**
+- **O quadro e a lista seguem os filtros do painel**, para a soma bater.
+- **Observação no cartão limitada a três linhas**; o texto inteiro fica ao
+  passar o mouse e na aba Resumo.
+
+**Em aberto — muda número que a diretoria vê:** o que conta como pendente.
+Hoje é Rascunho, Protocolada e Aprovada (ponto #24). A primeira mensagem dela
+foi *"não é referente ao nosso pagamento pendente"*, o que sugere que para eles
+seja só a aprovada. A mesma regra decide o quadro, a lista e o filtro — é uma
+linha em `pagamentoPendente` (`modules/medicoes/filtros.ts`).
+
+A planilha que ela mostrou como modelo tem **uma quarta coluna**, cortada na
+foto. Perguntar o que é antes de acrescentar.
+
+**Suspensão de prazo — não implementada, bloqueada.** Não vira mais uma
+rerratificação: rerratificação tem percentual obrigatório, valor ou prazo,
+numeração e entra na variação do contrato; suspensão tem início e retomada.
+Fica como registro próprio, mostrado dentro da aba Rerratificações. Antes de
+modelar, perguntar:
+
+- O registro tem **data de início e de retomada**? A retomada pode ficar em
+  aberto enquanto não se sabe?
+- Precisa de **aprovação**, como a rerratificação, ou vale pela data?
+- **Durante a suspensão, o ciclo de medição para também?** Se não parar, a
+  obra fica vermelha com "Medição vencida" sem poder medir.
+- Suspensa é o mesmo que a situação **Paralisada**, que hoje deixa o farol
+  sempre vermelho?
+
+**Custo de mudar:** baixo para as escolhas do pagamento. A suspensão é
+migration nova e mexe em prazo, farol e painel. Enquanto a retomada estiver em
+aberto o término anda um dia por dia, então não cabe em coluna cache como o
+prazo aditivado — é calculada na leitura. E obra cujo término já foi corrigido
+à mão por causa de suspensão contaria os dias duas vezes: listar as obras cujo
+término gravado difere de ordem de início + prazo e revisar uma a uma.
 
 ## Pontos já resolvidos 🟢
 

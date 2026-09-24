@@ -7,15 +7,19 @@ import { formatarBRL } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
 import {
-  condicaoDeBusca,
-  filtrarPorFarol,
+  pagamentosPendentes,
+  totalPendente,
+} from "@/modules/medicoes/pagamento";
+import {
+  filtrosParaQuery,
   lerFiltros,
   temFiltroAtivo,
 } from "@/modules/obras/filtros";
-import { resumoDaObra, totaisDoPainel } from "@/modules/obras/resumo";
+import { totaisDoPainel } from "@/modules/obras/resumo";
 
-import { CartaoObra, type ObraNoPainel } from "./cartao";
+import { CartaoObra } from "./cartao";
 import { BarraDeFiltros } from "./filtros";
+import { carregarObrasDoPainel } from "./painel";
 
 export const metadata = { title: "Painel de Obras" };
 export const dynamic = "force-dynamic";
@@ -34,42 +38,8 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
   const filtros = lerFiltros(await searchParams);
   const agora = new Date();
 
-  const [registros, operadores, contratantes] = await Promise.all([
-    prisma.obra.findMany({
-      where: condicaoDeBusca(filtros),
-      // Ordem só de desempate: a ordenação que vale é por término vigente e
-      // acontece em memória, depois do resumo — o prazo aditivado é um
-      // contador de dias, não dá para somá-lo na data pelo `orderBy`. São
-      // quinze a vinte contratos, cabe de sobra.
-      orderBy: [{ criadoEm: "desc" }],
-      select: {
-        id: true,
-        codigo: true,
-        objeto: true,
-        numeroContrato: true,
-        status: true,
-        valorContratado: true,
-        valorAditivado: true,
-        dataOrdemInicio: true,
-        dataPrevistaTermino: true,
-        prazoAditivadoDias: true,
-        periodicidadeMedicao: true,
-        intervaloMedicaoDias: true,
-        contratante: { select: { nome: true } },
-        operadorId: true,
-        operador: { select: { nome: true } },
-        operadorAssumidoEm: true,
-        operadorLiberadoEm: true,
-        operadorObservacao: true,
-        medicoes: {
-          select: {
-            valorMedido: true,
-            competencia: true,
-            dataMedicao: true,
-          },
-        },
-      },
-    }),
+  const [visiveis, operadores, contratantes] = await Promise.all([
+    carregarObrasDoPainel(filtros, agora),
     // Operadores são usuários do sistema, não o cadastro de responsáveis:
     // quem assume a obra é quem está logado.
     prisma.usuario.findMany({
@@ -84,24 +54,9 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
     }),
   ]);
 
-  const obras: ObraNoPainel[] = registros
-    .map((o) => ({
-      ...o,
-      resumo: resumoDaObra(o, o.medicoes, agora),
-    }))
-    // Quem vence primeiro aparece primeiro, contando a prorrogação já
-    // aprovada. Obra sem término vai para o fim: não tem vencimento a cobrar.
-    .sort((a, b) => {
-      const ta = a.resumo.terminoVigente?.getTime() ?? Infinity;
-      const tb = b.resumo.terminoVigente?.getTime() ?? Infinity;
-      return ta - tb;
-    });
-
-  const visiveis = filtrarPorFarol(
-    obras.map((o) => ({ ...o, farol: o.resumo.farol })),
-    filtros.farol,
-  );
   const totais = totaisDoPainel(visiveis);
+  const pendente = totalPendente(pagamentosPendentes(visiveis));
+  const podeVerLista = pode(usuario.perfil, "medicao", "ver");
 
   return (
     <div>
@@ -142,6 +97,19 @@ export default async function ObrasPage({ searchParams }: PageProps<"/obras">) {
           rotulo="Medições atrasadas"
           valor={String(totais.medicoesAtrasadas)}
           detalhe="Ciclo de medição vencido"
+        />
+        {/* Pedido de 24/09/2026: valor somado e quantidade, e o quadro abre
+            a lista — "apenas informativa"; alterar continua na medição. */}
+        <Indicador
+          rotulo="Pagamento pendente"
+          valor={formatarBRL(pendente.valor)}
+          detalhe={`${pendente.quantidade} medição(ões)${podeVerLista ? " · ver lista" : ""}`}
+          alerta={pendente.quantidade > 0}
+          href={
+            podeVerLista
+              ? `/obras/pagamentos-pendentes${filtrosParaQuery(filtros)}`
+              : undefined
+          }
         />
       </div>
 

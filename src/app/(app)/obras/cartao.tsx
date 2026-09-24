@@ -34,6 +34,8 @@ export type ObraNoPainel = {
   dataOrdemInicio: Date | null;
   dataPrevistaTermino: Date | null;
   prazoAditivadoDias: number;
+  /** Observações da aba Contrato — aparecem no pé do cartão (24/09/2026). */
+  observacoes: string | null;
   resumo: ResumoObra;
 };
 
@@ -140,6 +142,23 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
           <span className="tabular">{formatarBRL(financeiro.saldoAMedir)}</span>
         </Dado>
       </div>
+
+      {/* Pedido do Junior em 24/09/2026: a observação do contrato também no
+          cartão. Três linhas no máximo, para os cartões não ficarem com
+          alturas muito diferentes; o texto inteiro fica no `title` e na aba
+          Resumo. */}
+      {obra.observacoes && (
+        <div className="mt-3 border-t border-[var(--border)] pt-3">
+          <Dado rotulo="Observações">
+            <span
+              title={obra.observacoes}
+              className="line-clamp-3 font-normal whitespace-pre-line"
+            >
+              {obra.observacoes}
+            </span>
+          </Dado>
+        </div>
+      )}
     </Link>
   );
 }

@@ -63,6 +63,22 @@ export function temFiltroAtivo(f: Filtros): boolean {
 }
 
 /**
+ * Caminho inverso de `lerFiltros`: os filtros de volta em query string, com
+ * `?` na frente, ou vazio quando não há filtro. Leva o filtro do painel para a
+ * lista de pagamentos pendentes, que precisa somar as mesmas obras do quadro.
+ */
+export function filtrosParaQuery(f: Filtros): string {
+  const q = new URLSearchParams();
+  if (f.busca) q.set("busca", f.busca);
+  if (f.status) q.set("status", f.status);
+  if (f.farol) q.set("farol", f.farol);
+  if (f.operadorId) q.set("operador", f.operadorId);
+  if (f.contratanteId) q.set("contratante", f.contratanteId);
+  const s = q.toString();
+  return s ? `?${s}` : "";
+}
+
+/**
  * Condição de banco para tudo, **menos o farol**.
  *
  * O farol não é coluna confiável para filtrar: ele é derivado do prazo, das

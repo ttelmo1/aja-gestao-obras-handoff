@@ -65,8 +65,19 @@ Sequência prevista: Rascunho → Protocolada → Aprovada → Paga (ou Rejeitad
 
 - [ ] **MED-24** Salvar como **Protocolada** sem número de protocolo → recusa
   com a mensagem sobre o processo precisar ser encontrado no órgão.
-- [ ] **MED-25** Salvar como **Paga** sem data de pagamento → "Medição marcada
-  como paga precisa da data do pagamento."
+- [ ] **MED-25** O formulário não oferece **Paga** na situação, nem o campo de
+  data do pagamento. Medição já paga mostra "Paga em dd/mm/aaaa", fixo.
+- [ ] **MED-25a** Na lista, medição **Protocolada** ou **Aprovada** mostra
+  "Marcar como paga"; clicar abre a data (hoje), confirmar → situação **Paga**
+  e a data na coluna Pagamento. Rascunho e Rejeitada não mostram o botão.
+- [ ] **MED-25b** Data do pagamento depois de hoje → "A data do pagamento não
+  pode ser depois de hoje."
+- [ ] **MED-25c** "Desfazer" numa medição paga → volta para **Aprovada**, sem
+  data. Os dois passos aparecem na aba Histórico.
+- [ ] **MED-25d** Editar e salvar uma medição **Paga** (mudar a observação,
+  por exemplo) → a data do pagamento continua lá.
+- [ ] **MED-25e** A caixa do filtro diz **"Pagamento pendente"** e a faixa de
+  indicadores mostra o valor e a quantidade de medições pendentes.
 - [ ] **MED-26** Excluir medição em **Rascunho** → apaga.
 - [ ] **MED-27** Excluir medição **Protocolada** → recusa, orientando a marcar
   como Rejeitada.
@@ -76,9 +87,8 @@ Sequência prevista: Rascunho → Protocolada → Aprovada → Paga (ou Rejeitad
   **Paga**, editá-la de volta para **Rascunho**, e então excluí-la. Hoje isso
   passa — dois passos contornam a trava do MED-27. Registrar o que acontece: é
   a máquina de estados que a etapa 12 vai desenhar.
-- [ ] **MED-30** ⚠️ Pular direto de **Rascunho** para **Paga** (com data de
-  pagamento) → hoje é aceito. Confirmar com o cliente se alguma transição deve
-  ser proibida de fato. 🎯
+- [ ] **MED-30** Pular direto de **Rascunho** para **Paga** → não é mais
+  possível: o botão só aparece a partir de Protocolada (24/09/2026).
 
 ## Periodicidade e "próxima medição"
 

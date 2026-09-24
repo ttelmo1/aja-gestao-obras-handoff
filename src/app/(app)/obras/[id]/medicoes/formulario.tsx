@@ -162,20 +162,38 @@ export function FormularioMedicao({
         </legend>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <Campo id="status" rotulo="Situação">
-            <select
+          {/*
+            "Paga" não se escolhe aqui: o pagamento é marcado pelo botão na
+            lista de medições, que grava a data junto (24/09/2026). Medição já
+            paga mostra a situação fixa e leva o valor num campo oculto.
+          */}
+          {padrao?.status === "PAGA" ? (
+            <Campo
               id="status"
-              name="status"
-              defaultValue={padrao?.status ?? "RASCUNHO"}
-              className={classeInput}
+              rotulo="Situação"
+              dica="Para mudar, desfaça o pagamento na lista de medições."
             >
-              {STATUS_MEDICAO.map((s) => (
-                <option key={s} value={s}>
-                  {ROTULOS_STATUS_MEDICAO[s]}
-                </option>
-              ))}
-            </select>
-          </Campo>
+              <input type="hidden" name="status" value="PAGA" />
+              <p id="status" className="py-2.5 text-sm font-bold text-[var(--success)]">
+                Paga{padrao.dataPagamento && ` em ${formatarDataCampo(padrao.dataPagamento)}`}
+              </p>
+            </Campo>
+          ) : (
+            <Campo id="status" rotulo="Situação">
+              <select
+                id="status"
+                name="status"
+                defaultValue={padrao?.status ?? "RASCUNHO"}
+                className={classeInput}
+              >
+                {STATUS_MEDICAO.filter((s) => s !== "PAGA").map((s) => (
+                  <option key={s} value={s}>
+                    {ROTULOS_STATUS_MEDICAO[s]}
+                  </option>
+                ))}
+              </select>
+            </Campo>
+          )}
 
           <Campo id="protocolo" rotulo="Nº do protocolo">
             <input
@@ -197,20 +215,6 @@ export function FormularioMedicao({
             />
           </Campo>
         </div>
-
-        <Campo
-          id="dataPagamento"
-          rotulo="Data do pagamento"
-          dica="Obrigatória quando a situação for Paga."
-        >
-          <input
-            id="dataPagamento"
-            name="dataPagamento"
-            type="date"
-            defaultValue={padrao?.dataPagamento ?? ""}
-            className={classeInput}
-          />
-        </Campo>
       </fieldset>
 
       <fieldset className="flex flex-col gap-4 border-t border-[var(--border)] pt-5">
@@ -304,6 +308,12 @@ export function FormularioMedicao({
       </div>
     </form>
   );
+}
+
+/** "2026-09-24" do campo de data vira "24/09/2026". */
+function formatarDataCampo(iso: string): string {
+  const [ano, mes, dia] = iso.split("-");
+  return `${dia}/${mes}/${ano}`;
 }
 
 /** O que a janela de confirmação mostra, já formatado no servidor. */

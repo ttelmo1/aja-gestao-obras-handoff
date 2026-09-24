@@ -166,6 +166,21 @@ A trilha é **append-only**: ninguém edita, ninguém apaga.
 - [ ] **PNL-80** 🎯 Perguntar também: quem pode exportar? (hoje todos os perfis
   — ver [ACS-48](01-acesso.md))
 
+## Pagamento pendente e observação no cartão (24/09/2026)
+
+- [ ] **PNL-81** O quadro **Pagamento pendente** mostra o valor somado e a
+  quantidade de medições, em vermelho quando há pendência.
+- [ ] **PNL-82** Clicar no quadro abre **Pagamentos pendentes**: obra, medição,
+  competência, situação e valor. A soma no título bate com o quadro.
+- [ ] **PNL-83** Com um filtro no painel (contratante, por exemplo), o quadro e
+  a lista mostram só as obras do filtro, e "Voltar ao painel" mantém o filtro.
+- [ ] **PNL-84** Na lista, o nome da obra leva à aba Medições e o número leva à
+  medição. A lista não edita nada.
+- [ ] **PNL-85** Marcar uma medição como paga → ela sai da lista e o quadro
+  diminui.
+- [ ] **PNL-86** Obra com observação na aba Contrato → a observação aparece no
+  pé do cartão, em até três linhas; o texto inteiro aparece ao passar o mouse.
+
 ## Fechamento da sessão
 
 - [ ] **PNL-90** Nenhuma tela mostrou stack trace, erro 500 ou tela em branco.

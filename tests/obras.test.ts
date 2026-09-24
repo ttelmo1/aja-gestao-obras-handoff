@@ -6,6 +6,7 @@ import {
   condicaoDeBusca,
   filtrarPorFarol,
   FILTROS_VAZIOS,
+  filtrosParaQuery,
   lerFiltros,
   temFiltroAtivo,
 } from "@/modules/obras/filtros";
@@ -194,6 +195,19 @@ describe("filtros do painel", () => {
     const f = lerFiltros({ status: "INVENTADO", farol: "ROXO" });
     assert.equal(f.status, null);
     assert.equal(f.farol, null);
+  });
+
+  it("filtros voltam à URL e são lidos de novo iguais", () => {
+    assert.equal(filtrosParaQuery(FILTROS_VAZIOS), "");
+    const f = lerFiltros({
+      busca: "Paiol 015",
+      status: "EM_ANDAMENTO",
+      farol: "VERMELHO",
+      operador: "u1",
+      contratante: "c1",
+    });
+    const q = new URLSearchParams(filtrosParaQuery(f));
+    assert.deepEqual(lerFiltros(Object.fromEntries(q)), f);
   });
 
   it("aceita status e farol válidos", () => {

@@ -1556,7 +1556,7 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     **O que isso não resolve:** suspensão de prazo continua sem modelagem. Ver
     ponto #25 de [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
-15. 🟡 **Pagamento de medição e pedidos de 24/09/2026.** Pedidos do Junior
+15. ✅ **Pagamento de medição e pedidos de 24/09/2026.** Pedidos do Junior
     pela Fernanda, com as escolhas de implementação no ponto #26 de
     [`pontos-para-reuniao.md`](pontos-para-reuniao.md).
 
@@ -1567,7 +1567,8 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     | Quadro "Pagamento pendente" no painel (valor e quantidade) | ✅ |
     | O quadro abre a lista de pagamentos pendentes | ✅ `/obras/pagamentos-pendentes` |
     | Observação do contrato no cartão do painel | ✅ |
-    | Suspensão de prazo na aba Rerratificações | ⬜ bloqueado — ponto #26 |
+    | Suspensão de prazo na aba Contrato | ✅ 25/09/2026 |
+    | Documentos da medição só na medição; "Medições contratuais" sai da lista do contrato | ✅ 25/09/2026 |
 
     **O pagamento tem um caminho só.** A regra mora em
     `modules/medicoes/pagamento.ts`: o botão aparece em Protocolada e
@@ -1580,8 +1581,22 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     URL da lista (`filtrosParaQuery`). Sem isso, a soma da lista divergiria
     do quadro que levou o usuário até ela.
 
-    **Em aberto:** o que conta como pendente (hoje Rascunho, Protocolada e
-    Aprovada — ponto #24) e toda a suspensão de prazo.
+    **Suspensão de prazo é calculada na leitura.** Com a data final em branco
+    ela cresce um dia por dia, então não cabe em coluna cache como o prazo
+    aditivado. A regra mora em `modules/obras/suspensao.ts` e vale igual para
+    o prazo e para o ciclo de medição: os dias suspensos empurram o
+    vencimento, e os **dias restantes** passam a ser dias de prazo, não de
+    calendário — senão preencher a data final no meio da suspensão faria o
+    número pular. O farol recebe esse número (`diasParaTermino`).
+
+    **Documento de medição fica na medição.** `ehDeMedicao`, em
+    `modules/documentos/acervo.ts`, tira da aba Documentos o que foi anexado
+    na medição ou no percurso dela, e a linha "Medições contratuais" saiu da
+    lista do contrato. As mensagens de exclusão passaram a apontar as medições.
+
+    **Em aberto:** a leitura de *"pode deixar só 'Medições'"* (renomeamos o
+    tipo), o farol durante a suspensão e se suspensa é o mesmo que Paralisada
+    — ponto #26.
 
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 

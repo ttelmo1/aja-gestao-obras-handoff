@@ -28,7 +28,16 @@ export default async function ResumoObraPage({
   if (!obra) notFound();
 
   const agora = new Date();
-  const { financeiro, prazo, terminoVigente, medicao, farol, motivosFarol } = resumoDaObra(
+  const {
+    financeiro,
+    prazo,
+    terminoVigente,
+    diasSuspensos,
+    suspensaDesde,
+    medicao,
+    farol,
+    motivosFarol,
+  } = resumoDaObra(
     obra,
     obra.medicoes,
     agora,
@@ -45,6 +54,14 @@ export default async function ResumoObraPage({
   return (
     <div className="flex flex-col gap-4">
       {criada && <Alerta tipo="sucesso">Obra cadastrada.</Alerta>}
+
+      {suspensaDesde && (
+        <p className="rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
+          <strong>Prazo suspenso desde {formatarData(suspensaDesde)}.</strong>{" "}
+          Prazo e ciclo das medições estão parados e voltam a contar na data
+          final da suspensão, na aba Contrato.
+        </p>
+      )}
 
       <Card titulo="Indicadores da obra">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -126,6 +143,11 @@ export default async function ResumoObraPage({
             {obra.prazoAditivadoDias > 0 && (
               <span className="block text-[11px] font-normal text-[var(--muted)]">
                 +{obra.prazoAditivadoDias} dia(s) de rerratificação
+              </span>
+            )}
+            {diasSuspensos > 0 && (
+              <span className="block text-[11px] font-normal text-[var(--muted)]">
+                +{diasSuspensos} dia(s) de suspensão
               </span>
             )}
           </Dado>

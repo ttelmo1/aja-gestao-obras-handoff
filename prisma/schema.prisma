@@ -216,6 +216,7 @@ model Obra {
   medicoes        Medicao[]
   etapas          EtapaObra[]
   rerratificacoes Rerratificacao[]
+  suspensoes      SuspensaoPrazo[]
   documentos      Documento[]
   dispensas       DocumentoDispensado[]
 
@@ -223,6 +224,32 @@ model Obra {
   @@index([contratanteId])
   @@index([operadorId])
   @@index([dataPrevistaTermino])
+}
+
+/// Suspensão do prazo contratual — pedido do Junior pela Fernanda em
+/// 24/09/2026: *"enquanto ela estiver suspensa tudo para, e depois volta a
+/// contar da data final da suspensão"*. Tudo é o prazo da obra e o ciclo das
+/// medições. Uma obra pode ter mais de uma, sem sobreposição.
+///
+/// Nada disto vira coluna cache na obra, ao contrário do prazo aditivado:
+/// enquanto `dataFim` está em branco a suspensão cresce um dia por dia, e uma
+/// coluna envelheceria à meia-noite. A conta mora em
+/// modules/obras/suspensao.ts e é feita na leitura.
+model SuspensaoPrazo {
+  id     String @id @default(uuid())
+  obraId String
+  obra   Obra   @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  /// O prazo para de contar neste dia.
+  dataInicio  DateTime
+  /// O prazo volta a contar neste dia. Em branco = a obra continua suspensa.
+  dataFim     DateTime?
+  observacoes String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([obraId, dataInicio])
 }
 
 // ============================================================

@@ -56,6 +56,13 @@ export type EntradaFarol = {
    */
   dataTerminoVigente: Date | null;
   /**
+   * Dias de prazo que faltam, já descontada a suspensão — `Prazo.diasRestantes`.
+   * Quando vem, manda sobre a data: com suspensão, dias de calendário até o
+   * término e dias de prazo restantes deixam de ser o mesmo número, e o que o
+   * cliente pediu é que o prazo fique parado enquanto a obra está suspensa.
+   */
+  diasParaTermino?: number | null;
+  /**
    * Dias até o vencimento da próxima medição, negativo quando já venceu.
    * `null` quando não há prazo a cobrar — obra sem ordem de início,
    * finalizada, ou periodicidade personalizada sem intervalo.
@@ -121,8 +128,10 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
   };
 
   // 1. Prazo contratual, já com as prorrogações aprovadas.
-  if (e.dataTerminoVigente) {
-    const diasRestantes = diasEntre(agora, e.dataTerminoVigente);
+  const diasRestantes =
+    e.diasParaTermino ??
+    (e.dataTerminoVigente ? diasEntre(agora, e.dataTerminoVigente) : null);
+  if (diasRestantes !== null) {
     if (diasRestantes < 0) {
       subir(2, `Prazo vencido há ${Math.abs(diasRestantes)} dia(s).`);
     } else if (diasRestantes <= LIMITES_PROVISORIOS.diasAlertaPrazo) {

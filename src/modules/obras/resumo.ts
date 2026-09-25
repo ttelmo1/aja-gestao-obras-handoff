@@ -19,6 +19,11 @@ import {
 } from "@/modules/medicoes/periodicidade";
 
 import { prazoTranscorrido, terminoVigente, type Prazo } from "./prazo";
+import {
+  diasSuspensosDesde,
+  suspensaoEmCurso,
+  type Suspensao,
+} from "./suspensao";
 
 /**
  * Tudo que o painel e a aba Resumo mostram sobre uma obra, num lugar só.
@@ -38,6 +43,8 @@ export type ObraParaResumo = {
   prazoAditivadoDias: number;
   periodicidadeMedicao: PeriodicidadeMedicao;
   intervaloMedicaoDias: number | null;
+  /** Suspensões de prazo. Ausente = nenhuma. */
+  suspensoes?: Suspensao[];
 };
 
 export type ResumoObra = {
@@ -49,6 +56,10 @@ export type ResumoObra = {
    * sem ordem de início — onde `prazo` é `null`.
    */
   terminoVigente: Date | null;
+  /** Dias de suspensão somados ao término vigente. */
+  diasSuspensos: number;
+  /** Início da suspensão que vale hoje; `null` se a obra não está suspensa. */
+  suspensaDesde: Date | null;
   /** Vencimento da próxima medição; `null` quando não há prazo a cobrar. */
   medicao: SituacaoMedicao | null;
   farol: Farol;
@@ -67,15 +78,23 @@ export function resumoDaObra(
     obra.valorAditivado,
     medicoes,
   );
+  const suspensoes = obra.suspensoes ?? [];
+  // Da ordem de início: suspensão só existe depois dela (a tela recusa antes),
+  // e obra sem ordem de início não tem prazo correndo para suspender.
+  const diasSuspensos = obra.dataOrdemInicio
+    ? diasSuspensosDesde(suspensoes, obra.dataOrdemInicio, agora)
+    : 0;
   const vigente = terminoVigente(
     obra.dataPrevistaTermino,
     obra.prazoAditivadoDias,
+    diasSuspensos,
   );
   const prazo = prazoTranscorrido(
     obra.dataOrdemInicio,
     obra.dataPrevistaTermino,
     agora,
     obra.prazoAditivadoDias,
+    suspensoes,
   );
 
   // A lista chega ordenada por competência, mas não custa não depender disso:
@@ -91,6 +110,7 @@ export function resumoDaObra(
     intervaloMedicaoDias: obra.intervaloMedicaoDias,
     dataOrdemInicio: obra.dataOrdemInicio,
     ultimaMedicaoEm,
+    suspensoes,
     agora,
   });
 
@@ -98,6 +118,7 @@ export function resumoDaObra(
     status: obra.status,
     dataOrdemInicio: obra.dataOrdemInicio,
     dataTerminoVigente: vigente,
+    diasParaTermino: prazo?.diasRestantes,
     diasParaMedicao: medicao?.diasRestantes ?? null,
     agora,
   });
@@ -106,6 +127,8 @@ export function resumoDaObra(
     financeiro,
     prazo,
     terminoVigente: vigente,
+    diasSuspensos,
+    suspensaDesde: suspensaoEmCurso(suspensoes, agora)?.dataInicio ?? null,
     medicao,
     farol,
     motivosFarol: motivos,

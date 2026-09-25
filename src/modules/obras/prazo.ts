@@ -1,5 +1,11 @@
 import { adicionarDias, diasEntre } from "@/lib/date-br";
 
+import {
+  diasSuspensosAteHoje,
+  diasSuspensosDesde,
+  type Suspensao,
+} from "./suspensao";
+
 /**
  * Prazo contratual da obra.
  *
@@ -7,8 +13,9 @@ import { adicionarDias, diasEntre } from "@/lib/date-br";
  * de término — e elas divergem na prática, porque a contagem começa na ordem
  * de início, que sai depois da assinatura. Aqui a data prevista é **derivada**
  * da ordem de início mais o prazo; o campo no banco guarda o resultado para
- * consulta e para o cliente poder corrigir à mão quando houver suspensão de
- * prazo (algo que o sistema ainda não modela — ver etapa 6).
+ * consulta e para o cliente poder corrigir à mão. Suspensão de prazo não
+ * entra aqui: desde 24/09/2026 ela tem registro próprio e é somada no término
+ * vigente (`modules/obras/suspensao.ts`).
  */
 export function terminoPrevisto(
   dataOrdemInicio: Date | null,
@@ -20,7 +27,7 @@ export function terminoPrevisto(
 
 /**
  * Término que vale hoje: o do contrato assinado mais o prazo adicional das
- * rerratificações já aprovadas.
+ * rerratificações já aprovadas, mais os dias de suspensão.
  *
  * Existe porque `dataPrevistaTermino` **não** é reescrita quando um aditivo
  * prorroga a obra — pedido do cliente em 22/09/2026: "mas não alterar o
@@ -32,14 +39,20 @@ export function terminoPrevisto(
  * talvez vença na data original. Quem faz esse recorte é
  * `impactoDasRerratificacoes`, e o resultado chega aqui pela coluna cache
  * `Obra.prazoAditivadoDias`.
+ *
+ * Os dias de suspensão vêm de `diasSuspensosDesde`, contados da ordem de
+ * início. Enquanto a suspensão está aberta, eles crescem um por dia e o
+ * término anda junto — é o "tudo para" do cliente.
  */
 export function terminoVigente(
   dataPrevistaTermino: Date | null,
   prazoAditivadoDias: number = 0,
+  diasSuspensos: number = 0,
 ): Date | null {
   if (!dataPrevistaTermino) return null;
-  if (prazoAditivadoDias <= 0) return dataPrevistaTermino;
-  return adicionarDias(dataPrevistaTermino, prazoAditivadoDias);
+  const extra = Math.max(0, prazoAditivadoDias) + Math.max(0, diasSuspensos);
+  if (extra === 0) return dataPrevistaTermino;
+  return adicionarDias(dataPrevistaTermino, extra);
 }
 
 export type Prazo = {
@@ -52,9 +65,11 @@ export type Prazo = {
   vencido: boolean;
   /** Dias de prorrogação já aprovados que entraram nesta conta. */
   prazoAditivadoDias: number;
+  /** Dias de suspensão que empurraram o término. */
+  diasSuspensos: number;
   /** Contrato assinado — o que a tela mostra como "Término previsto". */
   terminoPrevistoContrato: Date;
-  /** Previsto + prorrogação: a data contra a qual tudo aqui é medido. */
+  /** Previsto + prorrogação + suspensão: a data contra a qual tudo aqui é medido. */
   terminoVigente: Date;
 };
 
@@ -66,25 +81,39 @@ export type Prazo = {
  * Tudo é medido contra o término **vigente**, não contra o do contrato: o
  * prazo adicional aprovado entra tanto nos dias restantes quanto no total, ou
  * obra prorrogada e em dia apareceria com o percentual passando de 100.
+ *
+ * A suspensão é diferente: ela **não** aumenta o prazo, só o pausa. Os dias
+ * suspensos saem dos decorridos e não entram no total, para o percentual e os
+ * dias restantes ficarem parados enquanto a obra está suspensa e voltarem a
+ * andar na retomada.
  */
 export function prazoTranscorrido(
   dataOrdemInicio: Date | null,
   dataPrevistaTermino: Date | null,
   agora: Date = new Date(),
   prazoAditivadoDias: number = 0,
+  suspensoes: Suspensao[] = [],
 ): Prazo | null {
   if (!dataOrdemInicio || !dataPrevistaTermino) return null;
 
+  const diasSuspensos = diasSuspensosDesde(suspensoes, dataOrdemInicio, agora);
   // `?? dataPrevistaTermino` só existe para o TypeScript: a data já foi
   // checada acima, e `terminoVigente` só devolve nulo quando ela é nula.
   const vigente =
-    terminoVigente(dataPrevistaTermino, prazoAditivadoDias) ?? dataPrevistaTermino;
+    terminoVigente(dataPrevistaTermino, prazoAditivadoDias, diasSuspensos) ??
+    dataPrevistaTermino;
 
-  const diasTotais = diasEntre(dataOrdemInicio, vigente);
+  const diasTotais = diasEntre(dataOrdemInicio, vigente) - diasSuspensos;
   if (diasTotais <= 0) return null;
 
-  const diasDecorridos = diasEntre(dataOrdemInicio, agora);
-  const diasRestantes = diasEntre(agora, vigente);
+  const diasDecorridos =
+    diasEntre(dataOrdemInicio, agora) -
+    diasSuspensosAteHoje(suspensoes, dataOrdemInicio, agora);
+  // Dias de prazo, não de calendário: com suspensão já lançada com data
+  // final, o término vigente fica lá na frente, mas o que falta de prazo é o
+  // que não foi consumido — e fica parado enquanto a obra está suspensa. Sem
+  // suspensão, os dois números são o mesmo.
+  const diasRestantes = diasTotais - diasDecorridos;
   const bruto = (diasDecorridos / diasTotais) * 100;
 
   return {
@@ -95,6 +124,7 @@ export function prazoTranscorrido(
     diasRestantes,
     vencido: diasRestantes < 0,
     prazoAditivadoDias: Math.max(0, prazoAditivadoDias),
+    diasSuspensos,
     terminoPrevistoContrato: dataPrevistaTermino,
     terminoVigente: vigente,
   };

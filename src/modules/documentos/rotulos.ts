@@ -20,7 +20,10 @@ export const ROTULOS_TIPO_DOCUMENTO: Record<TipoDocumento, string> = {
   ORDEM_INICIO: "Ordem de início",
   ART_RRT: "Emissão de ART / RRT",
   CNO: "Emissão da CNO",
-  MEDICAO: "Medições contratuais",
+  // Era "Medições contratuais" enquanto a linha estava na lista do contrato.
+  // Saiu dela em 24/09/2026 e o tipo ficou só na medição — "pode deixar só
+  // 'Medições'", nas palavras da Fernanda. A confirmar: ponto #26.
+  MEDICAO: "Medições",
   TERMO_ADITIVO: "Termo aditivo",
   APOSTILAMENTO: "Apostilamento",
   RECEBIMENTO_PROVISORIO: "Termo de recebimento provisório",
@@ -64,7 +67,8 @@ export const TIPOS_POR_CONTEXTO: Record<
   TipoDocumento[]
 > = {
   // A lista de documentos do contrato, dita pelo cliente em 21/09/2026 e
-  // nesta ordem. `OUTRO` fecha a lista: é a linha por onde entra o que não
+  // nesta ordem — sem "Medições contratuais", que saiu em 24/09/2026 porque
+  // documento de medição fica só na medição. `OUTRO` fecha a lista: é a linha por onde entra o que não
   // tem tipo próprio, e a única que se repete sem limite.
   obra: [
     TipoDocumento.TERMO_ADJUDICACAO,
@@ -77,7 +81,6 @@ export const TIPOS_POR_CONTEXTO: Record<
     TipoDocumento.ORDEM_INICIO,
     TipoDocumento.ART_RRT,
     TipoDocumento.CNO,
-    TipoDocumento.MEDICAO,
     TipoDocumento.TERMO_ADITIVO,
     TipoDocumento.APOSTILAMENTO,
     TipoDocumento.RECEBIMENTO_PROVISORIO,

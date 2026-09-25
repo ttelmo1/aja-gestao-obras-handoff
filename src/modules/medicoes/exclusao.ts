@@ -44,5 +44,5 @@ export function contarDocumentosPorMedicao(
 /** Motivo para recusar a exclusão, ou `null` quando ela pode seguir. */
 export function bloqueioExclusaoMedicao(documentosAtivos: number): string | null {
   if (documentosAtivos === 0) return null;
-  return `Esta medição tem ${documentosAtivos} documento(s) ativo(s). Exclua-os na aba Documentos antes de apagá-la.`;
+  return `Esta medição tem ${documentosAtivos} documento(s) ativo(s). Exclua-os na própria medição, no bloco de documentos, antes de apagá-la.`;
 }

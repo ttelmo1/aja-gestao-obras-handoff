@@ -109,9 +109,11 @@
   definitivo, licenças e outros.
   - **Termo aditivo e apostilamento vieram com "(em caso de necessidade)"**:
     têm linha, mas não são cobrados — contrato sem aditivo não está em falta.
-  - **"Medições contratuais" é cumprida pelos boletins anexados em cada
-    medição**, que é onde eles entram. Cobrar no contrato um arquivo que mora
-    em outra tela deixaria a linha vermelha para sempre.
+  - ~~"Medições contratuais" é cumprida pelos boletins anexados em cada
+    medição~~ — **[AJUSTADO 24/09] saiu da lista do contrato**: documento de
+    medição fica só na medição (*"de medição ficar em medição"*), e a aba
+    Documentos da obra deixou de mostrar os arquivos das medições. A lista do
+    contrato ficou com dezesseis itens; o tipo passou a se chamar "Medições".
   - A lista da **medição** (17/09) não muda: medição, memória de cálculo,
     cronograma, relatório fotográfico, diário de obra, nota fiscal e outros.
 - Arquivos podem ser grandes (mencionado até ~300MB), mas **isso não é um problema técnico

@@ -6,6 +6,7 @@ import {
   acervoDaMedicao,
   acervoDoContrato,
   aceitaMaisDeUm,
+  ehDeMedicao,
   ehDoContrato,
   ehOpcional,
   ESPERADOS_DA_MEDICAO,
@@ -162,8 +163,9 @@ describe("acervo do contrato", () => {
 });
 
 describe("os documentos necessários de cada tela", () => {
-  // A lista que a Fernanda mandou em 21/09/2026, na ordem em que ela veio.
-  it("o contrato cobra os dezessete documentos do cliente, na ordem", () => {
+  // A lista que a Fernanda mandou em 21/09/2026, na ordem em que ela veio —
+  // menos "Medições contratuais", que saiu em 24/09/2026.
+  it("o contrato cobra os dezesseis documentos do cliente, na ordem", () => {
     assert.deepEqual(ESPERADOS_DA_OBRA, [
       TipoDocumento.TERMO_ADJUDICACAO,
       TipoDocumento.TERMO_HOMOLOGACAO,
@@ -175,7 +177,6 @@ describe("os documentos necessários de cada tela", () => {
       TipoDocumento.ORDEM_INICIO,
       TipoDocumento.ART_RRT,
       TipoDocumento.CNO,
-      TipoDocumento.MEDICAO,
       TipoDocumento.TERMO_ADITIVO,
       TipoDocumento.APOSTILAMENTO,
       TipoDocumento.RECEBIMENTO_PROVISORIO,
@@ -198,7 +199,7 @@ describe("os documentos necessários de cada tela", () => {
       documentos: [],
       dispensados: [],
     });
-    // Dezessete linhas, catorze cobradas: os três opcionais ficam de fora.
+    // Dezesseis linhas, treze cobradas: os três opcionais ficam de fora.
     assert.equal(linhas.length, ESPERADOS_DA_OBRA.length);
     assert.equal(resumoDoAcervo(linhas).cobrados, ESPERADOS_DA_OBRA.length - 3);
   });
@@ -244,24 +245,45 @@ describe("os documentos necessários de cada tela", () => {
     }
   });
 
-  // Item 11 da lista. Os boletins são anexados na tela de cada medição — a
-  // linha do contrato ficaria vermelha para sempre se ignorasse isso.
-  it("o boletim anexado na medição cumpre a linha “Medições contratuais”", () => {
+  // "De medição ficar em medição" — 24/09/2026. Vale para o que foi anexado
+  // na tela da medição e para o que entrou no percurso dela pelos setores.
+  it("documento de medição não aparece na aba Documentos do contrato", () => {
     const linhas = acervoDoContrato({
       esperados: ESPERADOS_DA_OBRA,
       documentos: [
         doc("b", TipoDocumento.MEDICAO, "2026-06-01", { medicao: { numero: 3 } }),
+        doc("n", TipoDocumento.NOTA_FISCAL, "2026-06-02", { medicao: { numero: 3 } }),
+        doc("t", TipoDocumento.DESPACHO, "2026-06-03", {
+          movimento: { medicaoId: "m3", setorDestino: { nome: "Fiscalização" } },
+        }),
       ],
       dispensados: [],
     });
-    const medicao = linhaDe(linhas, TipoDocumento.MEDICAO);
+    const ids = linhas.map((l) => l.documento?.id).filter(Boolean);
+    assert.deepEqual(ids, []);
+    assert.equal(linhaDe(linhas, TipoDocumento.MEDICAO), undefined);
+    assert.equal(resumoDoAcervo(linhas).anexados, 0);
+  });
 
-    assert.equal(medicao?.classe, "ESPERADO");
-    assert.equal(medicao?.situacao, "ANEXADO");
-    assert.equal(medicao?.documento?.id, "b");
-    // Um contrato tem várias medições: a linha continua aceitando arquivo.
-    assert.ok(medicao?.aceitaInclusao);
-    assert.equal(resumoDoAcervo(linhas).anexados, 1);
+  it("documento de rerratificação continua aparecendo, como de outra tela", () => {
+    const linhas = acervoDoContrato({
+      esperados: ESPERADOS_DA_OBRA,
+      documentos: [
+        doc("r", TipoDocumento.TERMO_ADITIVO, "2026-06-01", {
+          rerratificacao: { numero: 1 },
+        }),
+      ],
+      dispensados: [],
+    });
+    const r = linhas.find((l) => l.documento?.id === "r");
+    assert.equal(r?.classe, "OUTRA_TELA");
+  });
+
+  it("identifica documento de medição pelos dois vínculos", () => {
+    assert.ok(ehDeMedicao({ medicao: { numero: 1 }, movimento: null }));
+    assert.ok(ehDeMedicao({ medicao: null, movimento: { medicaoId: "m1" } }));
+    assert.equal(ehDeMedicao({ medicao: null, movimento: { medicaoId: null } }), false);
+    assert.equal(ehDeMedicao({ medicao: null, movimento: null }), false);
   });
 
   // Ditos pelo cliente em 17/09/2026, nesta ordem, mais a linha "Outro".

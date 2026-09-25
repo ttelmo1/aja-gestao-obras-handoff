@@ -55,6 +55,7 @@ export const CORES_ACAO: Record<AcaoAuditoria, string> = {
 export const ROTULOS_ENTIDADE: Record<string, string> = {
   Obra: "Obra",
   Medicao: "Medição",
+  SuspensaoPrazo: "Suspensão de prazo",
   EtapaObra: "Etapa de tramitação",
   TramitacaoMovimento: "Tramitação",
   Documento: "Documento",
@@ -80,6 +81,7 @@ export const ENTIDADES_AUDITAVEIS = [
   "EtapaObra",
   "Documento",
   "Rerratificacao",
+  "SuspensaoPrazo",
   "Contratante",
   "Setor",
   "Usuario",

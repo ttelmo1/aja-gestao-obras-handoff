@@ -44,6 +44,7 @@ export async function carregarObrasDoPainel(filtros: Filtros, agora: Date) {
       operadorAssumidoEm: true,
       operadorLiberadoEm: true,
       operadorObservacao: true,
+      suspensoes: { select: { dataInicio: true, dataFim: true } },
       medicoes: {
         select: {
           id: true,

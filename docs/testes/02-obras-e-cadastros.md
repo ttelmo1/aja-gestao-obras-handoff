@@ -79,14 +79,34 @@ administrador.
   prevista de término vazia → o sistema deriva o término
   (`ordem de início + prazo`). Conferir a data na mão.
 - [ ] **OBR-34** Corrigir a data prevista de término à mão → o valor digitado
-  prevalece (o cliente precisa disso para suspensão de prazo, que o sistema
-  ainda não modela). Confirmar se é o comportamento esperado. 🎯
+  prevalece. Suspensão de prazo **não** deve mais ser feita assim — tem
+  registro próprio (OBR-37a em diante).
 - [ ] **OBR-35** Obra com prazo em dias mas **sem** ordem de início → a tela não
   inventa uma data de término nem mostra 0% de prazo transcorrido.
 - [ ] **OBR-36** Obra com término previsto **anterior** à ordem de início →
   observar o que a tela faz. Não pode mostrar percentual negativo nem quebrar. ⚠️
 - [ ] **OBR-37** Na obra `OBR-DEMO-003` (prazo vencido), a barra/percentual de
   prazo passa de 100% e é rotulada como vencida, sem travar em 100%.
+
+### Suspensão de prazo (24/09/2026)
+
+- [ ] **OBR-37a** Aba Contrato → "Suspensões de prazo": lançar uma suspensão
+  com início e **sem** data final → aparece "em aberto", com os dias em curso.
+  O cartão do painel e a aba Resumo mostram "Prazo suspenso desde dd/mm".
+- [ ] **OBR-37b** Voltar no dia seguinte (ou mudar a data do sistema) → dias
+  restantes, percentual de prazo e dias para a próxima medição **não mudam**;
+  o término vigente e a próxima medição andam um dia.
+- [ ] **OBR-37c** Preencher a data final → o prazo volta a contar a partir
+  dela, de onde parou. O término vigente mostra "+N dia(s) de suspensão".
+- [ ] **OBR-37d** Obra com medição quase vencendo, suspensa → ela **não** fica
+  vermelha por medição vencida enquanto estiver suspensa, nem entra em
+  "Medições atrasadas".
+- [ ] **OBR-37e** Lançar uma segunda suspensão que cruza a primeira → recusa
+  por sobreposição. Uma que começa no dia em que a outra termina → aceita.
+- [ ] **OBR-37f** Suspensão antes da ordem de início, ou com data final igual
+  ou anterior ao início → recusa com a mensagem certa.
+- [ ] **OBR-37g** Editar e excluir uma suspensão → os dias saem do término; os
+  três passos aparecem na aba Histórico.
 
 ### Edição e exclusão
 

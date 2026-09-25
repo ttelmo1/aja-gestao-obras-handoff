@@ -70,6 +70,11 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
           <p className="mt-1.5 text-[11px] font-bold tracking-wide text-[var(--muted)] uppercase">
             {ROTULOS_STATUS[obra.status]}
           </p>
+          {obra.resumo.suspensaDesde && (
+            <p className="mt-1 text-[12px] font-semibold text-[var(--warning-fg)]">
+              Prazo suspenso desde {formatarData(obra.resumo.suspensaDesde)}
+            </p>
+          )}
         </div>
         <BadgeFarol farol={farol} titulo={motivosFarol.join(" ")} />
       </div>
@@ -106,6 +111,11 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
           {obra.prazoAditivadoDias > 0 && (
             <span className="block text-[11px] font-normal text-[var(--muted)]">
               +{obra.prazoAditivadoDias} dia(s) de rerratificação
+            </span>
+          )}
+          {obra.resumo.diasSuspensos > 0 && (
+            <span className="block text-[11px] font-normal text-[var(--muted)]">
+              +{obra.resumo.diasSuspensos} dia(s) de suspensão
             </span>
           )}
         </Dado>

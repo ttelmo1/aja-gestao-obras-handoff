@@ -58,18 +58,19 @@ O documento fica ligado à entidade que o originou (requisito 1.6).
 - [ ] **DOC-24** Anexar numa **rerratificação** → mostra "Rerratificação 01".
 - [ ] **DOC-25** Um documento anexado ao movimento de uma etapa mostra o
   vínculo **mais específico** (o setor), não o genérico.
-- [ ] **DOC-26** O documento enviado pela medição aparece **tanto** na aba
-  Medições quanto na central de documentos da obra.
+- [ ] **DOC-26** O documento enviado pela medição aparece **só** na tela da
+  medição — não na aba Documentos da obra (24/09/2026).
 
 ## Central de documentos
 
 - [ ] **DOC-30** A central lista os documentos de todas as origens da obra.
 - [ ] **DOC-31** Filtrar por **tipo de documento** → a lista reduz corretamente.
-- [ ] **DOC-32** A aba Documentos abre com os **dezessete tipos da lista do
-  cliente** (21/09/2026), na ordem: adjudicação, homologação, empenho,
-  contrato, publicação do extrato, apólice, publicação da comissão, ordem de
-  início, ART/RRT, CNO, medições contratuais, termo aditivo, apostilamento,
-  recebimento provisório, recebimento definitivo, licenças e "Outros".
+- [ ] **DOC-32** A aba Documentos abre com os **dezesseis tipos da lista do
+  cliente**, na ordem: adjudicação, homologação, empenho, contrato,
+  publicação do extrato, apólice, publicação da comissão, ordem de início,
+  ART/RRT, CNO, termo aditivo, apostilamento, recebimento provisório,
+  recebimento definitivo, licenças e "Outros". "Medições contratuais" saiu
+  em 24/09/2026.
 - [ ] **DOC-33** **Termo aditivo**, **apostilamento** e **Outros** aparecem
   como *Opcional* em cinza, não em vermelho, e não entram no "N de M não
   anexado(s)" — o cliente pediu os dois primeiros "em caso de necessidade".
@@ -78,9 +79,11 @@ O documento fica ligado à entidade que o originou (requisito 1.6).
   cabeçalho continua contando o tipo uma vez. No **contrato** ou em outro tipo
   de arquivo único, o segundo envio é recusado com a mensagem que manda usar
   "Outros".
-- [ ] **DOC-35** Anexar um boletim na tela de uma medição → a linha **Medições
-  contratuais** da aba Documentos da obra passa a "Anexado", mostrando
-  "Medição NN" na coluna "Vinculado a".
+- [ ] **DOC-35** Anexar um boletim na tela de uma medição → ele aparece na
+  linha **Medições** da própria medição e **não** aparece na aba Documentos
+  da obra. O filtro de origem da aba não oferece medições.
+- [ ] **DOC-35a** Tentar excluir uma obra que só tem documentos em medições →
+  a recusa manda excluir "na aba Documentos e nas medições".
 - [ ] **DOC-32** Filtrar por **origem** → idem.
 - [ ] **DOC-33** Buscar por parte do nome do arquivo → encontra.
 - [ ] **DOC-34** Buscar por um termo que não existe → estado vazio com mensagem,

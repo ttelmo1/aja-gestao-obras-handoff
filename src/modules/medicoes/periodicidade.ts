@@ -1,5 +1,10 @@
 import { PeriodicidadeMedicao, StatusObra } from "@/generated/prisma/enums";
 import { adicionarDias, diasEntre } from "@/lib/date-br";
+import {
+  diasSuspensosAteHoje,
+  diasSuspensosDesde,
+  type Suspensao,
+} from "@/modules/obras/suspensao";
 
 /**
  * Ritmo das medições e vencimento da próxima.
@@ -59,6 +64,8 @@ export type EntradaProximaMedicao = {
   dataOrdemInicio: Date | null;
   /** Data da medição mais recente já lançada, ou `null` se não houver nenhuma. */
   ultimaMedicaoEm: Date | null;
+  /** Suspensões de prazo da obra — elas param o ciclo também. */
+  suspensoes?: Suspensao[];
   agora?: Date;
 };
 
@@ -75,6 +82,12 @@ export type SituacaoMedicao = {
  *
  * Conta a partir da última medição lançada; sem nenhuma, conta da ordem de
  * início — é o primeiro momento em que passa a existir obra para medir.
+ *
+ * Suspensão de prazo para o ciclo (24/09/2026: *"com a suspensão para de
+ * contar tudo, que seria o prazo e medições"*): os dias suspensos depois da
+ * base empurram o vencimento, com a mesma regra do prazo contratual — ver
+ * `modules/obras/suspensao.ts`. Sem isso, obra suspensa ficaria vermelha por
+ * medição vencida sem ter como medir.
  *
  * Devolve `null` quando não há prazo a cobrar: obra sem ordem de início (não
  * começou), finalizada, cancelada ou paralisada (a pendência ali é outra, e o
@@ -98,8 +111,13 @@ export function proximaMedicao(e: EntradaProximaMedicao): SituacaoMedicao | null
   const base = e.ultimaMedicaoEm ?? e.dataOrdemInicio;
   if (!base) return null;
 
-  const proxima = adicionarDias(base, dias);
-  const diasRestantes = diasEntre(agora, proxima);
+  const suspensoes = e.suspensoes ?? [];
+  const proxima = adicionarDias(base, dias + diasSuspensosDesde(suspensoes, base, agora));
+  // Dias do ciclo que faltam, descontada a suspensão já vivida — mesmo motivo
+  // de `Prazo.diasRestantes`: parado durante a suspensão, e sem pular quando
+  // alguém preenche a data final no meio dela.
+  const diasRestantes =
+    dias - (diasEntre(base, agora) - diasSuspensosAteHoje(suspensoes, base, agora));
 
   return {
     ultima: e.ultimaMedicaoEm,

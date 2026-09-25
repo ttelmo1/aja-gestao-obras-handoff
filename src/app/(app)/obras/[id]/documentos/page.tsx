@@ -6,6 +6,7 @@ import { exigirPermissao } from "@/lib/guarda";
 import { pode } from "@/modules/auth/permissoes";
 import {
   acervoDoContrato,
+  ehDeMedicao,
   ESPERADOS_DA_OBRA,
   resumoDoAcervo,
 } from "@/modules/documentos/acervo";
@@ -34,9 +35,12 @@ export const dynamic = "force-dynamic";
  * cada linha é um tipo esperado, e a coluna "Ação" traz o que se pode fazer
  * com ela — incluir o arquivo, abrir, excluir, marcar que não se aplica.
  *
- * O envio é **um arquivo por tipo**, com cinco exceções — "Outros", medições,
- * apólice, licenças e ART/RRT (ver `ACEITAM_REPETICAO`). Nos demais, o segundo
- * arquivo do mesmo assunto entra como "Outros".
+ * O envio é **um arquivo por tipo**, com quatro exceções — "Outros", apólice,
+ * licenças e ART/RRT (ver `ACEITAM_REPETICAO`). Nos demais, o segundo arquivo
+ * do mesmo assunto entra como "Outros".
+ *
+ * Documento de medição não aparece aqui desde 24/09/2026: fica só na tela da
+ * medição (ver `ehDeMedicao`).
  */
 export default async function DocumentosPage({
   params,
@@ -61,11 +65,13 @@ export default async function DocumentosPage({
   });
   const resumo = resumoDoAcervo(linhas);
 
-  // As opções do seletor saem do acervo inteiro, não do resultado filtrado:
+  // As opções do seletor saem do acervo inteiro da aba, não do resultado filtrado:
   // um filtro que apaga as próprias opções trava o usuário na escolha atual.
-  const origens = origensDisponiveis(todos);
+  const origens = origensDisponiveis(todos.filter((d) => !ehDeMedicao(d)));
   const visiveis = filtrarLinhasDoAcervo(linhas, filtros);
 
+  // Conta a obra inteira, medições incluídas, mesmo com os arquivos delas
+  // fora desta lista: o número responde "quanto disco esta obra ocupa".
   const espaco = todos.reduce((s, d) => s + Number(d.tamanhoBytes), 0);
 
   return (
@@ -95,9 +101,10 @@ export default async function DocumentosPage({
         <p className="mb-4 rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
           A lista mostra todos os documentos esperados do contrato, na ordem do
           processo. Cada tipo é anexado uma vez — <strong>apólice</strong>,{" "}
-          <strong>ART/RRT</strong>, <strong>licenças</strong> e{" "}
-          <strong>medições contratuais</strong> aceitam vários. Para o segundo
-          arquivo dos demais, use <strong>&ldquo;Outros&rdquo;</strong>.
+          <strong>ART/RRT</strong> e <strong>licenças</strong> aceitam vários.
+          Para o segundo arquivo dos demais, use{" "}
+          <strong>&ldquo;Outros&rdquo;</strong>. Os documentos das medições
+          ficam em cada medição.
         </p>
 
         <FiltrosDaCentral
@@ -111,7 +118,7 @@ export default async function DocumentosPage({
           <Dado rotulo="Anexados">{resumo.anexados}</Dado>
           <Dado rotulo="Não anexados">{resumo.faltando}</Dado>
           <Dado rotulo="Não se aplicam">{resumo.dispensados}</Dado>
-          <Dado rotulo="Espaço ocupado">
+          <Dado rotulo="Espaço ocupado pela obra">
             <span className="tabular">{formatarTamanho(espaco)}</span>
           </Dado>
         </div>

@@ -24,6 +24,12 @@ export const carregarObra = cache(async (id: string) => {
           dataMedicao: true,
         },
       },
+      // Entram no prazo e no ciclo de medição de todas as abas — o cabeçalho
+      // mostra o farol, e o farol depende delas.
+      suspensoes: {
+        orderBy: { dataInicio: "asc" },
+        select: { id: true, dataInicio: true, dataFim: true, observacoes: true },
+      },
       _count: {
         select: {
           medicoes: true,

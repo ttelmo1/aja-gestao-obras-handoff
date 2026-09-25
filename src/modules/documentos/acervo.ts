@@ -17,7 +17,7 @@ import { TIPOS_DOCUMENTO, TIPOS_POR_CONTEXTO } from "./rotulos";
  * As duas telas que usam isto têm regras diferentes de repetição, e é a
  * diferença que justifica o parâmetro:
  *
- * - **Contrato:** cada tipo entra uma vez, salvo os cinco de
+ * - **Contrato:** cada tipo entra uma vez, salvo os quatro de
  *   `ACEITAM_REPETICAO`. Precisando de um segundo arquivo de um assunto que
  *   não se repete, ele vai como "Outros".
  * - **Medição:** todo tipo se repete. A mesma medição pode ter duas planilhas
@@ -29,12 +29,10 @@ import { TIPOS_DOCUMENTO, TIPOS_POR_CONTEXTO } from "./rotulos";
  * Tipos que podem se repetir no contrato.
  *
  * A regra da aba continua sendo **um arquivo por tipo** — linha que se
- * desdobra desfaz a leitura de "o que falta". Estes cinco são a exceção, e
+ * desdobra desfaz a leitura de "o que falta". Estes quatro são a exceção, e
  * cada um por um motivo concreto:
  *
  * - **Outros** é a porta do que não tem tipo próprio.
- * - **Medições contratuais** porque um contrato tem várias, e cada boletim
- *   anexado na tela da medição aparece nesta linha.
  * - **Apólice de seguro / Risco engenharia** porque o nome junta dois seguros
  *   distintos, e ainda recebe endosso e renovação ao longo da obra.
  * - **Licenças** porque são quase sempre mais de uma — prefeitura, ambiental,
@@ -47,7 +45,6 @@ import { TIPOS_DOCUMENTO, TIPOS_POR_CONTEXTO } from "./rotulos";
  */
 const ACEITAM_REPETICAO = new Set<TipoDocumento>([
   TipoDocumento.OUTRO,
-  TipoDocumento.MEDICAO,
   TipoDocumento.APOLICE_SEGURO,
   TipoDocumento.LICENCA,
   TipoDocumento.ART_RRT,
@@ -87,19 +84,21 @@ export function ehDoContrato(d: VinculosDoDocumento): boolean {
 }
 
 /**
- * Tipos cuja linha do contrato é cumprida pelo arquivo de outra tela.
+ * O documento é de uma medição — anexado na tela dela, ou no percurso dela
+ * pelos setores.
  *
- * Hoje é só "Medições contratuais", item 11 da lista do cliente. Os boletins
- * são anexados na tela de cada medição — se a linha do contrato só olhasse os
- * arquivos do próprio contrato, ela ficaria vermelha para sempre numa obra
- * que tem todas as medições em dia.
+ * Documento de medição fica **só na medição**: pedido do Junior pela Fernanda
+ * em 24/09/2026 — *"de medição ficar em medição"*. Até então a aba Documentos
+ * da obra mostrava tudo, e os arquivos das medições (boletim, nota fiscal,
+ * diário, relatório fotográfico) enchiam a lista do contrato de linhas "de
+ * outra tela". Junto saiu da lista do contrato a linha "Medições contratuais",
+ * que era cumprida pelos boletins anexados nas medições.
  */
-const CUMPREM_DE_OUTRA_TELA = new Set<TipoDocumento>([TipoDocumento.MEDICAO]);
-
-export function cobradoNoContrato(
-  d: VinculosDoDocumento & { tipo: TipoDocumento },
-): boolean {
-  return ehDoContrato(d) || CUMPREM_DE_OUTRA_TELA.has(d.tipo);
+export function ehDeMedicao(d: {
+  medicao: unknown;
+  movimento: { medicaoId?: string | null } | null;
+}): boolean {
+  return d.medicao !== null || Boolean(d.movimento?.medicaoId);
 }
 
 /**
@@ -133,8 +132,8 @@ export type SituacaoLinha = "ANEXADO" | "FALTANDO" | "DISPENSADO";
  * - `EXTRA` — o arquivo é desta tela, mas de um tipo fora da lista cobrada. A
  *   lista de esperados é curta de propósito, e arquivo que não aparece em
  *   lista nenhuma é arquivo que ninguém encontra.
- * - `OUTRA_TELA` — o arquivo é de uma medição, de uma rerratificação ou da
- *   tramitação, visto de fora. Aparece para dar o acervo inteiro da obra, sem
+ * - `OUTRA_TELA` — o arquivo é de uma rerratificação ou da tramitação de uma
+ *   etapa, visto de fora. Aparece para dar o acervo inteiro da obra, sem
  *   botão de incluir: quem anexa é a tela de origem.
  */
 export type ClasseLinha = "ESPERADO" | "EXTRA" | "OUTRA_TELA";
@@ -279,15 +278,19 @@ export function montarAcervo<D extends DocumentoDoAcervo>({
 }
 
 /**
- * A aba Documentos da obra: um arquivo por tipo — menos "Outros" e as
- * medições —, e o que estiver preso a outra tela entra como linha de leitura.
+ * A aba Documentos da obra: um arquivo por tipo — menos os de
+ * `ACEITAM_REPETICAO` —, e o que estiver preso a uma rerratificação entra
+ * como linha de leitura. Documento de medição não entra: ver `ehDeMedicao`.
  */
-export function acervoDoContrato<D extends DocumentoDoAcervo>(
+export function acervoDoContrato<
+  D extends DocumentoDoAcervo & { movimento: { medicaoId?: string | null } | null },
+>(
   entrada: Omit<Entrada<D>, "pertence" | "permiteRepeticao">,
 ): Array<LinhaAcervo<D>> {
   return montarAcervo({
     ...entrada,
-    pertence: cobradoNoContrato,
+    documentos: entrada.documentos.filter((d) => !ehDeMedicao(d)),
+    pertence: ehDoContrato,
     permiteRepeticao: aceitaMaisDeUm,
   });
 }

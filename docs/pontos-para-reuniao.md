@@ -8,10 +8,10 @@ imediato, não retrabalho.
 Ordenados por custo de mudar, do mais caro para o mais barato.
 
 - **Status:** `🔴 aberto` · `🟡 assumido, a confirmar` · `🟢 confirmado`
-- **Última atualização:** 24/09/2026 — pedidos do Junior pela Fernanda sobre
-  **pagamento de medição** e **suspensão de prazo** (ponto #26). O pagamento
-  entrou em dev com duas escolhas nossas a confirmar; a suspensão espera
-  resposta. Antes disso, em 21/09/2026, a Fernanda mandou a **lista de
+- **Última atualização:** 25/09/2026 — respostas da Fernanda sobre
+  **pagamento**, **suspensão de prazo** e **documentos da medição** (ponto
+  #26). Tudo implementado em dev; ficam a confirmar a data final em branco, o
+  farol durante a suspensão e o nome "Medições". Antes disso, em 21/09/2026, a Fernanda mandou a **lista de
   documentos do contrato** (dezessete itens) e pediu a **retirada do cadastro
   de responsáveis**. Fecha a parte principal do ponto #18 e deixa três escolhas
   de implementação para confirmar, registradas lá. Antes disso, em
@@ -52,7 +52,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 22 | Filtro do painel: responsável virou operador | 🟡 | Baixo |
 | 24 | Pagamento pendente: o prazo, e o que conta como pendente | 🟡 | Baixo |
 | 25 | Prazo adicional da rerratificação prorroga a obra | 🟢 | ~~Baixo~~ — resolvido |
-| 26 | Pedidos de 24/09: pagamento na linha, quadro no painel, suspensão de prazo | 🟡 | Baixo a alto |
+| 26 | Pedidos de 24/09: pagamento, suspensão de prazo, documentos da medição | 🟡 | Baixo |
 
 ---
 
@@ -1131,7 +1131,7 @@ aprovado, com os dias restantes e o farol contando por ele. Resposta dela:
 existir, entra pelo mesmo caminho do prazo aditivado, não por data digitada à
 mão. Pedida em 24/09/2026 — ver ponto #26.
 
-## 26. Pedidos de 24/09/2026 — pagamento e suspensão 🟡 parcialmente implementado
+## 26. Pedidos de 24/09/2026 — pagamento, suspensão e documentos 🟡 implementado, a confirmar
 
 Pedidos do Junior, pela Fernanda, por mensagem em 24/09/2026:
 
@@ -1161,35 +1161,56 @@ confirmar com a tela aberta:
 - **Observação no cartão limitada a três linhas**; o texto inteiro fica ao
   passar o mouse e na aba Resumo.
 
-**Em aberto — muda número que a diretoria vê:** o que conta como pendente.
-Hoje é Rascunho, Protocolada e Aprovada (ponto #24). A primeira mensagem dela
-foi *"não é referente ao nosso pagamento pendente"*, o que sugere que para eles
-seja só a aprovada. A mesma regra decide o quadro, a lista e o filtro — é uma
-linha em `pagamentoPendente` (`modules/medicoes/filtros.ts`).
+**Respondido em 24/09/2026:**
 
-A planilha que ela mostrou como modelo tem **uma quarta coluna**, cortada na
-foto. Perguntar o que é antes de acrescentar.
+- **Pendente é tudo o que não foi marcado como pago** — *"as que não forem
+  marcadas no painel como Pago"*. Rascunho, Protocolada e Aprovada continuam.
+  É o que já estava implementado; fecha o ponto #24 nesse aspecto.
+- **O botão só em Protocolada e Aprovada** — *"o botão de pago pode ser assim
+  mesmo"*.
+- **A 4ª coluna da planilha não importa** — o resto da foto era só contexto.
 
-**Suspensão de prazo — não implementada, bloqueada.** Não vira mais uma
-rerratificação: rerratificação tem percentual obrigatório, valor ou prazo,
-numeração e entra na variação do contrato; suspensão tem início e retomada.
-Fica como registro próprio, mostrado dentro da aba Rerratificações. Antes de
-modelar, perguntar:
+**Suspensão de prazo — implementada em 25/09/2026.** Respostas dela:
+*"na aba do contrato, ter a opção de colocar a suspensão (que pode ser mais de
+uma) com a data de início e data final, e na data final voltar a contar o
+prazo e as medições"*. O lugar é a **aba Contrato** — o Junior tinha dito
+Rerratificações antes; vale a resposta direta dela.
 
-- O registro tem **data de início e de retomada**? A retomada pode ficar em
-  aberto enquanto não se sabe?
-- Precisa de **aprovação**, como a rerratificação, ou vale pela data?
-- **Durante a suspensão, o ciclo de medição para também?** Se não parar, a
-  obra fica vermelha com "Medição vencida" sem poder medir.
-- Suspensa é o mesmo que a situação **Paralisada**, que hoje deixa o farol
-  sempre vermelho?
+Como ficou:
 
-**Custo de mudar:** baixo para as escolhas do pagamento. A suspensão é
-migration nova e mexe em prazo, farol e painel. Enquanto a retomada estiver em
-aberto o término anda um dia por dia, então não cabe em coluna cache como o
-prazo aditivado — é calculada na leitura. E obra cujo término já foi corrigido
-à mão por causa de suspensão contaria os dias duas vezes: listar as obras cujo
-término gravado difere de ordem de início + prazo e revisar uma a uma.
+- Registro próprio (`SuspensaoPrazo`), não uma rerratificação: rerratificação
+  tem percentual, valor, numeração e entra na variação do contrato.
+- **Tudo para**: o término vigente anda junto com a suspensão, e os dias
+  restantes de prazo e do ciclo de medição ficam congelados até a data final.
+  Obra suspensa não fica vermelha por medição vencida.
+- Vale pela data, sem aprovação — ela descreveu assim.
+- Calculada na leitura, sem coluna cache: com a data final em branco a
+  suspensão cresce um dia por dia.
+
+**Escolhas nossas, a confirmar com a tela aberta:**
+
+- **Data final pode ficar em branco** enquanto a obra está suspensa. Não foi
+  perguntado explicitamente; *"enquanto ela estiver suspensa tudo para"*
+  descreve o estado em aberto, e sem isso a obra ficaria vermelha até alguém
+  saber a data de retomada.
+- **O farol não ganhou cor própria.** A obra suspensa fica com a cor que tinha
+  no dia do início (os números congelam), e o cartão e a aba Resumo mostram
+  "Prazo suspenso desde dd/mm".
+- **Suspensa não é "Paralisada".** A situação Paralisada continua como está
+  (farol sempre vermelho). Se para eles for a mesma coisa, é juntar depois.
+- Sem sobreposição entre suspensões; não começa antes da ordem de início.
+- **Obras com término corrigido à mão** por suspensão contariam os dias duas
+  vezes se a suspensão for lançada também. Revisar com o cliente antes de
+  lançar as suspensões antigas.
+
+**Documentos da medição — implementado em 25/09/2026.** Pedido: *"de medição
+ficar em medição"* e *"tira da lista na aba de documentos o Medições
+Contratuais"*. A aba Documentos da obra deixou de mostrar os arquivos das
+medições, e a linha saiu da lista do contrato (dezesseis itens). O espaço
+ocupado continua contando a obra inteira.
+
+**Em aberto:** *"pode deixar só 'Medições'"* — lemos como renomear o tipo
+"Medições contratuais" para "Medições", e foi o que fizemos. Confirmar.
 
 ## Pontos já resolvidos 🟢
 

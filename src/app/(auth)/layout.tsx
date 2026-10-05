@@ -13,7 +13,7 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
       <div className="w-full max-w-sm">
         <div className="overflow-hidden rounded-[14px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--sombra-card)]">
           <div className="faixa-marca px-6 py-5 text-white">
-            <Marca compacto subtitulo="Acesso pela rede local" />
+            <Marca compacto subtitulo="Acesso restrito" />
           </div>
           <div className="p-6">{children}</div>
         </div>

@@ -33,6 +33,11 @@ const schema = z
     S3_ACCESS_KEY_ID: z.string().min(1).optional(),
     S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
     /**
+     * Segredo que o Vercel Cron manda nas rotas de `/api/cron/`. Sem ele, essas
+     * rotas recusam toda chamada.
+     */
+    CRON_SECRET: z.string().min(16).optional(),
+    /**
      * Cookie de sessão com a flag `Secure`. Fica em `false` por padrão porque a
      * instalação é em rede local, provavelmente sobre HTTP puro — com `Secure`
      * ligado nesse cenário o navegador descarta o cookie e ninguém consegue

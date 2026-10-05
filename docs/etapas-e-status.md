@@ -1685,7 +1685,7 @@ fora do provedor.
 
 | # | Fase | Horas | Estado |
 | --- | --- | --- | --- |
-| 1 | Driver `s3` e configuração | ~3h | 🔵 código pronto; falta testar contra o R2 |
+| 1 | Driver `s3` e configuração | ~3h | ✅ |
 | 2 | Envio em três passos (preparar → enviar → confirmar) | ~6h | ✅ |
 | 3 | Download por redirecionamento | ~1h | ✅ |
 | 4 | Limpeza de envios abandonados (cron) | ~1h | ✅ |
@@ -1744,5 +1744,15 @@ envio (preparo ou confirmação), a exceção escapava e a página inteira
 quebrava ("This page couldn't load"). Agora vira mensagem na janela, e a
 confirmação que falha tenta cancelar o envio.
 
-**Falta verificar:** o driver `s3` contra um bucket R2 de verdade — em
-especial se o R2 aplica o `Content-Length` assinado.
+**Verificado contra o Cloudflare R2 (05/10/2026, bucket `aja-obras-dev`):**
+o R2 **aplica o `Content-Length` e o `Content-Type` assinados** — corpo
+maior que o autorizado e tipo diferente voltam 403 sem gravar nada; o
+objeto sem assinatura não abre (bucket privado). Pela tela: PDF de 49 KB e
+de 40 MB enviados direto ao bucket (o servidor só vê as duas actions, nenhum
+`PUT`), porcentagem subindo no botão, sem erro de CORS; o download responde
+com redirecionamento para o R2 e o arquivo chega íntegro (hash igual ao
+original), com tipo e nome — inclusive acentuado — corretos.
+
+**Nota para a fase 6:** documentos gravados antes com outro driver (disco ou
+`ArquivoBlob`) passam a responder 410 quando o ambiente troca para `s3`,
+até a migração copiar os arquivos para o bucket.

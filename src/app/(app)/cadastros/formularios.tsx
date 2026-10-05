@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState } from "react";
 
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { Esfera } from "@/generated/prisma/enums";
 import { formatarCnpj } from "@/modules/cadastros/cnpj";
@@ -11,14 +12,13 @@ import { ESFERAS, ROTULOS_ESFERA } from "@/modules/cadastros/rotulos";
 import {
   excluirCadastro,
   salvarContratante,
-  salvarResponsavel,
   salvarSetor,
   type EstadoCadastro,
 } from "./acoes";
 
 /**
- * Formulários dos três cadastros. Cada um serve tanto para criar quanto para
- * editar: quando recebe `padrao`, manda o `id` junto e a ação atualiza.
+ * Formulários dos cadastros de apoio. Cada um serve tanto para criar quanto
+ * para editar: quando recebe `padrao`, manda o `id` junto e a ação atualiza.
  */
 
 function Rodape({
@@ -78,13 +78,13 @@ export type Contratante = {
 };
 
 export function FormContratante({ padrao }: { padrao?: Contratante }) {
-  const [estado, acao, pendente] = useActionState<EstadoCadastro, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoCadastro>(
     salvarContratante,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -172,88 +172,6 @@ export function FormContratante({ padrao }: { padrao?: Contratante }) {
   );
 }
 
-export type Responsavel = {
-  id: string;
-  nome: string;
-  cargo: string | null;
-  registro: string | null;
-  email: string | null;
-  telefone: string | null;
-  ativo: boolean;
-};
-
-export function FormResponsavel({ padrao }: { padrao?: Responsavel }) {
-  const [estado, acao, pendente] = useActionState<EstadoCadastro, FormData>(
-    salvarResponsavel,
-    undefined,
-  );
-
-  return (
-    <form action={acao} className="flex flex-col gap-4">
-      {padrao && <input type="hidden" name="id" value={padrao.id} />}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <Campo id="nome" rotulo="Nome">
-            <input
-              id="nome"
-              name="nome"
-              required
-              minLength={3}
-              defaultValue={padrao?.nome}
-              className={classeInput}
-            />
-          </Campo>
-        </div>
-
-        <Campo id="cargo" rotulo="Cargo / função">
-          <input
-            id="cargo"
-            name="cargo"
-            defaultValue={padrao?.cargo ?? ""}
-            className={classeInput}
-          />
-        </Campo>
-
-        <Campo id="registro" rotulo="Registro profissional" dica="CREA ou CAU.">
-          <input
-            id="registro"
-            name="registro"
-            defaultValue={padrao?.registro ?? ""}
-            className={classeInput}
-          />
-        </Campo>
-
-        <Campo id="email" rotulo="E-mail">
-          <input
-            id="email"
-            name="email"
-            type="email"
-            defaultValue={padrao?.email ?? ""}
-            className={classeInput}
-          />
-        </Campo>
-
-        <Campo id="telefone" rotulo="Telefone">
-          <input
-            id="telefone"
-            name="telefone"
-            defaultValue={padrao?.telefone ?? ""}
-            className={classeInput}
-          />
-        </Campo>
-      </div>
-
-      <CampoAtivo marcado={padrao?.ativo ?? true} />
-      <Rodape
-        pendente={pendente}
-        voltarPara="/cadastros/responsaveis"
-        estado={estado}
-      />
-    </form>
-  );
-}
-
 export type Setor = {
   id: string;
   nome: string;
@@ -262,13 +180,13 @@ export type Setor = {
 };
 
 export function FormSetor({ padrao }: { padrao?: Setor }) {
-  const [estado, acao, pendente] = useActionState<EstadoCadastro, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoCadastro>(
     salvarSetor,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 
       <Campo id="nome" rotulo="Nome do setor">
@@ -306,7 +224,7 @@ export function BotaoExcluir({
   entidade,
 }: {
   id: string;
-  entidade: "Contratante" | "Responsavel" | "Setor";
+  entidade: "Contratante" | "Setor";
 }) {
   const [estado, acao, pendente] = useActionState<EstadoCadastro, FormData>(
     excluirCadastro,

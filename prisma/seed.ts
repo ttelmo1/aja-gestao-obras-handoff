@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { randomUUID } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "../src/generated/prisma/client";
@@ -10,7 +11,16 @@ import {
   StatusObra,
   TipoEtapa,
 } from "../src/generated/prisma/enums";
+import { env } from "../src/lib/env";
+import { driver } from "../src/lib/storage/driver";
+import { ROTULOS_TIPO_DOCUMENTO } from "../src/modules/documentos/rotulos";
+import { gerarPdf } from "../src/modules/relatorios/pdf";
 import { etapasIniciais } from "../src/modules/tramitacao/fluxo";
+import {
+  StatusRerratificacao,
+  TipoDocumento,
+} from "../src/generated/prisma/enums";
+import { impactoDasRerratificacoes } from "../src/modules/rerratificacoes/calculos";
 
 /**
  * Seed de provisionamento inicial.
@@ -76,7 +86,22 @@ async function seedBase() {
  * o cliente precisa ver funcionando na reunião. As datas são relativas a hoje,
  * então a demonstração não envelhece.
  */
+/**
+ * Atribuição de operador nas obras de demonstração: assumida agora, ou
+ * liberada há alguns dias — quando o nome fica só como o último que mexeu.
+ */
+type AtribuicaoDemo =
+  | { assumidaHa: number; liberadaHa?: undefined }
+  | { liberadaHa: number; assumidaHa?: undefined };
+
 async function seedDemo() {
+  // O operador das obras de demonstração é o próprio usuário que entra na
+  // demonstração: assim dá para liberar a obra e assumir de volta na tela.
+  const operadorDemo = await prisma.usuario.findFirstOrThrow({
+    where: { perfil: Perfil.ADMINISTRADOR },
+    orderBy: { criadoEm: "asc" },
+  });
+
   const contratante = await prisma.contratante.upsert({
     // CNPJ válido de verdade: o cadastro valida dígito verificador, e um
     // número inventado seria recusado pela própria tela na demonstração.
@@ -91,18 +116,9 @@ async function seedDemo() {
     },
   });
 
-  // `Responsavel` não tem coluna única para servir de chave de upsert, então
-  // a idempotência é por busca — rodar o seed duas vezes não duplica ninguém.
-  const responsavel =
-    (await prisma.responsavel.findFirst({ where: { nome: "João Silva" } })) ??
-    (await prisma.responsavel.create({
-      data: {
-        nome: "João Silva",
-        cargo: "Engenheiro civil",
-        registro: "CREA-BA 000000",
-        email: "joao.silva@exemplo.local",
-      },
-    }));
+  // Quem assina os boletins da demonstração. Desde 21/09/2026 é texto na
+  // própria medição, não mais um cadastro à parte.
+  const RESPONSAVEL_DEMO = "João Silva";
 
   const hoje = new Date();
   const dias = (n: number) => {
@@ -137,7 +153,11 @@ async function seedDemo() {
       prazoDias: 160,
       dataPrevistaTermino: dias(20),
       status: StatusObra.EM_ANDAMENTO,
-      observacoes: "Obra de demonstração — término próximo, farol de atenção.",
+      observacoes:
+        "Obra de demonstração — término e medição próximos, farol de atenção.",
+      // Assumida: mostra o bloco do operador com observação e o botão de
+      // liberar, já que quem entra na demonstração é este mesmo usuário.
+      operador: { assumidaHa: 3 } as AtribuicaoDemo,
     },
     {
       codigo: "OBR-DEMO-003",
@@ -151,6 +171,9 @@ async function seedDemo() {
       dataPrevistaTermino: dias(-80),
       status: StatusObra.EM_ANDAMENTO,
       observacoes: "Obra de demonstração — prazo vencido, farol crítico.",
+      // Crítica e sem ninguém: o nome fica como último operador, que é o
+      // desenho pedido — registro, não fila de tarefas.
+      operador: { liberadaHa: 5 } as AtribuicaoDemo,
     },
     {
       codigo: "OBR-DEMO-004",
@@ -170,39 +193,58 @@ async function seedDemo() {
   // vencido: é o que acende o indicador "medições atrasadas" no painel.
   const medicoesPorObra: Record<
     string,
-    Array<{ diasAtras: number; valor: string; executado: string; status: StatusMedicao }>
+    Array<{ diasAtras: number; valor: string; status: StatusMedicao }>
   > = {
     // Em dia: última medição há 10 dias, próxima cai daqui a 20.
     "OBR-DEMO-001": [
-      { diasAtras: 130, valor: "120000.00", executado: "12.00", status: StatusMedicao.PAGA },
-      { diasAtras: 100, valor: "140000.00", executado: "24.00", status: StatusMedicao.PAGA },
-      { diasAtras: 70, valor: "150000.00", executado: "36.00", status: StatusMedicao.PAGA },
-      { diasAtras: 40, valor: "95000.00", executado: "44.00", status: StatusMedicao.APROVADA },
-      { diasAtras: 10, valor: "95000.00", executado: "52.00", status: StatusMedicao.PROTOCOLADA },
+      { diasAtras: 130, valor: "120000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 100, valor: "140000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 70, valor: "150000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 40, valor: "95000.00", status: StatusMedicao.APROVADA },
+      { diasAtras: 10, valor: "95000.00", status: StatusMedicao.PROTOCOLADA },
     ],
-    // Ciclo vencido há 10 dias — aparece em "medições atrasadas".
+    // Última medição há 25 dias: numa obra mensal, a próxima vence em 5 —
+    // dentro dos dez dias de antecedência que acendem o amarelo. É o cartão
+    // que demonstra o critério novo do farol, e ele soma dois motivos, porque
+    // o término também está próximo.
     "OBR-DEMO-002": [
-      { diasAtras: 100, valor: "90000.00", executado: "20.00", status: StatusMedicao.PAGA },
-      { diasAtras: 70, valor: "110000.00", executado: "42.00", status: StatusMedicao.PAGA },
-      { diasAtras: 40, valor: "100000.00", executado: "60.00", status: StatusMedicao.PROTOCOLADA },
+      { diasAtras: 85, valor: "90000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 55, valor: "110000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 25, valor: "100000.00", status: StatusMedicao.PROTOCOLADA },
     ],
-    // Parada faz tempo: ciclo vencido há 90 dias e execução atrás do prazo.
+    // Parada faz tempo: ciclo de medição vencido há 90 dias — é esta que
+    // aparece no indicador "medições atrasadas" do painel.
     "OBR-DEMO-003": [
-      { diasAtras: 200, valor: "80000.00", executado: "25.00", status: StatusMedicao.PAGA },
-      { diasAtras: 160, valor: "60000.00", executado: "40.00", status: StatusMedicao.PAGA },
-      { diasAtras: 120, valor: "40000.00", executado: "48.00", status: StatusMedicao.REJEITADA },
+      { diasAtras: 200, valor: "80000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 160, valor: "60000.00", status: StatusMedicao.PAGA },
+      { diasAtras: 120, valor: "40000.00", status: StatusMedicao.REJEITADA },
     ],
   };
 
   let totalMedicoes = 0;
   for (const obra of obras) {
+    const { operador, ...dadosDaObra } = obra;
     const registro = await prisma.obra.upsert({
       where: { codigo: obra.codigo },
       update: {},
       create: {
-        ...obra,
+        ...dadosDaObra,
         contratanteId: contratante.id,
-        responsavelId: responsavel.id,
+        // Atribuição momentânea de operador: só as obras em atenção e crítica
+        // têm, porque só nelas o campo aparece (requisitos.md 1.2).
+        ...(operador
+          ? {
+              operadorId: operadorDemo.id,
+              operadorAssumidoEm:
+                operador.assumidaHa === undefined ? null : dias(-operador.assumidaHa),
+              operadorLiberadoEm:
+                operador.liberadaHa === undefined ? null : dias(-operador.liberadaHa),
+              operadorObservacao:
+                operador.assumidaHa === undefined
+                  ? null
+                  : "Aguardando a foto da obra para protocolar a medição.",
+            }
+          : {}),
       },
     });
 
@@ -221,7 +263,6 @@ async function seedDemo() {
           periodoInicio: dias(-m.diasAtras - 29),
           periodoFim: data,
           valorMedido: m.valor,
-          percentualExecutado: m.executado,
           protocolo:
             m.status === StatusMedicao.RASCUNHO
               ? null
@@ -231,7 +272,7 @@ async function seedDemo() {
           notaFiscalValor: m.valor,
           issAliquota: "5.00",
           issValor: (Number(m.valor) * 0.05).toFixed(2),
-          responsavelId: responsavel.id,
+          responsavelNome: RESPONSAVEL_DEMO,
           status: m.status,
           dataPagamento: m.status === StatusMedicao.PAGA ? dias(-m.diasAtras + 30) : null,
         },
@@ -354,13 +395,244 @@ async function seedDemo() {
     }
   }
 
-  console.log(
-    `  demo: contratante ${contratante.nome}, responsável ${responsavel.nome}`,
-  );
+  // --- Rerratificações ----------------------------------------------------
+  // Uma aprovada (mexe no valor do contrato) e uma ainda tramitando (não
+  // mexe) — é a distinção que a aba precisa deixar clara na demonstração.
+  const RERRATIFICACOES: Record<
+    string,
+    Array<{
+      numero: number;
+      status: StatusRerratificacao;
+      valor: string;
+      percentual: string;
+      itens: number;
+      prazo: number | null;
+      descricao: string;
+      observacoes: string;
+      diasAtras: number;
+    }>
+  > = {
+    "OBR-DEMO-001": [
+      {
+        numero: 1,
+        status: StatusRerratificacao.APROVADA,
+        valor: "120000.00",
+        percentual: "10.00",
+        itens: 8,
+        prazo: 45,
+        descricao: "Ajuste de quantitativos e serviços",
+        observacoes: "Acréscimo de 10% com prorrogação de 45 dias.",
+        diasAtras: 60,
+      },
+    ],
+    "OBR-DEMO-002": [
+      {
+        numero: 1,
+        status: StatusRerratificacao.PROTOCOLADA,
+        valor: "48000.00",
+        percentual: "10.00",
+        itens: 3,
+        prazo: null,
+        descricao: "Inclusão de quadro de distribuição",
+        observacoes: "Aguardando parecer da Controladoria.",
+        diasAtras: 20,
+      },
+    ],
+  };
+
+  let totalRerratificacoes = 0;
+  for (const obra of obras) {
+    const lista = RERRATIFICACOES[obra.codigo];
+    if (!lista) continue;
+
+    const registro = await prisma.obra.findUniqueOrThrow({
+      where: { codigo: obra.codigo },
+      select: { id: true },
+    });
+
+    for (const rr of lista) {
+      const existe = await prisma.rerratificacao.findUnique({
+        where: { obraId_numero: { obraId: registro.id, numero: rr.numero } },
+        select: { id: true },
+      });
+      if (existe) continue;
+
+      await prisma.rerratificacao.create({
+        data: {
+          obraId: registro.id,
+          numero: rr.numero,
+          data: dias(-rr.diasAtras),
+          protocolo:
+            rr.status === StatusRerratificacao.EM_ELABORACAO
+              ? null
+              : `${new Date().getFullYear()}.00${900 + rr.numero}`,
+          descricao: rr.descricao,
+          quantidadeItens: rr.itens,
+          percentualAlcancado: rr.percentual,
+          valorImpactado: rr.valor,
+          prazoAdicionalDias: rr.prazo,
+          status: rr.status,
+          observacoes: rr.observacoes,
+        },
+      });
+      totalRerratificacoes++;
+    }
+
+    // O cache do impacto — valor e prazo — é reescrito a partir das
+    // aprovadas, igual faz a Server Action: as colunas nunca são digitadas à
+    // mão.
+    const todas = await prisma.rerratificacao.findMany({
+      where: { obraId: registro.id },
+      select: { status: true, valorImpactado: true, prazoAdicionalDias: true },
+    });
+    const impacto = impactoDasRerratificacoes(todas);
+    await prisma.obra.update({
+      where: { id: registro.id },
+      data: {
+        valorAditivado: impacto.valorAprovado.toFixed(2),
+        prazoAditivadoDias: impacto.prazoAdicionalDias,
+      },
+    });
+
+    // Obra com aditivo não tem a etapa de rerratificação "não se aplica".
+    await prisma.etapaObra.updateMany({
+      where: { obraId: registro.id, tipo: TipoEtapa.RERRATIFICACAO },
+      data: { status: StatusEtapa.EM_ANDAMENTO },
+    });
+  }
+
+  // --- Documentos ---------------------------------------------------------
+  // Arquivos de verdade no armazenamento: a central de documentos só faz
+  // sentido na demonstração se o botão "Abrir" abrir alguma coisa. Passa pelo
+  // mesmo driver das rotas, então funciona tanto em disco (on-premise) quanto
+  // em banco (demonstração serverless).
+  const armazenamento = driver();
+
+  // Quem "enviou" os documentos de demonstração é o admin criado no seed base.
+  const admin = await prisma.usuario.findFirstOrThrow({
+    where: { perfil: Perfil.ADMINISTRADOR },
+    select: { id: true },
+  });
+
+  async function anexar(
+    obraId: string,
+    nome: string,
+    tipo: TipoDocumento,
+    descricao: string,
+    vinculo: { medicaoId?: string; etapaObraId?: string; movimentoId?: string } = {},
+  ) {
+    const jaExiste = await prisma.documento.findFirst({
+      where: { obraId, nomeOriginal: nome, ...vinculo },
+      select: { id: true },
+    });
+    if (jaExiste) return false;
+
+    // PDF de verdade, pelo mesmo gerador dos relatórios do sistema. Um stub
+    // com só cabeçalho e `%%EOF` é recusado por qualquer leitor, e na
+    // demonstração isso parece falha do sistema, não arquivo de mentira.
+    const obra = await prisma.obra.findUniqueOrThrow({
+      where: { id: obraId },
+      select: { numeroContrato: true, objeto: true, contratante: { select: { nome: true } } },
+    });
+    const conteudo = gerarPdf({
+      titulo: nome,
+      subtitulo: descricao,
+      filtros: [
+        { rotulo: "Obra", valor: `${obra.numeroContrato} — ${obra.objeto}` },
+        { rotulo: "Contratante", valor: obra.contratante.nome },
+      ],
+      colunas: [
+        { chave: "campo", rotulo: "Campo" },
+        { chave: "valor", rotulo: "Valor" },
+      ],
+      linhas: [
+        [{ texto: "Tipo do documento" }, { texto: ROTULOS_TIPO_DOCUMENTO[tipo] }],
+        [{ texto: "Contrato" }, { texto: obra.numeroContrato }],
+        [{ texto: "Objeto" }, { texto: obra.objeto }],
+      ],
+      geradoEm: new Date(),
+      geradoPor: "Seed de demonstração",
+      observacao:
+        "Documento fictício, gerado pelo seed apenas para demonstração. " +
+        "Não corresponde a nenhum documento real e não tem valor legal.",
+    });
+    const salvo = await armazenamento.salvarArquivo(
+      // `Buffer.from`: `gerarPdf` devolve `Uint8Array`, que o `File` não aceita
+      // direto por causa do tipo do buffer subjacente.
+      new File([Buffer.from(conteudo)], `${randomUUID()}.pdf`, {
+        type: "application/pdf",
+      }),
+      obraId,
+    );
+
+    await prisma.documento.create({
+      data: {
+        nomeOriginal: nome,
+        nomeArmazenado: salvo.nomeArmazenado,
+        caminhoRelativo: salvo.caminhoRelativo,
+        mimeType: "application/pdf",
+        extensao: "pdf",
+        tamanhoBytes: BigInt(salvo.tamanhoBytes),
+        hashSha256: salvo.hashSha256,
+        tipo,
+        descricao,
+        obraId,
+        ...vinculo,
+        enviadoPorId: admin.id,
+      },
+    });
+    return true;
+  }
+
+  let totalDocumentos = 0;
+  for (const obra of obras) {
+    const registro = await prisma.obra.findUniqueOrThrow({
+      where: { codigo: obra.codigo },
+      select: { id: true, numeroContrato: true },
+    });
+    const num = registro.numeroContrato.replace("/", "_");
+
+    // Documentos do contrato, presentes em toda obra.
+    if (await anexar(registro.id, `contrato_${num}.pdf`, TipoDocumento.CONTRATO, "Contrato assinado.")) totalDocumentos++;
+    if (await anexar(registro.id, `empenho_${num}.pdf`, TipoDocumento.EMPENHO, "Nota de empenho.")) totalDocumentos++;
+
+    // Documentos da última medição e do setor onde ela está parada.
+    const ultima = await prisma.medicao.findFirst({
+      where: { obraId: registro.id },
+      orderBy: { numero: "desc" },
+      select: { id: true, numero: true },
+    });
+    if (!ultima) continue;
+
+    const dois = String(ultima.numero).padStart(2, "0");
+    if (await anexar(registro.id, `medicao_${dois}_assinada.pdf`, TipoDocumento.MEDICAO, "Medição aprovada internamente.", { medicaoId: ultima.id })) totalDocumentos++;
+    if (await anexar(registro.id, `nf_medicao_${dois}.pdf`, TipoDocumento.NOTA_FISCAL, "Nota fiscal da medição.", { medicaoId: ultima.id })) totalDocumentos++;
+    if (await anexar(registro.id, `iss_medicao_${dois}.pdf`, TipoDocumento.ISS, "Guia de recolhimento do ISS.", { medicaoId: ultima.id })) totalDocumentos++;
+
+    const aberto = await prisma.tramitacaoMovimento.findFirst({
+      where: { etapaObra: { obraId: registro.id }, dataSaida: null },
+      select: { id: true, etapaObraId: true, setorDestino: { select: { nome: true } } },
+    });
+    if (aberto) {
+      const vinculo = { etapaObraId: aberto.etapaObraId, movimentoId: aberto.id };
+      if (await anexar(registro.id, `protocolo_${num}.pdf`, TipoDocumento.PROTOCOLO, "Abertura do processo.", vinculo)) totalDocumentos++;
+      if (await anexar(registro.id, `parecer_${aberto.setorDestino.nome.toLowerCase()}.pdf`, TipoDocumento.PARECER, `Parecer da ${aberto.setorDestino.nome}.`, vinculo)) totalDocumentos++;
+    }
+  }
+
+  console.log(`  demo: contratante ${contratante.nome}`);
   console.log(`  demo: ${obras.length} obras, com faróis diferentes`);
   console.log(`  demo: ${totalMedicoes} medições, uma obra com ciclo vencido`);
   console.log(
     `  demo: ${totalMovimentos} movimentos de tramitação, 3 processos em aberto`,
+  );
+  console.log(
+    `  demo: ${totalDocumentos} documentos com arquivo em ${
+      env().STORAGE_DRIVER === "db" ? "banco" : "disco"
+    }`,
+  );
+  console.log(
+    `  demo: ${totalRerratificacoes} rerratificações, uma aprovada e uma em tramitação`,
   );
 }
 

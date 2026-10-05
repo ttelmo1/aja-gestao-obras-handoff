@@ -5,8 +5,8 @@ import { percentual } from "@/lib/money";
 
 describe("resumoFinanceiro", () => {
   const medicoes = [
-    { valorMedido: "100000.00", percentualExecutado: "20.00", competencia: new Date("2026-01-31") },
-    { valorMedido: "150000.00", percentualExecutado: "50.00", competencia: new Date("2026-02-28") },
+    { valorMedido: "100000.00", competencia: new Date("2026-01-31") },
+    { valorMedido: "150000.00", competencia: new Date("2026-02-28") },
   ];
 
   it("soma medições e calcula saldo sobre o contrato atual", () => {
@@ -27,11 +27,6 @@ describe("resumoFinanceiro", () => {
     assert.equal(r.valorContratadoAtual.toString(), "900000");
   });
 
-  it("usa o MAIOR percentual executado, não a soma — o avanço é acumulado", () => {
-    const r = resumoFinanceiro("1000000.00", "0", medicoes);
-    assert.equal(r.percentualExecutado.toString(), "50");
-  });
-
   it("não quebra sem medições", () => {
     const r = resumoFinanceiro("1000000.00", "0", []);
     assert.equal(r.valorMedidoTotal.toString(), "0");
@@ -47,8 +42,8 @@ describe("resumoFinanceiro", () => {
   it("não acumula erro de ponto flutuante", () => {
     // 0.1 + 0.2 em float daria 0.30000000000000004.
     const r = resumoFinanceiro("1.00", "0", [
-      { valorMedido: "0.10", percentualExecutado: "0", competencia: new Date() },
-      { valorMedido: "0.20", percentualExecutado: "0", competencia: new Date() },
+      { valorMedido: "0.10", competencia: new Date() },
+      { valorMedido: "0.20", competencia: new Date() },
     ]);
     assert.equal(r.valorMedidoTotal.toString(), "0.3");
     assert.equal(r.saldoAMedir.toString(), "0.7");

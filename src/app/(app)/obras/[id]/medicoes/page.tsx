@@ -7,14 +7,25 @@ import { Dado } from "@/components/ui/dados";
 import { Alerta } from "@/components/ui/formulario";
 import { Celula, Linha, Tabela } from "@/components/ui/tabela";
 import { Vazio } from "@/components/ui/vazio";
-import { formatarCompetencia, formatarData } from "@/lib/date-br";
+import { dataParaIso, formatarCompetencia, formatarData } from "@/lib/date-br";
 import { exigirPermissao } from "@/lib/guarda";
-import { formatarBRL, formatarPercentual } from "@/lib/money";
+import { formatarBRL, formatarPercentual, somar } from "@/lib/money";
 import { pode } from "@/modules/auth/permissoes";
+import { contarDocumentosPorMedicao } from "@/modules/medicoes/exclusao";
+import {
+  filtrarMedicoes,
+  lerFiltrosMedicao,
+  pagamentoPendente,
+  temFiltroMedicao,
+} from "@/modules/medicoes/filtros";
+import { podeMarcarComoPaga } from "@/modules/medicoes/pagamento";
 import { resumoDaObra } from "@/modules/obras/resumo";
-import { situacaoDaTramitacao } from "@/modules/tramitacao/movimentos";
 
-import { carregarMedicoes, carregarObra } from "../dados";
+import { carregarDocumentos, carregarMedicoes, carregarObra } from "../dados";
+import { medicaoParaExcluir } from "./exclusao";
+import { FiltrosDasMedicoes } from "./filtros";
+import { BotaoExcluirMedicao } from "./formulario";
+import { PagamentoDaMedicao } from "./pagamento";
 
 export const metadata = { title: "Medições" };
 export const dynamic = "force-dynamic";
@@ -33,25 +44,34 @@ export default async function MedicoesPage({
 }: PageProps<"/obras/[id]/medicoes">) {
   const usuario = await exigirPermissao("medicao", "ver");
   const { id } = await params;
-  const { salva } = await searchParams;
+  const parametros = await searchParams;
+  const { salva } = parametros;
+  const filtros = lerFiltrosMedicao(parametros);
 
-  const [obra, medicoes] = await Promise.all([
+  const podeEditar = pode(usuario.perfil, "medicao", "editar");
+  const podeExcluir = pode(usuario.perfil, "medicao", "excluir");
+
+  const [obra, medicoes, documentos] = await Promise.all([
     carregarObra(id),
     carregarMedicoes(id),
+    // Só quem exclui precisa saber quais medições têm documento ativo: é o
+    // que decide se a confirmação oferece o botão ou explica a trava.
+    podeExcluir ? carregarDocumentos(id) : [],
   ]);
   if (!obra) notFound();
 
   const agora = new Date();
-  const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes, null, agora);
+  const hoje = dataParaIso(agora);
+  const { financeiro, medicao } = resumoDaObra(obra, obra.medicoes, agora);
   const estourou = financeiro.saldoAMedir.isNegative();
-  const podeEditar = pode(usuario.perfil, "medicao", "editar");
+  const documentosPorMedicao = contarDocumentosPorMedicao(documentos);
 
-  // A situação da tramitação entra pronta em cada linha: calcular dentro do
-  // JSX repetiria a mesma soma três vezes por medição.
-  const linhas = medicoes.map((m) => ({
-    medicao: m,
-    tramitacao: situacaoDaTramitacao(m.movimentos, agora),
-  }));
+  // A faixa de indicadores continua falando da obra inteira; só a tabela
+  // responde ao filtro. Um total que mudasse junto com o filtro deixaria de
+  // ser o valor do contrato.
+  const visiveis = filtrarMedicoes(medicoes, filtros);
+  const pendentes = medicoes.filter((m) => pagamentoPendente(m.status));
+  const valorPendente = somar(...pendentes.map((m) => m.valorMedido));
 
   return (
     <div className="flex flex-col gap-4">
@@ -98,7 +118,19 @@ export default async function MedicoesPage({
           </Dado>
         </div>
 
-        <div className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-3">
+        <div className="mt-4 grid gap-3 border-t border-[var(--border)] pt-4 sm:grid-cols-4">
+          <Dado rotulo="Pagamento pendente">
+            {pendentes.length === 0 ? (
+              "Nada pendente"
+            ) : (
+              <span className="tabular text-[var(--danger)]">
+                {formatarBRL(valorPendente)}
+                <span className="block text-[11px] font-normal text-[var(--muted)]">
+                  {pendentes.length} medição(ões)
+                </span>
+              </span>
+            )}
+          </Dado>
           <Dado rotulo="Última medição">
             {formatarData(medicao?.ultima)}
           </Dado>
@@ -121,9 +153,28 @@ export default async function MedicoesPage({
         </div>
       </Card>
 
-      <Card titulo={`Histórico (${medicoes.length})`}>
-        {medicoes.length === 0 ? (
-          <Vazio mensagem="Nenhuma medição lançada nesta obra." />
+      <Card
+        titulo={
+          temFiltroMedicao(filtros)
+            ? `Histórico (${visiveis.length} de ${medicoes.length})`
+            : `Histórico (${medicoes.length})`
+        }
+      >
+        <div className="mb-4 border-b border-[var(--border)] pb-4">
+          <FiltrosDasMedicoes
+            base={`/obras/${obra.id}/medicoes`}
+            filtros={filtros}
+          />
+        </div>
+
+        {visiveis.length === 0 ? (
+          <Vazio
+            mensagem={
+              temFiltroMedicao(filtros)
+                ? "Nenhuma medição com esses filtros."
+                : "Nenhuma medição lançada nesta obra."
+            }
+          />
         ) : (
           <Tabela
             colunas={[
@@ -132,18 +183,17 @@ export default async function MedicoesPage({
               "Período",
               "Data",
               "Valor",
-              "% exec.",
               "Protocolo",
               "NF",
               "ISS",
               "Responsável",
               "Situação",
-              "Setor atual",
-              "Tempo",
+              "Pagamento",
               "Docs",
+              ...(podeExcluir ? [""] : []),
             ]}
           >
-            {linhas.map(({ medicao: m, tramitacao }) => (
+            {visiveis.map((m) => (
               <Linha key={m.id}>
                 <Celula>
                   {podeEditar ? (
@@ -165,36 +215,36 @@ export default async function MedicoesPage({
                 </Celula>
                 <Celula>{formatarData(m.dataMedicao)}</Celula>
                 <Celula tabular>{formatarBRL(m.valorMedido)}</Celula>
-                <Celula tabular>{formatarPercentual(m.percentualExecutado)}</Celula>
                 <Celula apagada>{m.protocolo ?? "—"}</Celula>
                 <Celula apagada>{m.notaFiscalNumero ?? "—"}</Celula>
                 <Celula tabular apagada>
                   {m.issValor ? formatarBRL(m.issValor) : "—"}
                 </Celula>
-                <Celula apagada>{m.responsavel?.nome ?? "—"}</Celula>
+                <Celula apagada>{m.responsavelNome ?? "—"}</Celula>
                 <Celula>
                   <BadgeMedicao status={m.status} />
                 </Celula>
-                <Celula apagada>
-                  {tramitacao.atual?.setorDestino.nome ?? "—"}
-                </Celula>
-                <Celula tabular>
-                  {tramitacao.diasParado === null ? (
-                    <span className="text-[var(--muted)]">—</span>
-                  ) : (
-                    <strong
-                      style={{
-                        color:
-                          tramitacao.diasParado >= 15 ? "var(--danger)" : undefined,
-                      }}
-                    >
-                      {tramitacao.diasParado} dia(s)
-                    </strong>
-                  )}
+                <Celula>
+                  <PagamentoDaMedicao
+                    medicaoId={m.id}
+                    paga={m.status === "PAGA"}
+                    dataPagamento={m.dataPagamento ? formatarData(m.dataPagamento) : null}
+                    podeMarcar={podeMarcarComoPaga(m.status)}
+                    podeEditar={podeEditar}
+                    hoje={hoje}
+                  />
                 </Celula>
                 <Celula tabular apagada>
                   {m._count.documentos}
                 </Celula>
+                {podeExcluir && (
+                  <Celula>
+                    <BotaoExcluirMedicao
+                      medicao={medicaoParaExcluir(m, documentosPorMedicao)}
+                      gatilho="link"
+                    />
+                  </Celula>
+                )}
               </Linha>
             ))}
           </Tabela>

@@ -6,28 +6,48 @@ import type { StatusObra } from "@/generated/prisma/enums";
 import { formatarData } from "@/lib/date-br";
 import { formatarBRL } from "@/lib/money";
 import { ROTULOS_STATUS } from "@/modules/obras/filtros";
+import {
+  situacaoDoOperador,
+  type AtribuicaoOperador,
+} from "@/modules/obras/operador";
 import type { ResumoObra } from "@/modules/obras/resumo";
 
 /**
  * Cartão de obra do painel — a tela que o cliente já viu no mockup. A faixa
- * navio na lateral esquerda e o par de barras (físico em navio, financeiro em
- * dourado) vêm de lá.
+ * navio na lateral esquerda e as barras de progresso vêm de lá. A barra de
+ * execução física saiu em 09/09/2026 junto com o dado (requisitos.md 1.4), e é
+ * o espaço dela que o operador ocupa. O código interno saiu da tela em
+ * 15/09/2026 — o número do contrato, logo abaixo do objeto, já identifica a
+ * obra —, mas continua gerado e gravado no banco.
  */
 export type ObraNoPainel = {
   id: string;
-  codigo: string;
   objeto: string;
   numeroContrato: string;
   status: StatusObra;
   contratante: { nome: string };
-  responsavel: { nome: string } | null;
+  operadorId: string | null;
+  operador: { nome: string } | null;
+  operadorAssumidoEm: Date | null;
+  operadorLiberadoEm: Date | null;
+  operadorObservacao: string | null;
   dataOrdemInicio: Date | null;
   dataPrevistaTermino: Date | null;
+  prazoAditivadoDias: number;
+  /** Observações da aba Contrato — aparecem no pé do cartão (24/09/2026). */
+  observacoes: string | null;
   resumo: ResumoObra;
 };
 
 export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
-  const { financeiro, prazo, medicao, farol, motivosFarol } = obra.resumo;
+  const { financeiro, prazo, medicao, farol, motivosFarol, motivoPrincipalFarol } =
+    obra.resumo;
+  const operador = situacaoDoOperador(atribuicaoDe(obra));
+  // O cliente quer o farol para "chamar a atenção e o responsável trabalhar em
+  // cima" — então o motivo fica escrito no cartão, e não só no hover, que não
+  // existe em tablet. Verde e cinza não precisam: a ausência de alerta é o
+  // recado.
+  const alerta = farol === "AMARELO" || farol === "VERMELHO";
 
   return (
     <Link
@@ -50,16 +70,54 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
           <p className="mt-1.5 text-[11px] font-bold tracking-wide text-[var(--muted)] uppercase">
             {ROTULOS_STATUS[obra.status]}
           </p>
+          {obra.resumo.suspensaDesde && (
+            <p className="mt-1 text-[12px] font-semibold text-[var(--warning-fg)]">
+              Prazo suspenso desde {formatarData(obra.resumo.suspensaDesde)}
+            </p>
+          )}
         </div>
         <BadgeFarol farol={farol} titulo={motivosFarol.join(" ")} />
       </div>
 
+      {alerta && motivoPrincipalFarol && (
+        <p
+          className="mb-3 text-[12px] font-semibold"
+          style={{ color: farol === "VERMELHO" ? "var(--red)" : "var(--warning-fg)" }}
+        >
+          {motivoPrincipalFarol}
+          {motivosFarol.length > 1 && (
+            <span className="font-normal text-[var(--muted)]">
+              {" "}
+              +{motivosFarol.length - 1}
+            </span>
+          )}
+        </p>
+      )}
+
       <Dados>
-        <Dado rotulo="Código">{obra.codigo}</Dado>
-        <Dado rotulo="Responsável">{obra.responsavel?.nome}</Dado>
+        {/* Operador só em atenção ou crítico: obra em dia não tem o que
+            atribuir, e o rótulo vazio em quinze cartões verdes é ruído. */}
+        {alerta && (
+          <Dado rotulo={operador.assumida ? "Operador" : "Último operador"}>
+            {operador.nome ?? "a assumir"}
+          </Dado>
+        )}
         <Dado rotulo="Início">{formatarData(obra.dataOrdemInicio) || "—"}</Dado>
+        {/* Término vigente, não o do contrato: é a data que decide o farol do
+            cartão, e mostrar a outra ao lado de um alerta de prazo já
+            prorrogado só confunde. O contrato aparece na aba Resumo. */}
         <Dado rotulo="Término previsto">
-          {formatarData(obra.dataPrevistaTermino) || "—"}
+          {formatarData(obra.resumo.terminoVigente) || "—"}
+          {obra.prazoAditivadoDias > 0 && (
+            <span className="block text-[11px] font-normal text-[var(--muted)]">
+              +{obra.prazoAditivadoDias} dia(s) de rerratificação
+            </span>
+          )}
+          {obra.resumo.diasSuspensos > 0 && (
+            <span className="block text-[11px] font-normal text-[var(--muted)]">
+              +{obra.resumo.diasSuspensos} dia(s) de suspensão
+            </span>
+          )}
         </Dado>
         <Dado rotulo="Última medição">{formatarData(medicao?.ultima)}</Dado>
         <Dado rotulo="Próxima medição">
@@ -78,10 +136,6 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
         <Progresso rotulo="Prazo transcorrido" percentual={prazo.percentualTranscorrido} />
       )}
       <Progresso
-        rotulo="Execução física"
-        percentual={financeiro.percentualExecutado.toNumber()}
-      />
-      <Progresso
         rotulo="Financeiro medido"
         percentual={financeiro.percentualMedido.toNumber()}
         tom="ouro"
@@ -98,6 +152,34 @@ export function CartaoObra({ obra }: { obra: ObraNoPainel }) {
           <span className="tabular">{formatarBRL(financeiro.saldoAMedir)}</span>
         </Dado>
       </div>
+
+      {/* Pedido do Junior em 24/09/2026: a observação do contrato também no
+          cartão. Três linhas no máximo, para os cartões não ficarem com
+          alturas muito diferentes; o texto inteiro fica no `title` e na aba
+          Resumo. */}
+      {obra.observacoes && (
+        <div className="mt-3 border-t border-[var(--border)] pt-3">
+          <Dado rotulo="Observações">
+            <span
+              title={obra.observacoes}
+              className="line-clamp-3 font-normal whitespace-pre-line"
+            >
+              {obra.observacoes}
+            </span>
+          </Dado>
+        </div>
+      )}
     </Link>
   );
+}
+
+/** Os quatro campos do operador, do jeito que o módulo os lê. */
+function atribuicaoDe(obra: ObraNoPainel): AtribuicaoOperador {
+  return {
+    operadorId: obra.operadorId,
+    operadorNome: obra.operador?.nome ?? null,
+    operadorAssumidoEm: obra.operadorAssumidoEm,
+    operadorLiberadoEm: obra.operadorLiberadoEm,
+    operadorObservacao: obra.operadorObservacao,
+  };
 }

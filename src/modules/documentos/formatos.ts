@@ -64,7 +64,12 @@ export function extensaoDe(nomeArquivo: string): string {
 }
 
 export type ResultadoValidacao =
-  | { ok: true; formato: FormatoAceito }
+  /**
+   * `mimeNormalizado` é o que deve ir para o banco: o mime que o navegador
+   * declarou só quando a allowlist o reconhece, senão o canônico da extensão.
+   * Guardar `arquivo.type` cru deixaria um `text/html` entrar num `.png`.
+   */
+  | { ok: true; formato: FormatoAceito; mimeNormalizado: string }
   | { ok: false; motivo: string };
 
 export function validarArquivo(
@@ -112,7 +117,33 @@ export function validarArquivo(
     return { ok: false, motivo: `Arquivo excede o limite de ${mb}MB.` };
   }
 
-  return { ok: true, formato };
+  const mimeNormalizado = formato.mimeTypes.includes(mimeType)
+    ? mimeType
+    : formato.mimeTypes[0];
+
+  return { ok: true, formato, mimeNormalizado };
+}
+
+/**
+ * Tipo de conteúdo para a resposta de download, derivado da extensão.
+ *
+ * O mime gravado veio do navegador de quem subiu o arquivo e não serve como
+ * autoridade para dizer ao navegador de quem baixa como interpretar os bytes:
+ * um `text/html` num arquivo `.png` rodaria como página na nossa própria
+ * origem, com a sessão de quem abriu.
+ */
+export function tipoDeConteudo(extensao: string): string {
+  const formato = formatosAceitos().find(
+    (f) => f.extensao === extensao.toLowerCase(),
+  );
+  return formato?.mimeTypes[0] ?? "application/octet-stream";
+}
+
+/** Só estes abrem na aba; o resto o navegador baixa. */
+const INLINE_SEGURO = new Set(["pdf", "jpg", "jpeg", "png"]);
+
+export function abreInline(extensao: string): boolean {
+  return INLINE_SEGURO.has(extensao.toLowerCase());
 }
 
 /** Lista para o atributo `accept` do input file. */

@@ -30,17 +30,27 @@ function opcoesCookie(expira: Date) {
   };
 }
 
-/** IP e navegador de quem está pedindo — para a auditoria e para a tela de sessões. */
+/**
+ * IP e navegador de quem está pedindo — para a auditoria e para a tela de
+ * sessões.
+ *
+ * O IP é sempre nulo, de propósito. Este projeto roda `next start` sem custom
+ * server nem middleware, e o app router não expõe o IP da conexão: `headers()`
+ * é tudo o que existe. Ler `x-forwarded-for` daria um valor escolhido pelo
+ * próprio cliente — auditoria autodeclarada, e um freio de login contornável
+ * por rotação de header. Melhor um campo vazio, que a tela já sabe exibir como
+ * "origem desconhecida", do que um campo que aparenta rastreabilidade sem ter.
+ *
+ * Se a instalação acabar tendo proxy reverso (ponto #11 da reunião), este é o
+ * lugar de reabrir — provavelmente com custom server lendo o socket, já que
+ * confiar no header depende de o proxy sobrescrevê-lo.
+ */
 export async function origemDaRequisicao(): Promise<{
   ip: string | null;
   userAgent: string | null;
 }> {
   const h = await headers();
-  // Numa instalação de rede local não há CDN; `x-forwarded-for` só aparece se
-  // o cliente colocar um proxy reverso na frente. O primeiro item é o cliente.
-  const encaminhado = h.get("x-forwarded-for");
-  const ip = encaminhado?.split(",")[0]?.trim() || h.get("x-real-ip") || null;
-  return { ip, userAgent: h.get("user-agent") };
+  return { ip: null, userAgent: h.get("user-agent") };
 }
 
 export async function criarSessao(usuarioId: string): Promise<void> {

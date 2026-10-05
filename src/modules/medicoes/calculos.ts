@@ -5,12 +5,12 @@ import { dec, money, percentual, somar } from "@/lib/money";
  * Cálculos financeiros da obra (requisitos.md 1.4).
  *
  * Nada aqui é persistido: os agregados são derivados das medições a cada
- * leitura, para não existirem duas versões da verdade. A única exceção é
- * `percentualExecutado`, que é informado pelo usuário por medição.
+ * leitura, para não existirem duas versões da verdade. Desde 09/09/2026 não há
+ * mais exceção — o avanço físico, único número que vinha do usuário, saiu do
+ * sistema (requisitos.md 1.4).
  */
 export type MedicaoParaCalculo = {
   valorMedido: Decimal | string | number;
-  percentualExecutado: Decimal | string | number;
   competencia: Date;
   /** Data do boletim; quando ausente, a competência faz as vezes. */
   dataMedicao?: Date | null;
@@ -28,8 +28,6 @@ export type ResumoFinanceiro = {
   saldoAMedir: Decimal;
   /** medido / contratado atual */
   percentualMedido: Decimal;
-  /** avanço físico: maior percentual informado (é acumulado) */
-  percentualExecutado: Decimal;
   quantidadeMedicoes: number;
 };
 
@@ -41,19 +39,11 @@ export function resumoFinanceiro(
   const valorContratadoAtual = money(somar(valorContratado, valorAditivado));
   const valorMedidoTotal = money(somar(...medicoes.map((m) => m.valorMedido)));
 
-  // O percentual executado é acumulado por natureza, então o total da obra é o
-  // maior valor informado, não a soma.
-  const percentualExecutado = medicoes.reduce<Decimal>(
-    (max, m) => Decimal.max(max, dec(m.percentualExecutado)),
-    new Decimal(0),
-  );
-
   return {
     valorContratadoAtual,
     valorMedidoTotal,
     saldoAMedir: money(valorContratadoAtual.minus(valorMedidoTotal)),
     percentualMedido: percentual(valorMedidoTotal, valorContratadoAtual),
-    percentualExecutado: percentualExecutado.toDecimalPlaces(2),
     quantidadeMedicoes: medicoes.length,
   };
 }

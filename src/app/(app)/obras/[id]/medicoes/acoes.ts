@@ -9,9 +9,8 @@ import {
   competencia,
   dataOpcional,
   dinheiro,
-  dinheiroOpcional,
+  dinheiroOpcionalPositivo,
   inteiroOpcional,
-  percentualObrigatorio,
   percentualOpcional,
   textoOpcional,
 } from "@/lib/campos";
@@ -19,8 +18,20 @@ import { autorizar } from "@/lib/guarda";
 import { dec } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
+import { apagarArquivos } from "@/lib/storage";
 import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { calcularIss, proximoNumero } from "@/modules/medicoes/calculos";
+import {
+  erroNaDataDoPagamento,
+  erroNaSituacaoPeloFormulario,
+  podeMarcarComoPaga,
+  SITUACAO_AO_DESFAZER_PAGAMENTO,
+} from "@/modules/medicoes/pagamento";
+import {
+  bloqueioExclusaoMedicao,
+  ondeDocumentosAtivosDaMedicao,
+  ondeDocumentosDaMedicao,
+} from "@/modules/medicoes/exclusao";
 
 export type EstadoMedicao = { erro?: string; sucesso?: string } | undefined;
 
@@ -32,17 +43,15 @@ const medicaoSchema = z
     periodoInicio: dataOpcional,
     periodoFim: dataOpcional,
     valorMedido: dinheiro,
-    percentualExecutado: percentualObrigatorio,
     protocolo: textoOpcional,
     dataProtocolo: dataOpcional,
     notaFiscalNumero: textoOpcional,
     notaFiscalData: dataOpcional,
-    notaFiscalValor: dinheiroOpcional,
+    notaFiscalValor: dinheiroOpcionalPositivo,
     issAliquota: percentualOpcional,
-    issValor: dinheiroOpcional,
-    responsavelId: textoOpcional,
+    issValor: dinheiroOpcionalPositivo,
+    responsavelNome: textoOpcional,
     status: z.enum(StatusMedicao),
-    dataPagamento: dataOpcional,
     observacoes: textoOpcional,
   })
   .refine((m) => dec(m.valorMedido).gt(0), {
@@ -51,10 +60,6 @@ const medicaoSchema = z
   .refine(
     (m) => !m.periodoInicio || !m.periodoFim || m.periodoInicio <= m.periodoFim,
     { message: "O início do período não pode ser depois do fim." },
-  )
-  .refine(
-    (m) => m.status !== StatusMedicao.PAGA || m.dataPagamento !== null,
-    { message: "Medição marcada como paga precisa da data do pagamento." },
   )
   .refine(
     (m) => m.status === StatusMedicao.RASCUNHO || m.protocolo !== null,
@@ -71,7 +76,6 @@ const CAMPOS = [
   "periodoInicio",
   "periodoFim",
   "valorMedido",
-  "percentualExecutado",
   "protocolo",
   "dataProtocolo",
   "notaFiscalNumero",
@@ -79,9 +83,8 @@ const CAMPOS = [
   "notaFiscalValor",
   "issAliquota",
   "issValor",
-  "responsavelId",
+  "responsavelNome",
   "status",
-  "dataPagamento",
   "observacoes",
 ];
 
@@ -124,7 +127,7 @@ export async function salvarMedicao(
 
   const obra = await prisma.obra.findUnique({
     where: { id: obraId },
-    select: { id: true, codigo: true },
+    select: { id: true, numeroContrato: true },
   });
   if (!obra) return { erro: "Obra não encontrada." };
 
@@ -138,6 +141,8 @@ export async function salvarMedicao(
       if (!antes || antes.obraId !== obraId) {
         return { erro: "Medição não encontrada nesta obra." };
       }
+      const erroSituacao = erroNaSituacaoPeloFormulario(antes.status, dados.status);
+      if (erroSituacao) return { erro: erroSituacao };
 
       const novo = { ...dados, issValor, numero: numero ?? antes.numero };
       const mudancas = diff(antes as unknown as Record<string, unknown>, novo);
@@ -152,7 +157,7 @@ export async function salvarMedicao(
             entidade: "Medicao",
             entidadeId: id,
             obraId,
-            descricao: `Medição ${antes.numero} da obra ${obra.codigo} alterada.`,
+            descricao: `Medição ${antes.numero} da obra do contrato ${obra.numeroContrato} alterada.`,
             dadosAntes: mudancas.antes,
             dadosDepois: mudancas.depois,
           },
@@ -160,10 +165,15 @@ export async function salvarMedicao(
         );
       });
 
+      // `layout` porque a medição mexe no cabeçalho e no farol da obra, não
+      // só na aba — mesma revalidação que as rerratificações já faziam.
+      revalidatePath(`/obras/${obraId}`, "layout");
       revalidatePath("/obras");
-      revalidatePath(`/obras/${obraId}/medicoes`);
       return { sucesso: "Alterações salvas." };
     }
+
+    const erroSituacao = erroNaSituacaoPeloFormulario(null, dados.status);
+    if (erroSituacao) return { erro: erroSituacao };
 
     await prisma.$transaction(async (tx) => {
       const existentes = await tx.medicao.findMany({
@@ -185,7 +195,7 @@ export async function salvarMedicao(
           entidade: "Medicao",
           entidadeId: medicao.id,
           obraId,
-          descricao: `Medição ${medicao.numero} lançada na obra ${obra.codigo}.`,
+          descricao: `Medição ${medicao.numero} lançada na obra do contrato ${obra.numeroContrato}.`,
           dadosDepois: {
             numero: medicao.numero,
             valorMedido: medicao.valorMedido,
@@ -202,6 +212,7 @@ export async function salvarMedicao(
     throw erro;
   }
 
+  revalidatePath(`/obras/${obraId}`, "layout");
   revalidatePath("/obras");
   redirect(`/obras/${obraId}/medicoes?salva=1`);
 }
@@ -222,28 +233,27 @@ export async function excluirMedicao(
       obraId: true,
       status: true,
       valorMedido: true,
-      obra: { select: { codigo: true } },
-      _count: { select: { documentos: true } },
+      obra: { select: { numeroContrato: true } },
     },
   });
   if (!medicao) return { erro: "Medição não encontrada." };
 
-  // Medição que já saiu do rascunho virou processo no órgão: existe protocolo,
-  // nota e gente esperando. Apagar seria perder o rastro; o caminho é
-  // Rejeitada, que continua no histórico.
-  if (medicao.status !== StatusMedicao.RASCUNHO) {
-    return {
-      erro: "Só medição em rascunho pode ser apagada. Uma medição já protocolada deve ser marcada como Rejeitada — o histórico do processo precisa continuar existindo.",
-    };
-  }
-  if (medicao._count.documentos > 0) {
-    return {
-      erro: `Esta medição tem ${medicao._count.documentos} documento(s) vinculado(s). Remova-os antes de apagá-la.`,
-    };
-  }
+  // Qualquer situação sai; só documento ativo trava — contando o que entrou
+  // pela tramitação, que iria junto em cascata. Ver modules/medicoes/exclusao.
+  const documentosAtivos = await prisma.documento.count({
+    where: ondeDocumentosAtivosDaMedicao(id),
+  });
+  const bloqueio = bloqueioExclusaoMedicao(documentosAtivos);
+  if (bloqueio) return { erro: bloqueio };
 
   const { ip } = await origemDaRequisicao();
-  await prisma.$transaction(async (tx) => {
+  const caminhos = await prisma.$transaction(async (tx) => {
+    // Lidos na mesma transação da exclusão: são os documentos já excluídos
+    // logicamente que a cascata leva junto, e cujos arquivos saem depois.
+    const documentos = await tx.documento.findMany({
+      where: ondeDocumentosDaMedicao(id),
+      select: { caminhoRelativo: true },
+    });
     await tx.medicao.delete({ where: { id } });
     await registrar(
       {
@@ -252,13 +262,135 @@ export async function excluirMedicao(
         entidade: "Medicao",
         entidadeId: id,
         obraId: medicao.obraId,
-        descricao: `Medição ${medicao.numero} da obra ${medicao.obra.codigo} excluída.`,
-        dadosAntes: { numero: medicao.numero, valorMedido: medicao.valorMedido },
+        descricao: `Medição ${medicao.numero} da obra do contrato ${medicao.obra.numeroContrato} excluída.`,
+        dadosAntes: {
+          numero: medicao.numero,
+          valorMedido: medicao.valorMedido,
+          status: medicao.status,
+        },
+      },
+      tx,
+    );
+    return documentos.map((d) => d.caminhoRelativo);
+  });
+  await apagarArquivos(caminhos);
+
+  revalidatePath(`/obras/${medicao.obraId}`, "layout");
+  revalidatePath("/obras");
+  redirect(`/obras/${medicao.obraId}/medicoes`);
+}
+
+/**
+ * Marca a medição como paga, com a data — o botão na linha da tabela. É o
+ * único caminho para *Paga*: o formulário não grava essa situação nem a data.
+ * Ver `modules/medicoes/pagamento.ts`.
+ */
+export async function marcarComoPaga(
+  _estado: EstadoMedicao,
+  formData: FormData,
+): Promise<EstadoMedicao> {
+  const permissao = await autorizar("medicao", "editar");
+  if (!permissao.ok) return { erro: permissao.erro };
+
+  const id = String(formData.get("id") ?? "");
+  const campoData = dataOpcional.safeParse(String(formData.get("dataPagamento") ?? ""));
+  if (!campoData.success) return { erro: "Data do pagamento inválida." };
+  const erroData = erroNaDataDoPagamento(campoData.data);
+  if (erroData) return { erro: erroData };
+
+  const medicao = await carregarParaPagamento(id);
+  if (!medicao) return { erro: "Medição não encontrada." };
+  if (!podeMarcarComoPaga(medicao.status)) {
+    return {
+      erro: "Só medição protocolada ou aprovada pode ser marcada como paga.",
+    };
+  }
+
+  const { ip } = await origemDaRequisicao();
+  await prisma.$transaction(async (tx) => {
+    await tx.medicao.update({
+      where: { id },
+      data: { status: StatusMedicao.PAGA, dataPagamento: campoData.data },
+    });
+    await registrar(
+      {
+        ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
+        acao: AcaoAuditoria.ATUALIZAR,
+        entidade: "Medicao",
+        entidadeId: id,
+        obraId: medicao.obraId,
+        descricao: `Medição ${medicao.numero} da obra do contrato ${medicao.obra.numeroContrato} marcada como paga.`,
+        dadosAntes: { status: medicao.status, dataPagamento: medicao.dataPagamento },
+        dadosDepois: { status: StatusMedicao.PAGA, dataPagamento: campoData.data },
       },
       tx,
     );
   });
 
+  revalidarPagamento(medicao.obraId);
+  return { sucesso: "Medição marcada como paga." };
+}
+
+/**
+ * Desfaz o pagamento — para o clique por engano ou a data errada. A medição
+ * volta para Aprovada e perde a data; ver `SITUACAO_AO_DESFAZER_PAGAMENTO`.
+ */
+export async function desfazerPagamento(
+  _estado: EstadoMedicao,
+  formData: FormData,
+): Promise<EstadoMedicao> {
+  const permissao = await autorizar("medicao", "editar");
+  if (!permissao.ok) return { erro: permissao.erro };
+
+  const id = String(formData.get("id") ?? "");
+  const medicao = await carregarParaPagamento(id);
+  if (!medicao) return { erro: "Medição não encontrada." };
+  if (medicao.status !== StatusMedicao.PAGA) {
+    return { erro: "Esta medição não está paga." };
+  }
+
+  const { ip } = await origemDaRequisicao();
+  await prisma.$transaction(async (tx) => {
+    await tx.medicao.update({
+      where: { id },
+      data: { status: SITUACAO_AO_DESFAZER_PAGAMENTO, dataPagamento: null },
+    });
+    await registrar(
+      {
+        ator: { id: permissao.usuario.id, nome: permissao.usuario.nome, ip },
+        acao: AcaoAuditoria.ATUALIZAR,
+        entidade: "Medicao",
+        entidadeId: id,
+        obraId: medicao.obraId,
+        descricao: `Pagamento da medição ${medicao.numero} da obra do contrato ${medicao.obra.numeroContrato} desfeito.`,
+        dadosAntes: { status: medicao.status, dataPagamento: medicao.dataPagamento },
+        dadosDepois: { status: SITUACAO_AO_DESFAZER_PAGAMENTO, dataPagamento: null },
+      },
+      tx,
+    );
+  });
+
+  revalidarPagamento(medicao.obraId);
+  return { sucesso: "Pagamento desfeito." };
+}
+
+function carregarParaPagamento(id: string) {
+  return prisma.medicao.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      numero: true,
+      obraId: true,
+      status: true,
+      dataPagamento: true,
+      obra: { select: { numeroContrato: true } },
+    },
+  });
+}
+
+/** O pagamento mexe na aba, no quadro do painel e na lista de pendentes. */
+function revalidarPagamento(obraId: string) {
+  revalidatePath(`/obras/${obraId}`, "layout");
   revalidatePath("/obras");
-  redirect(`/obras/${medicao.obraId}/medicoes`);
+  revalidatePath("/obras/pagamentos-pendentes");
 }

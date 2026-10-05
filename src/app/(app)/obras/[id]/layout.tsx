@@ -7,7 +7,7 @@ import { resumoDaObra } from "@/modules/obras/resumo";
 import { ROTULOS_STATUS } from "@/modules/obras/filtros";
 
 import { AbasDaObra } from "./abas";
-import { carregarObra, diasParadoDe } from "./dados";
+import { carregarObra } from "./dados";
 
 /**
  * Cabeçalho e abas da obra — a estrutura que o cliente viu no mockup. O
@@ -18,18 +18,13 @@ export default async function ObraLayout({
   children,
   params,
 }: LayoutProps<"/obras/[id]">) {
-  await exigirPermissao("obra", "ver");
+  const usuario = await exigirPermissao("obra", "ver");
   const { id } = await params;
   const obra = await carregarObra(id);
   if (!obra) notFound();
 
   const agora = new Date();
-  const { farol, motivosFarol } = resumoDaObra(
-    obra,
-    obra.medicoes,
-    diasParadoDe(obra, agora),
-    agora,
-  );
+  const { farol, motivosFarol } = resumoDaObra(obra, obra.medicoes, agora);
 
   return (
     <div>
@@ -46,7 +41,7 @@ export default async function ObraLayout({
             {obra.objeto}
           </h1>
           <p className="mt-1.5 text-sm text-[var(--muted)]">
-            {obra.codigo} · Contrato {obra.numeroContrato} · {obra.contratante.nome}
+            Contrato {obra.numeroContrato} · {obra.contratante.nome}
             {obra.numeroProcesso && ` · Processo ${obra.numeroProcesso}`}
           </p>
         </div>
@@ -58,7 +53,7 @@ export default async function ObraLayout({
         </div>
       </header>
 
-      <AbasDaObra obraId={obra.id} />
+      <AbasDaObra obraId={obra.id} perfil={usuario.perfil} />
       {children}
     </div>
   );

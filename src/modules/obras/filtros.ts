@@ -2,7 +2,11 @@ import { Farol, StatusObra } from "@/generated/prisma/enums";
 
 /**
  * Filtros do painel (requisitos.md 1.9: busca por obra, contrato, protocolo,
- * responsável e status/farol).
+ * operador e status/farol).
+ *
+ * O filtro que era "responsável" virou "operador" em 09/09/2026, junto com o
+ * campo: filtra por quem assumiu a obra ou por quem mexeu nela por último —
+ * "as minhas obras" é a consulta que os três do setor fazem todo dia.
  *
  * A leitura da URL é feita aqui, e não na página, por dois motivos: a mesma
  * interpretação serve ao painel e ao relatório da etapa 11, e valor inválido
@@ -12,7 +16,7 @@ export type Filtros = {
   busca: string;
   status: StatusObra | null;
   farol: Farol | null;
-  responsavelId: string | null;
+  operadorId: string | null;
   contratanteId: string | null;
 };
 
@@ -20,7 +24,7 @@ export const FILTROS_VAZIOS: Filtros = {
   busca: "",
   status: null,
   farol: null,
-  responsavelId: null,
+  operadorId: null,
   contratanteId: null,
 };
 
@@ -43,7 +47,7 @@ export function lerFiltros(params: Entrada): Filtros {
     busca: texto(params.busca),
     status: opcao(params.status, Object.values(StatusObra)),
     farol: opcao(params.farol, Object.values(Farol)),
-    responsavelId: texto(params.responsavel) || null,
+    operadorId: texto(params.operador) || null,
     contratanteId: texto(params.contratante) || null,
   };
 }
@@ -53,9 +57,25 @@ export function temFiltroAtivo(f: Filtros): boolean {
     f.busca !== "" ||
     f.status !== null ||
     f.farol !== null ||
-    f.responsavelId !== null ||
+    f.operadorId !== null ||
     f.contratanteId !== null
   );
+}
+
+/**
+ * Caminho inverso de `lerFiltros`: os filtros de volta em query string, com
+ * `?` na frente, ou vazio quando não há filtro. Leva o filtro do painel para a
+ * lista de pagamentos pendentes, que precisa somar as mesmas obras do quadro.
+ */
+export function filtrosParaQuery(f: Filtros): string {
+  const q = new URLSearchParams();
+  if (f.busca) q.set("busca", f.busca);
+  if (f.status) q.set("status", f.status);
+  if (f.farol) q.set("farol", f.farol);
+  if (f.operadorId) q.set("operador", f.operadorId);
+  if (f.contratanteId) q.set("contratante", f.contratanteId);
+  const s = q.toString();
+  return s ? `?${s}` : "";
 }
 
 /**
@@ -71,7 +91,7 @@ export function condicaoDeBusca(f: Filtros) {
   const onde: Record<string, unknown> = {};
 
   if (f.status) onde.status = f.status;
-  if (f.responsavelId) onde.responsavelId = f.responsavelId;
+  if (f.operadorId) onde.operadorId = f.operadorId;
   if (f.contratanteId) onde.contratanteId = f.contratanteId;
 
   if (f.busca) {
@@ -82,7 +102,7 @@ export function condicaoDeBusca(f: Filtros) {
       { numeroContrato: contem },
       { numeroProcesso: contem },
       { contratante: { nome: contem } },
-      { responsavel: { nome: contem } },
+      { operador: { nome: contem } },
     ];
   }
 

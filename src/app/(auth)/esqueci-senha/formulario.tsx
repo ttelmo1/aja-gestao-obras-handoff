@@ -1,13 +1,12 @@
 "use client";
 
-import { useActionState } from "react";
-
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 
 import { pedirRedefinicao, type EstadoFormulario } from "../acoes";
 
 export function FormularioEsqueciSenha() {
-  const [estado, acao, pendente] = useActionState<EstadoFormulario, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoFormulario>(
     pedirRedefinicao,
     undefined,
   );
@@ -15,7 +14,7 @@ export function FormularioEsqueciSenha() {
   if (estado?.sucesso) return <Alerta tipo="sucesso">{estado.sucesso}</Alerta>;
 
   return (
-    <form action={acao} className="flex flex-col gap-4">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-4">
       <Campo id="email" rotulo="E-mail da sua conta">
         <input
           id="email"

@@ -6,10 +6,15 @@ import {
   condicaoDeBusca,
   filtrarPorFarol,
   FILTROS_VAZIOS,
+  filtrosParaQuery,
   lerFiltros,
   temFiltroAtivo,
 } from "@/modules/obras/filtros";
-import { prazoTranscorrido, terminoPrevisto } from "@/modules/obras/prazo";
+import {
+  prazoTranscorrido,
+  terminoPrevisto,
+  terminoVigente,
+} from "@/modules/obras/prazo";
 import { resumoDaObra, totaisDoPainel } from "@/modules/obras/resumo";
 
 const d = (iso: string) => new Date(`${iso}T12:00:00-03:00`);
@@ -51,6 +56,101 @@ describe("prazo contratual", () => {
   it("devolve null quando o término não é depois do início", () => {
     assert.equal(prazoTranscorrido(d("2026-05-10"), d("2026-05-10")), null);
     assert.equal(prazoTranscorrido(d("2026-05-10"), d("2026-05-01")), null);
+  });
+});
+
+/**
+ * Bug relatado pelo cliente em 22/09/2026: rerratificação com prazo adicional
+ * aprovado não prorrogava nada, e a obra continuava "vencida há 60 dias".
+ * Os números abaixo são os da tela que ele mandou.
+ */
+describe("prorrogação por rerratificação", () => {
+  it("soma o prazo aprovado ao término do contrato", () => {
+    const fim = terminoVigente(d("2026-07-24"), 120);
+    assert.equal(fim?.toISOString().slice(0, 10), "2026-11-21");
+  });
+
+  it("sem prazo aprovado, o vigente é o próprio término do contrato", () => {
+    const contrato = d("2026-07-24");
+    assert.equal(terminoVigente(contrato, 0), contrato);
+    assert.equal(terminoVigente(null, 120), null);
+  });
+
+  it("obra vencida volta a ficar em dia com o prazo aprovado", () => {
+    const semAditivo = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+    );
+    assert.ok(semAditivo);
+    assert.equal(semAditivo.vencido, true);
+    assert.equal(semAditivo.diasRestantes, -60);
+
+    const comAditivo = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+      120,
+    );
+    assert.ok(comAditivo);
+    assert.equal(comAditivo.vencido, false);
+    assert.equal(comAditivo.diasRestantes, 60);
+  });
+
+  it("o prazo adicional entra também no total, não só no que falta", () => {
+    // Senão obra prorrogada e em dia apareceria com o transcorrido acima de
+    // 100% — o denominador tem que crescer junto.
+    const p = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+      120,
+    );
+    assert.ok(p);
+    assert.equal(p.diasTotais, 480); // 360 do contrato + 120 aprovados
+    assert.ok(p.percentualTranscorrido < 100);
+  });
+
+  it("o término do contrato continua intocado — o cliente pediu isso", () => {
+    const p = prazoTranscorrido(
+      d("2025-07-29"),
+      d("2026-07-24"),
+      d("2026-09-22"),
+      120,
+    );
+    assert.ok(p);
+    assert.equal(p.terminoPrevistoContrato.toISOString().slice(0, 10), "2026-07-24");
+    assert.equal(p.terminoVigente.toISOString().slice(0, 10), "2026-11-21");
+    assert.equal(p.prazoAditivadoDias, 120);
+  });
+
+  it("a obra prorrogada sai do vermelho no farol", () => {
+    const obra = {
+      status: "EM_ANDAMENTO" as const,
+      valorContratado: "10349390.52",
+      valorAditivado: "2529161.37",
+      dataOrdemInicio: d("2025-07-29"),
+      dataPrevistaTermino: d("2026-07-24"),
+      prazoAditivadoDias: 0,
+      periodicidadeMedicao: "MENSAL" as const,
+      intervaloMedicaoDias: null,
+    };
+    const medicoes = [{ valorMedido: "500000", competencia: d("2026-09-20") }];
+
+    const antes = resumoDaObra(obra, medicoes, d("2026-09-22"));
+    assert.equal(antes.farol, "VERMELHO");
+    assert.match(antes.motivosFarol.join(" "), /Prazo vencido/);
+
+    const depois = resumoDaObra(
+      { ...obra, prazoAditivadoDias: 120 },
+      medicoes,
+      d("2026-09-22"),
+    );
+    assert.equal(depois.farol, "VERDE");
+    assert.equal(
+      depois.terminoVigente?.toISOString().slice(0, 10),
+      "2026-11-21",
+    );
   });
 });
 
@@ -97,6 +197,19 @@ describe("filtros do painel", () => {
     assert.equal(f.farol, null);
   });
 
+  it("filtros voltam à URL e são lidos de novo iguais", () => {
+    assert.equal(filtrosParaQuery(FILTROS_VAZIOS), "");
+    const f = lerFiltros({
+      busca: "Paiol 015",
+      status: "EM_ANDAMENTO",
+      farol: "VERMELHO",
+      operador: "u1",
+      contratante: "c1",
+    });
+    const q = new URLSearchParams(filtrosParaQuery(f));
+    assert.deepEqual(lerFiltros(Object.fromEntries(q)), f);
+  });
+
   it("aceita status e farol válidos", () => {
     const f = lerFiltros({ status: "EM_ANDAMENTO", farol: "VERMELHO" });
     assert.equal(f.status, "EM_ANDAMENTO");
@@ -104,7 +217,7 @@ describe("filtros do painel", () => {
     assert.equal(temFiltroAtivo(f), true);
   });
 
-  it("a busca cobre código, objeto, contrato, protocolo, contratante e responsável", () => {
+  it("a busca cobre código, objeto, contrato, protocolo, contratante e operador", () => {
     const onde = condicaoDeBusca(lerFiltros({ busca: "015/2026" })) as {
       OR: Array<Record<string, unknown>>;
     };
@@ -116,7 +229,7 @@ describe("filtros do painel", () => {
       "numeroContrato",
       "numeroProcesso",
       "contratante",
-      "responsavel",
+      "operador",
     ]) {
       assert.ok(campos.includes(campo), campo);
     }
@@ -138,33 +251,28 @@ describe("resumo da obra", () => {
     valorAditivado: "0",
     dataOrdemInicio: d("2026-03-10"),
     dataPrevistaTermino: d("2026-12-31"),
+    prazoAditivadoDias: 0,
     periodicidadeMedicao: "MENSAL" as const,
     intervaloMedicaoDias: null,
   };
 
-  it("sem medição, não inventa avanço físico nem acusa atraso de execução", () => {
-    const r = resumoDaObra(base, [], null, d("2026-09-04"));
+  it("sem medição, o saldo é o contrato inteiro", () => {
+    const r = resumoDaObra(base, [], d("2026-09-04"));
     assert.equal(r.financeiro.quantidadeMedicoes, 0);
     assert.equal(r.financeiro.valorMedidoTotal.toString(), "0");
     assert.equal(r.financeiro.saldoAMedir.toString(), "1200000");
-    assert.equal(
-      r.motivosFarol.some((m) => m.includes("atrás do previsto")),
-      false,
-    );
   });
 
-  it("soma as medições e usa o maior percentual executado", () => {
+  it("soma as medições e calcula o percentual medido", () => {
     const r = resumoDaObra(
       base,
       [
-        { valorMedido: "300000", percentualExecutado: "25", competencia: d("2026-06-30") },
-        { valorMedido: "348000", percentualExecutado: "58", competencia: d("2026-07-31") },
+        { valorMedido: "300000", competencia: d("2026-06-30") },
+        { valorMedido: "348000", competencia: d("2026-07-31") },
       ],
-      null,
       d("2026-09-04"),
     );
     assert.equal(r.financeiro.valorMedidoTotal.toString(), "648000");
-    assert.equal(r.financeiro.percentualExecutado.toString(), "58");
     assert.equal(r.financeiro.saldoAMedir.toString(), "552000");
     assert.equal(r.financeiro.percentualMedido.toString(), "54");
   });
@@ -173,7 +281,6 @@ describe("resumo da obra", () => {
     const r = resumoDaObra(
       { ...base, status: "PLANEJAMENTO", dataOrdemInicio: null, dataPrevistaTermino: null },
       [],
-      null,
       d("2026-09-04"),
     );
     assert.equal(r.farol, "CINZA");
@@ -181,7 +288,7 @@ describe("resumo da obra", () => {
   });
 
   it("obra paralisada fica vermelha independentemente do prazo", () => {
-    const r = resumoDaObra({ ...base, status: "PARALISADA" }, [], null, d("2026-04-01"));
+    const r = resumoDaObra({ ...base, status: "PARALISADA" }, [], d("2026-04-01"));
     assert.equal(r.farol, "VERMELHO");
   });
 });
@@ -196,13 +303,13 @@ describe("totais do painel", () => {
         valorAditivado: "0",
         dataOrdemInicio: d("2026-01-01"),
         dataPrevistaTermino: d("2026-12-31"),
+        prazoAditivadoDias: 0,
         periodicidadeMedicao: "MENSAL" as const,
         intervaloMedicaoDias: null,
       },
       medido === "0"
         ? []
-        : [{ valorMedido: medido, percentualExecutado: "50", competencia: d("2026-06-30") }],
-      null,
+        : [{ valorMedido: medido, competencia: d("2026-06-30") }],
       d("2026-07-01"),
     ),
   });

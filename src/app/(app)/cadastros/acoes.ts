@@ -12,11 +12,11 @@ import { AcaoAuditoria, diff, registrar } from "@/modules/auditoria/registrar";
 import { limparCnpj, validarCnpj } from "@/modules/cadastros/cnpj";
 
 /**
- * Ações dos três cadastros de apoio (contratante, responsável, setor).
+ * Ações dos cadastros de apoio (contratante e setor).
  *
  * Num arquivo só, e não um por entidade, porque o que muda entre eles é
  * apenas o schema de campos — permissão, auditoria e revalidação são
- * idênticas, e triplicar isso é triplicar o lugar onde esquecer de auditar.
+ * idênticas, e duplicar isso é duplicar o lugar onde esquecer de auditar.
  */
 
 export type EstadoCadastro = { erro?: string; sucesso?: string } | undefined;
@@ -51,18 +51,6 @@ const contratanteSchema = z.object({
   ativo: z.boolean(),
 });
 
-const responsavelSchema = z.object({
-  nome: z.string().trim().min(3, "Informe o nome do responsável."),
-  cargo: opcional,
-  registro: opcional,
-  email: opcional.refine(
-    (v) => v === null || z.email().safeParse(v).success,
-    "E-mail inválido.",
-  ),
-  telefone: opcional,
-  ativo: z.boolean(),
-});
-
 const setorSchema = z.object({
   nome: z.string().trim().min(2, "Informe o nome do setor."),
   sigla: opcional,
@@ -82,7 +70,7 @@ function paraLog(dados: Record<string, unknown>): Record<string, unknown> {
 
 type Config = {
   recurso: "cadastro";
-  entidade: "Contratante" | "Responsavel" | "Setor";
+  entidade: "Contratante" | "Setor";
   rotulo: string;
   caminho: string;
 };
@@ -178,13 +166,11 @@ function mensagemDeConflito(erro: unknown, entidade: Config["entidade"]): string
 }
 
 /* eslint-disable @typescript-eslint/no-explicit-any --
-   As três tabelas têm formatos diferentes e o Prisma não expõe um tipo comum
+   As duas tabelas têm formatos diferentes e o Prisma não expõe um tipo comum
    de delegate. O acesso está confinado a esta função, e cada chamada acima
    passa por um schema do zod antes de chegar aqui. */
 function tabelaDe(entidade: Config["entidade"], tx: any = prisma): any {
-  return { Contratante: tx.contratante, Responsavel: tx.responsavel, Setor: tx.setor }[
-    entidade
-  ];
+  return { Contratante: tx.contratante, Setor: tx.setor }[entidade];
 }
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -200,19 +186,6 @@ export async function salvarContratante(
     CONFIGS.Contratante,
     formData,
     { ...dados.data, cnpj: dados.data.cnpj && limparCnpj(dados.data.cnpj) },
-  );
-}
-
-export async function salvarResponsavel(
-  _estado: EstadoCadastro,
-  formData: FormData,
-): Promise<EstadoCadastro> {
-  const dados = responsavelSchema.safeParse(
-    campos(formData, ["nome", "cargo", "registro", "email", "telefone"]),
-  );
-  if (!dados.success) return { erro: dados.error.issues[0]?.message ?? "Dados inválidos." };
-  return salvar(CONFIGS.Responsavel, formData,
-    dados.data,
   );
 }
 
@@ -284,9 +257,6 @@ async function contarVinculos(
   if (entidade === "Contratante") {
     return prisma.obra.count({ where: { contratanteId: id } });
   }
-  if (entidade === "Responsavel") {
-    return prisma.obra.count({ where: { responsavelId: id } });
-  }
   const [entradas, saidas] = await Promise.all([
     prisma.tramitacaoMovimento.count({ where: { setorDestinoId: id } }),
     prisma.tramitacaoMovimento.count({ where: { setorOrigemId: id } }),
@@ -300,12 +270,6 @@ const CONFIGS: Record<Config["entidade"], Config> = {
     entidade: "Contratante",
     rotulo: "Contratante",
     caminho: "/cadastros/contratantes",
-  },
-  Responsavel: {
-    recurso: "cadastro",
-    entidade: "Responsavel",
-    rotulo: "Responsável",
-    caminho: "/cadastros/responsaveis",
   },
   Setor: {
     recurso: "cadastro",

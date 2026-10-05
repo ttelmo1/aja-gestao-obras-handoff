@@ -3,8 +3,11 @@ import { describe, it } from "node:test";
 
 import {
   competencia,
+  dataOpcional,
+  DIGITOS_INTEIROS_DINHEIRO,
   dinheiro,
   dinheiroOpcional,
+  dinheiroOpcionalPositivo,
   normalizarDinheiro,
   percentualObrigatorio,
   percentualOpcional,
@@ -121,7 +124,6 @@ describe("data de referência da medição", () => {
   it("usa a data do boletim quando existe", () => {
     const m = {
       valorMedido: "1",
-      percentualExecutado: "1",
       competencia: d("2026-07-01"),
       dataMedicao: d("2026-07-31"),
     };
@@ -131,7 +133,6 @@ describe("data de referência da medição", () => {
   it("cai na competência quando o boletim não foi datado", () => {
     const m = {
       valorMedido: "1",
-      percentualExecutado: "1",
       competencia: d("2026-07-01"),
       dataMedicao: null,
     };
@@ -146,6 +147,7 @@ describe("resumo da obra com medições", () => {
     valorAditivado: "0",
     dataOrdemInicio: d("2026-01-10"),
     dataPrevistaTermino: d("2026-12-31"),
+    prazoAditivadoDias: 0,
     periodicidadeMedicao: "MENSAL" as const,
     intervaloMedicaoDias: null,
   };
@@ -153,26 +155,24 @@ describe("resumo da obra com medições", () => {
   const medicoes = [
     {
       valorMedido: "300000",
-      percentualExecutado: "25",
       competencia: d("2026-06-01"),
       dataMedicao: d("2026-06-30"),
     },
     {
       valorMedido: "348000",
-      percentualExecutado: "58",
       competencia: d("2026-07-01"),
       dataMedicao: d("2026-07-31"),
     },
   ];
 
   it("acha a última medição mesmo com a lista fora de ordem", () => {
-    const r = resumoDaObra(obra, [...medicoes].reverse(), null, d("2026-08-10"));
+    const r = resumoDaObra(obra, [...medicoes].reverse(), d("2026-08-10"));
     assert.ok(r.medicao);
     assert.equal(r.medicao.ultima?.toISOString().slice(0, 10), "2026-07-31");
   });
 
   it("aponta o vencimento do próximo ciclo", () => {
-    const r = resumoDaObra(obra, medicoes, null, d("2026-08-10"));
+    const r = resumoDaObra(obra, medicoes, d("2026-08-10"));
     assert.ok(r.medicao);
     assert.equal(r.medicao.proxima.toISOString().slice(0, 10), "2026-08-30");
     assert.equal(r.medicao.atrasada, false);
@@ -181,11 +181,11 @@ describe("resumo da obra com medições", () => {
   it("conta as obras com ciclo vencido no painel", () => {
     const emDia = {
       status: "EM_ANDAMENTO" as const,
-      resumo: resumoDaObra(obra, medicoes, null, d("2026-08-10")),
+      resumo: resumoDaObra(obra, medicoes, d("2026-08-10")),
     };
     const atrasada = {
       status: "EM_ANDAMENTO" as const,
-      resumo: resumoDaObra(obra, medicoes, null, d("2026-10-10")),
+      resumo: resumoDaObra(obra, medicoes, d("2026-10-10")),
     };
 
     assert.equal(totaisDoPainel([emDia, atrasada]).medicoesAtrasadas, 1);
@@ -211,6 +211,34 @@ describe("campos do formulário de medição", () => {
     // Zero diria "a nota é de R$ 0,00"; null diz "ainda não informado".
     assert.equal(dinheiroOpcional.parse(""), null);
     assert.equal(dinheiroOpcional.parse("1.500,50"), "1500.50");
+  });
+
+  it("nota fiscal e ISS não aceitam valor negativo", () => {
+    // `dinheiro` continua aceitando negativo de propósito — a rerratificação
+    // usa isso para supressão. Aqui, não faz sentido.
+    assert.equal(dinheiroOpcionalPositivo.parse(""), null);
+    assert.equal(dinheiroOpcionalPositivo.parse("1.500,50"), "1500.50");
+    assert.equal(dinheiroOpcionalPositivo.safeParse("-500,00").success, false);
+    assert.equal(dinheiro.parse("-500,00"), "-500.00");
+  });
+
+  it("data malformada é erro, não campo esvaziado em silêncio", () => {
+    assert.equal(dataOpcional.parse(""), null);
+    // 30 de fevereiro não existe, e `new Date` a converteria em 02/03 calado.
+    assert.equal(dataOpcional.safeParse("2026-02-30").success, false);
+    assert.equal(dataOpcional.safeParse("31/12/2026").success, false);
+    assert.equal(dataOpcional.safeParse("2026-13-01").success, false);
+    assert.equal(dataOpcional.safeParse("ontem").success, false);
+    assert.ok(dataOpcional.parse("2026-09-07") instanceof Date);
+  });
+
+  it("valor maior que a coluna do banco é recusado no formulário", () => {
+    // `Decimal(15, 2)` guarda 13 dígitos inteiros; acima disso o insert
+    // estouraria no banco e viraria erro 500 em vez de mensagem na tela.
+    const noLimite = "9".repeat(DIGITOS_INTEIROS_DINHEIRO);
+    assert.equal(normalizarDinheiro(noLimite), `${noLimite}.00`);
+    assert.equal(normalizarDinheiro("9".repeat(DIGITOS_INTEIROS_DINHEIRO + 1)), null);
+    assert.equal(dinheiro.safeParse("9".repeat(DIGITOS_INTEIROS_DINHEIRO + 1)).success, false);
   });
 
   it("percentual aceita vírgula e recusa acima de 100", () => {

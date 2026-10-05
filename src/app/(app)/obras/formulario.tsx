@@ -1,26 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState } from "react";
 
+import { ConfirmarExclusao } from "@/components/ui/confirmar-exclusao";
+import { useEnvioSemReset } from "@/components/ui/envio-sem-reset";
 import { Alerta, Botao, Campo, classeInput } from "@/components/ui/formulario";
 import type { PeriodicidadeMedicao, StatusObra } from "@/generated/prisma/enums";
 import {
   PERIODICIDADES,
   ROTULOS_PERIODICIDADE,
 } from "@/modules/medicoes/periodicidade";
+import { bloqueioExclusaoObra } from "@/modules/obras/exclusao";
 import { ROTULOS_STATUS, STATUS_OBRA } from "@/modules/obras/filtros";
 
 import { excluirObra, salvarObra, type EstadoObra } from "./acoes";
 
 export type ObraNoFormulario = {
   id: string;
-  codigo: string;
   objeto: string;
   numeroContrato: string;
   numeroProcesso: string | null;
   contratanteId: string;
-  responsavelId: string | null;
   valorContratado: string;
   dataAssinatura: string | null;
   dataOrdemInicio: string | null;
@@ -47,19 +47,17 @@ type Opcao = { id: string; nome: string };
 export function FormularioObra({
   padrao,
   contratantes,
-  responsaveis,
 }: {
   padrao?: ObraNoFormulario;
   contratantes: Opcao[];
-  responsaveis: Opcao[];
 }) {
-  const [estado, acao, pendente] = useActionState<EstadoObra, FormData>(
+  const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoObra>(
     salvarObra,
     undefined,
   );
 
   return (
-    <form action={acao} className="flex flex-col gap-5">
+    <form onSubmit={aoEnviar} className="flex flex-col gap-5">
       {padrao && <input type="hidden" name="id" value={padrao.id} />}
 
       <fieldset className="flex flex-col gap-4">
@@ -82,21 +80,7 @@ export function FormularioObra({
           />
         </Campo>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Campo
-            id="codigo"
-            rotulo="Código interno"
-            dica={padrao ? undefined : "Em branco, o sistema numera sozinho."}
-          >
-            <input
-              id="codigo"
-              name="codigo"
-              defaultValue={padrao?.codigo}
-              placeholder="OBR-2026-001"
-              className={classeInput}
-            />
-          </Campo>
-
+        <div className="grid gap-4 sm:grid-cols-2">
           <Campo id="numeroContrato" rotulo="Número do contrato">
             <input
               id="numeroContrato"
@@ -118,7 +102,7 @@ export function FormularioObra({
           </Campo>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4">
           <Campo id="contratanteId" rotulo="Contratante">
             <select
               id="contratanteId"
@@ -131,22 +115,6 @@ export function FormularioObra({
               {contratantes.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nome}
-                </option>
-              ))}
-            </select>
-          </Campo>
-
-          <Campo id="responsavelId" rotulo="Responsável técnico">
-            <select
-              id="responsavelId"
-              name="responsavelId"
-              defaultValue={padrao?.responsavelId ?? ""}
-              className={classeInput}
-            >
-              <option value="">Não definido</option>
-              {responsaveis.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.nome}
                 </option>
               ))}
             </select>
@@ -236,7 +204,15 @@ export function FormularioObra({
             />
           </Campo>
 
-          <Campo id="dataTerminoReal" rotulo="Término real">
+          {/* "Real" virava o campo onde se digitava o término prorrogado à
+              mão (relato do cliente em 22/09/2026) — e ele não entra em conta
+              nenhuma. A prorrogação é derivada do prazo aprovado em
+              rerratificação; aqui é só a conclusão de fato. */}
+          <Campo
+            id="dataTerminoReal"
+            rotulo="Término efetivo"
+            dica="Só no fim: quando a obra terminou de fato. Prorrogação de prazo entra pela rerratificação."
+          >
             <input
               id="dataTerminoReal"
               name="dataTerminoReal"
@@ -312,25 +288,39 @@ export function FormularioObra({
   );
 }
 
+/** O que a janela de confirmação mostra sobre a obra. */
+export type ObraParaExcluir = {
+  id: string;
+  numeroContrato: string;
+  objeto: string;
+  contratante: string;
+  medicoes: number;
+  rerratificacoes: number;
+  documentosAtivos: number;
+};
+
 /**
  * Excluir obra é separado do formulário e só aparece para quem tem a
- * permissão. A ação recusa quando há medições, documentos ou rerratificações.
+ * permissão. Só documento ativo trava; o resto sai em cascata, e por isso a
+ * confirmação diz quantas medições e rerratificações vão junto.
  */
-export function BotaoExcluirObra({ id }: { id: string }) {
-  const [estado, acao, pendente] = useActionState<EstadoObra, FormData>(
-    excluirObra,
-    undefined,
-  );
-
+export function BotaoExcluirObra({ obra }: { obra: ObraParaExcluir }) {
   return (
-    <div className="flex flex-col gap-2">
-      <form action={acao}>
-        <input type="hidden" name="id" value={id} />
-        <Botao type="submit" variante="perigo" disabled={pendente}>
-          {pendente ? "Excluindo…" : "Excluir obra"}
-        </Botao>
-      </form>
-      {estado?.erro && <Alerta tipo="erro">{estado.erro}</Alerta>}
-    </div>
+    <ConfirmarExclusao
+      acao={excluirObra}
+      campos={{ id: obra.id }}
+      titulo="Excluir esta obra?"
+      detalhes={[
+        { rotulo: "Contrato", valor: obra.numeroContrato },
+        { rotulo: "Objeto", valor: obra.objeto },
+        { rotulo: "Contratante", valor: obra.contratante },
+        { rotulo: "Medições", valor: String(obra.medicoes) },
+        { rotulo: "Rerratificações", valor: String(obra.rerratificacoes) },
+      ]}
+      bloqueio={bloqueioExclusaoObra(obra.documentosAtivos)}
+      aviso="A obra é apagada de vez, junto com medições, rerratificações e tramitação. A auditoria continua registrando a exclusão."
+      gatilho="botao"
+      rotuloGatilho="Excluir obra"
+    />
   );
 }

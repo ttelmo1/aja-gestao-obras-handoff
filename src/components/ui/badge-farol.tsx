@@ -5,10 +5,12 @@ import { ROTULOS_FAROL } from "@/modules/farol/regras";
  * Farol de status. A cor nunca é o único sinal — vem sempre com o rótulo
  * escrito, porque parte dos usuários não é técnica e daltonismo é comum.
  *
- * As cores são as do mockup (`--green`, `--yellow`, `--red`). O mockup ainda
- * define um laranja, usado lá numa faixa intermediária; o enum tem só quatro
- * valores, então o laranja fica reservado até o cliente fechar os critérios
- * do farol (`docs/pontos-para-reuniao.md`, ponto 1).
+ * As cores são as do mockup (`--green`, `--yellow`, `--red`). O laranja que o
+ * mockup também define ficou de fora: o cliente confirmou em 07/09/2026 que
+ * são três faixas mais o cinza (`docs/pontos-para-reuniao.md`, ponto 1).
+ *
+ * O rótulo nunca quebra em duas linhas — a etiqueta divide a primeira linha do
+ * cartão com o nome da obra, e quebrada ela vira um borrão cinza no canto.
  */
 const CORES: Record<Farol, { ponto: string; fundo: string; texto: string }> = {
   VERDE: {
@@ -41,7 +43,7 @@ export function BadgeFarol({
   return (
     <span
       title={titulo}
-      className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold"
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold whitespace-nowrap"
       style={{ background: cor.fundo, color: cor.texto }}
     >
       <span

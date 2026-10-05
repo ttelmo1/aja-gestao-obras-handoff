@@ -2,7 +2,6 @@ import { notFound } from "next/navigation";
 
 import { Card } from "@/components/ui/card";
 import { exigirPermissao } from "@/lib/guarda";
-import { prisma } from "@/lib/prisma";
 import { proximoNumero } from "@/modules/medicoes/calculos";
 
 import { carregarMedicoes, carregarObra, paraCampoMes } from "../../dados";
@@ -22,14 +21,9 @@ export default async function NovaMedicaoPage({
   await exigirPermissao("medicao", "criar");
   const { id } = await params;
 
-  const [obra, medicoes, responsaveis] = await Promise.all([
+  const [obra, medicoes] = await Promise.all([
     carregarObra(id),
     carregarMedicoes(id),
-    prisma.responsavel.findMany({
-      where: { ativo: true },
-      orderBy: { nome: "asc" },
-      select: { id: true, nome: true },
-    }),
   ]);
   if (!obra) notFound();
 
@@ -39,7 +33,6 @@ export default async function NovaMedicaoPage({
     <Card titulo="Nova medição">
       <FormularioMedicao
         obraId={obra.id}
-        responsaveis={responsaveis}
         numeroSugerido={proximoNumero(medicoes.map((m) => m.numero))}
         competenciaSugerida={paraCampoMes(hoje) ?? ""}
       />

@@ -32,11 +32,13 @@ model Usuario {
   criadoEm     DateTime  @default(now())
   atualizadoEm DateTime  @updatedAt
 
-  tokensSenha  TokenSenha[]
-  sessoes      Sessao[]
-  obrasCriadas Obra[]                @relation("ObraCriadaPor")
-  documentos   Documento[]
-  movimentos   TramitacaoMovimento[]
+  tokensSenha   TokenSenha[]
+  sessoes       Sessao[]
+  obrasCriadas  Obra[]                @relation("ObraCriadaPor")
+  obrasOperadas Obra[]                @relation("ObraOperador")
+  documentos    Documento[]
+  movimentos    TramitacaoMovimento[]
+  dispensas     DocumentoDispensado[]
 
   @@index([ativo])
 }
@@ -75,25 +77,6 @@ model Sessao {
 
   @@index([usuarioId])
   @@index([expiraEm])
-}
-
-/// Equipe da obra — cadastro separado dos usuários do sistema (requisitos.md 1.2).
-model Responsavel {
-  id       String  @id @default(uuid())
-  nome     String
-  cargo    String?
-  registro String? // CREA / CAU
-  email    String?
-  telefone String?
-  ativo    Boolean @default(true)
-
-  criadoEm     DateTime @default(now())
-  atualizadoEm DateTime @updatedAt
-
-  obras    Obra[]
-  medicoes Medicao[]
-
-  @@index([ativo])
 }
 
 /// Órgão público contratante.
@@ -146,6 +129,10 @@ enum StatusObra {
 }
 
 /// Farol de status — calculado pelo motor de regras (requisitos.md 1.3).
+///
+/// Não é coluna de `Obra` de propósito: o farol depende do tempo que passa, e
+/// uma obra fica amarela sozinha à meia-noite, sem ninguém salvar nada. Cache
+/// aqui só produziria luz errada. Ver docs/pontos-para-reuniao.md, ponto #1.
 /// CINZA = sem dados suficientes para classificar.
 enum Farol {
   VERDE
@@ -171,19 +158,46 @@ model Obra {
   numeroProcesso String? // protocolo no órgão
 
   contratanteId String
-  contratante   Contratante  @relation(fields: [contratanteId], references: [id])
-  responsavelId String?
-  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
+  contratante   Contratante @relation(fields: [contratanteId], references: [id])
+
+  /// Operador que assumiu a obra — atribuição momentânea, feita pelo próprio
+  /// usuário na aba Resumo, não no cadastro do contrato (requisitos.md 1.2).
+  ///
+  /// São 15 a 20 contratos para três pessoas: quem está disponível assume, e o
+  /// nome fica como o último que mexeu depois de liberada. Não é responsável
+  /// fixo pela obra nem fila de tarefas — é registro de quem cuidou por
+  /// último. Aponta para `Usuario` porque quem assume é quem está logado.
+  operadorId         String?
+  operador           Usuario?  @relation("ObraOperador", fields: [operadorId], references: [id])
+  /// Quando a atribuição atual começou. Nulo = ninguém assumiu agora, mesmo
+  /// que `operadorId` ainda guarde o último que mexeu.
+  operadorAssumidoEm DateTime?
+  operadorLiberadoEm DateTime?
+  /// Justificativa em texto livre — "aguardando foto", "aguardando relatório".
+  operadorObservacao String?
 
   /// Valor original do contrato.
   valorContratado Decimal @db.Decimal(15, 2)
-  /// Soma do impacto das rerratificações (pode ser negativo).
+  /// Cache da soma do impacto das rerratificações aprovadas (pode ser
+  /// negativo). Fonte da verdade é modules/rerratificacoes/calculos.ts, que
+  /// reescreve a coluna a cada aprovação — ao contrário do farol, que não é
+  /// coluna nenhuma porque envelheceria sozinho com a passagem do tempo.
   valorAditivado  Decimal @default(0) @db.Decimal(15, 2)
 
   dataAssinatura      DateTime?
   dataOrdemInicio     DateTime?
   prazoDias           Int?
+  /// Término do contrato assinado. NÃO muda quando uma rerratificação
+  /// prorroga a obra — o prazo aprovado entra em `prazoAditivadoDias` e o
+  /// término que vale hoje é derivado dos dois (modules/obras/prazo.ts).
   dataPrevistaTermino DateTime?
+  /// Cache da soma do prazo adicional das rerratificações APROVADAS, em dias.
+  /// Mesmo papel de `valorAditivado`: a regra mora em
+  /// modules/rerratificacoes/calculos.ts e a coluna é reescrita a cada
+  /// alteração de rerratificação.
+  prazoAditivadoDias  Int       @default(0)
+  /// Data em que a obra terminou de fato, preenchida à mão no fim. Não é o
+  /// término prorrogado — esse é derivado, ver `prazoAditivadoDias`.
   dataTerminoReal     DateTime?
 
   status StatusObra @default(PLANEJAMENTO)
@@ -191,10 +205,6 @@ model Obra {
   periodicidadeMedicao PeriodicidadeMedicao @default(MENSAL)
   /// Intervalo em dias — só usado quando a periodicidade é PERSONALIZADA.
   intervaloMedicaoDias Int?
-
-  /// Cache do farol. Fonte da verdade é modules/farol/regras.ts.
-  farol            Farol     @default(CINZA)
-  farolCalculadoEm DateTime?
 
   observacoes String?
 
@@ -206,12 +216,40 @@ model Obra {
   medicoes        Medicao[]
   etapas          EtapaObra[]
   rerratificacoes Rerratificacao[]
+  suspensoes      SuspensaoPrazo[]
   documentos      Documento[]
+  dispensas       DocumentoDispensado[]
 
-  @@index([status, farol])
+  @@index([status])
   @@index([contratanteId])
-  @@index([responsavelId])
+  @@index([operadorId])
   @@index([dataPrevistaTermino])
+}
+
+/// Suspensão do prazo contratual — pedido do Junior pela Fernanda em
+/// 24/09/2026: *"enquanto ela estiver suspensa tudo para, e depois volta a
+/// contar da data final da suspensão"*. Tudo é o prazo da obra e o ciclo das
+/// medições. Uma obra pode ter mais de uma, sem sobreposição.
+///
+/// Nada disto vira coluna cache na obra, ao contrário do prazo aditivado:
+/// enquanto `dataFim` está em branco a suspensão cresce um dia por dia, e uma
+/// coluna envelheceria à meia-noite. A conta mora em
+/// modules/obras/suspensao.ts e é feita na leitura.
+model SuspensaoPrazo {
+  id     String @id @default(uuid())
+  obraId String
+  obra   Obra   @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  /// O prazo para de contar neste dia.
+  dataInicio  DateTime
+  /// O prazo volta a contar neste dia. Em branco = a obra continua suspensa.
+  dataFim     DateTime?
+  observacoes String?
+
+  criadoEm     DateTime @default(now())
+  atualizadoEm DateTime @updatedAt
+
+  @@index([obraId, dataInicio])
 }
 
 // ============================================================
@@ -242,9 +280,12 @@ model Medicao {
   /// competência (mês) e do protocolo (quando entrou no órgão).
   dataMedicao   DateTime?
 
-  valorMedido         Decimal @db.Decimal(15, 2)
-  /// Avanço físico acumulado da obra, informado pelo usuário (não calculável).
-  percentualExecutado Decimal @db.Decimal(5, 2)
+  valorMedido         Decimal  @db.Decimal(15, 2)
+  /// Avanço físico acumulado, informado pelo usuário até 09/09/2026, quando o
+  /// acompanhamento físico saiu do sistema (requisitos.md 1.4). Nenhuma tela
+  /// escreve nem lê esta coluna: ela sobrevive só para não apagar o histórico
+  /// das medições já lançadas. Ver etapa 13 e ponto #5.
+  percentualExecutado Decimal? @db.Decimal(5, 2)
 
   protocolo     String?
   dataProtocolo DateTime?
@@ -255,9 +296,14 @@ model Medicao {
   issAliquota      Decimal?  @db.Decimal(5, 2)
   issValor         Decimal?  @db.Decimal(15, 2)
 
-  /// Responsável da AJA por esta medição (mockup: "RESPONSÁVEL AJA").
-  responsavelId String?
-  responsavel   Responsavel? @relation(fields: [responsavelId], references: [id])
+  /// Quem assinou o boletim, digitado na própria medição.
+  ///
+  /// Era uma FK para `Responsavel`, um cadastro de equipe à parte dos
+  /// usuários do sistema. A Fernanda pediu a retirada do cadastro em
+  /// 21/09/2026 — "nas medições pode deixar só pra colocar o nome do
+  /// responsável pela medição mesmo": são poucas pessoas, sempre as mesmas, e
+  /// manter cadastro para isso é uma tela a mais para ganhar nada.
+  responsavelNome String?
 
   status        StatusMedicao @default(RASCUNHO)
   dataPagamento DateTime?
@@ -268,6 +314,7 @@ model Medicao {
 
   documentos Documento[]
   movimentos TramitacaoMovimento[]
+  dispensas  DocumentoDispensado[]
 
   @@unique([obraId, numero])
   @@index([obraId, competencia])
@@ -358,6 +405,8 @@ model TramitacaoMovimento {
   observacoes     String?
   criadoEm        DateTime @default(now())
 
+  documentos Documento[]
+
   @@index([etapaObraId, dataEntrada])
   @@index([medicaoId, dataEntrada])
   @@index([dataSaida]) // dataSaida IS NULL => processo parado
@@ -386,6 +435,12 @@ model Rerratificacao {
   data      DateTime?
   protocolo String?
 
+  /// "Ajuste de quantitativos e serviços" — a coluna Descrição do mockup.
+  descricao       String?
+  /// Quantos itens a planilha alterou. É contagem, não detalhamento: o
+  /// item a item fica no Excel apresentado ao órgão (requisitos.md 1.7).
+  quantidadeItens Int?
+
   /// Impacto agregado.
   percentualAlcancado Decimal @db.Decimal(5, 2)
   valorImpactado      Decimal @db.Decimal(15, 2)
@@ -407,20 +462,57 @@ model Rerratificacao {
 // Gestão documental
 // ============================================================
 
+/// Vocabulário do cliente. Os dezessete primeiros são a **lista de documentos
+/// do contrato**, ditada pela Fernanda em 21/09/2026 na ordem em que o
+/// processo acontece; depois vêm os documentos da medição (17/09/2026) e o
+/// vocabulário das outras telas — tramitação, rerratificação e acervo geral.
+///
+/// Três valores foram **renomeados**, e não acrescentados, porque o cliente
+/// nomeia hoje o mesmo papel de antes: `GARANTIA` virou `APOLICE_SEGURO`,
+/// `RERRATIFICACAO` virou `TERMO_ADITIVO` e `ACEITE` virou
+/// `RECEBIMENTO_PROVISORIO`. Rename preserva o que já foi anexado; acrescentar
+/// deixaria dois nomes para a mesma coisa no seletor.
 enum TipoDocumento {
+  // A lista do contrato — 21/09/2026, nesta ordem.
+  TERMO_ADJUDICACAO
+  TERMO_HOMOLOGACAO
+  EMPENHO
+  CONTRATO
+  PUBLICACAO_EXTRATO_CONTRATO
+  APOLICE_SEGURO
+  PUBLICACAO_COMISSAO_FISCALIZACAO
+  ORDEM_INICIO
+  ART_RRT
+  CNO
+  MEDICAO
+  TERMO_ADITIVO
+  APOSTILAMENTO
+  RECEBIMENTO_PROVISORIO
+  RECEBIMENTO_DEFINITIVO
+  LICENCA
+  OUTRO
+
+  // Os documentos necessários da medição — 17/09/2026.
+  MEMORIA_CALCULO
+  CRONOGRAMA
+  RELATORIO_FOTOGRAFICO
+  DIARIO_OBRA
+  NOTA_FISCAL
+
+  // Vocabulário das outras telas. Fora da lista do contrato, continuam
+  // anexáveis onde fazem sentido — e onde já existirem, seguem aparecendo.
+  PROTOCOLO
+  ISS
+  DESPACHO
+  PARECER
+  AUTORIZACAO
+  EXIGENCIA
+  COMPROVANTE
+  ATESTADO
   EDITAL
   PROPOSTA
-  CONTRATO
-  GARANTIA
-  ORDEM_INICIO
-  MEDICAO
-  NOTA_FISCAL
-  RERRATIFICACAO
-  ACEITE
-  ATESTADO
   FOTO
   PLANILHA
-  OUTRO
 }
 
 /// Origem rastreável via FKs explícitas: exatamente uma preenchida.
@@ -440,13 +532,18 @@ model Documento {
   descricao String?
 
   obraId           String?
-  obra             Obra?           @relation(fields: [obraId], references: [id], onDelete: Cascade)
+  obra             Obra?                @relation(fields: [obraId], references: [id], onDelete: Cascade)
   medicaoId        String?
-  medicao          Medicao?        @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+  medicao          Medicao?             @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
   etapaObraId      String?
-  etapaObra        EtapaObra?      @relation(fields: [etapaObraId], references: [id], onDelete: Cascade)
+  etapaObra        EtapaObra?           @relation(fields: [etapaObraId], references: [id], onDelete: Cascade)
+  /// Passagem por um setor específico. No mockup cada passo do fluxo tem seus
+  /// próprios anexos ("Documentos da etapa": despacho, parecer, checklist), e
+  /// a central de documentos mostra em que setor o arquivo entrou.
+  movimentoId      String?
+  movimento        TramitacaoMovimento? @relation(fields: [movimentoId], references: [id], onDelete: Cascade)
   rerratificacaoId String?
-  rerratificacao   Rerratificacao? @relation(fields: [rerratificacaoId], references: [id], onDelete: Cascade)
+  rerratificacao   Rerratificacao?      @relation(fields: [rerratificacaoId], references: [id], onDelete: Cascade)
 
   enviadoPorId String?
   enviadoPor   Usuario? @relation(fields: [enviadoPorId], references: [id])
@@ -459,10 +556,51 @@ model Documento {
   @@index([obraId])
   @@index([medicaoId])
   @@index([etapaObraId])
+  @@index([movimentoId])
   @@index([rerratificacaoId])
   @@index([nomeOriginal])
   @@index([excluidoEm])
   @@index([hashSha256])
+}
+
+/// Tipo de documento que este contrato — ou esta medição — não precisa
+/// entregar (requisitos.md 1.6).
+///
+/// A aba Documentos deixou de listar só o que foi enviado: ela lista o que se
+/// **espera**, em vermelho o que falta. Sem uma forma de dizer "aqui não se
+/// aplica", uma obra sem garantia carregaria uma linha vermelha para sempre e
+/// a lista perderia o sentido — vermelho que nunca apaga vira decoração.
+///
+/// A dispensa é do par (obra, tipo) ou (medição, tipo), nunca do tipo em si:
+/// o mesmo contrato dispensa ISS e o vizinho exige.
+///
+/// `obraId` está sempre preenchido, inclusive na dispensa de medição, para a
+/// exclusão da obra levar tudo em cascata e para a consulta da aba não
+/// precisar de `join`. A unicidade é garantida por **dois índices parciais**
+/// criados na migration — `medicaoId IS NULL` e `medicaoId IS NOT NULL` —,
+/// que o Prisma Schema não consegue expressar: um `@@unique` comum deixaria
+/// passar dispensas repetidas, porque no Postgres dois NULL não são iguais.
+model DocumentoDispensado {
+  id String @id @default(uuid())
+
+  obraId String
+  obra   Obra   @relation(fields: [obraId], references: [id], onDelete: Cascade)
+
+  /// Nulo = dispensa do contrato. Preenchido = dispensa daquela medição.
+  medicaoId String?
+  medicao   Medicao? @relation(fields: [medicaoId], references: [id], onDelete: Cascade)
+
+  tipo TipoDocumento
+
+  /// Por que não se aplica — texto livre, opcional.
+  motivo String?
+
+  marcadoPorId String?
+  marcadoPor   Usuario? @relation(fields: [marcadoPorId], references: [id])
+  criadoEm     DateTime @default(now())
+
+  @@index([obraId])
+  @@index([medicaoId])
 }
 
 // ============================================================
@@ -511,4 +649,24 @@ model Auditoria {
   @@index([entidade, entidadeId])
   @@index([criadoEm])
   @@index([usuarioId])
+}
+
+// ============================================================
+// Armazenamento de arquivos em banco (driver alternativo)
+// ============================================================
+
+/// Bytes dos documentos quando `STORAGE_DRIVER=db`.
+///
+/// Existe para o deploy de demonstração em plataforma serverless, onde o
+/// disco é efêmero e o arquivo enviado some entre uma requisição e outra. A
+/// instalação real é on-premise e usa `STORAGE_DRIVER=disco`, onde esta
+/// tabela fica vazia.
+///
+/// A chave é o mesmo `caminhoRelativo` gravado em `Documento` — assim os dois
+/// drivers têm exatamente a mesma semântica (caminho -> bytes) e nenhum código
+/// de rota precisa saber qual está ativo.
+model ArquivoBlob {
+  caminhoRelativo String   @id
+  conteudo        Bytes
+  criadoEm        DateTime @default(now())
 }

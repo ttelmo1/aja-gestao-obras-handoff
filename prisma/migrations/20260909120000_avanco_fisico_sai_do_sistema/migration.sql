@@ -1,0 +1,14 @@
+-- O avanço físico sai do sistema.
+--
+-- Decidido na apresentação à diretoria em 09/09/2026: o sistema administra o
+-- processo (prazo, pendência, documentação), não a execução da obra. Sem
+-- alguém alimentando o percentual semanalmente o número não é verdadeiro, e um
+-- físico falso ao lado de um financeiro correto estraga a leitura dos dois.
+-- Ver docs/raw/apresentacao-diretoria.md e requisitos.md 1.4.
+--
+-- A coluna NÃO é removida: as medições já lançadas na base de demonstração e
+-- na base do cliente carregam o número informado na época, e apagá-lo seria
+-- reescrever histórico para tirar da tela um campo que a tela já não mostra.
+-- Nenhum código lê ou escreve esta coluna a partir daqui; ela só deixa de ser
+-- obrigatória para que a medição possa ser criada sem o campo.
+ALTER TABLE "Medicao" ALTER COLUMN "percentualExecutado" DROP NOT NULL;

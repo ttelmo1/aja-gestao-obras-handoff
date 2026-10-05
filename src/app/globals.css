@@ -68,6 +68,30 @@ body {
   height: 100%;
 }
 
+/* O Tailwind v4 deixou de dar `cursor: pointer` a botão no preflight, e o
+   resultado foi uma tela onde só o link "Abrir" mostrava a mãozinha e todas as
+   outras ações da mesma coluna pareciam texto morto. Vale para o app inteiro,
+   não só para a tabela de documentos: onde clica, a mão aparece. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+label[for] {
+  cursor: pointer;
+}
+
+/* Os atalhos do cabeçalho da medição rolam a página até o bloco: sem isto o
+   salto é instantâneo e quem clicou não vê que a página andou. Respeita quem
+   pediu menos animação no sistema. */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

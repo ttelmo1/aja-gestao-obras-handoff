@@ -3,10 +3,17 @@ import { diasEntre } from "@/lib/date-br";
 /**
  * Tempo de permanência por setor (requisitos.md 1.5).
  *
+ * **Módulo em espera desde 17/09/2026.** A tramitação saiu da interface e o
+ * farol passou a ter dois critérios (ponto #23): nada em `src/app/` chama
+ * estas funções hoje. O módulo e seus testes ficam de pé porque a decisão foi
+ * de tela, não de modelo — as tabelas continuam no banco e um `git revert`
+ * devolve as páginas. Se o cliente confirmar que não volta, isto sai junto com
+ * o schema.
+ *
  * A regra central do módulo é uma só: **movimento sem data de saída é
- * processo parado**. É dele que saem o "há N dias na Controladoria" do
+ * processo parado**. É dele que saíam o "há N dias na Controladoria" do
  * mockup, o indicador "Processos parados" do painel e o critério `diasParado`
- * do farol, que existe desde a etapa 0 esperando por estes números.
+ * do farol.
  *
  * Nada aqui é persistido como verdade: `EtapaObra.diasPermanencia` é cache
  * recalculado na escrita, e o tempo do movimento aberto muda sozinho a cada

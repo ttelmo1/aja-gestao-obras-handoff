@@ -1,40 +1,74 @@
 import { Farol, StatusObra } from "@/generated/prisma/enums";
-import { diasDesde, diasEntre } from "@/lib/date-br";
+import { diasEntre } from "@/lib/date-br";
 
 /**
  * Motor do farol (requisitos.md 1.3).
  *
- * ATENÇÃO: os critérios exatos de cada cor AINDA NÃO foram definidos pelo
- * cliente — é ponto em aberto declarado nos requisitos (seção 3). Os limites
- * abaixo são uma proposta para levar à reunião de validação, não uma regra
- * acordada. Todo o resto do sistema consome apenas `calcularFarol`, então
- * mudar os critérios é mudar este arquivo.
+ * ESCOPO CONFIRMADO pelo engenheiro do cliente em 07/09/2026: o farol é sobre
+ * a obra inteira, não sobre o prazo da medição, e **basta um critério** para
+ * acender — "qualquer problema, porque aí chama a atenção e o responsável
+ * trabalha em cima". São três faixas mais o cinza: amarelo é atenção, vermelho
+ * é urgência, cinza é neutro (obra que ainda não começou).
+ *
+ * O critério de avanço físico contra tempo decorrido SAIU em 09/09/2026: o
+ * dado deixou de existir no sistema (requisitos.md 1.4). No lugar dele entrou
+ * o PRAZO DA PRÓXIMA MEDIÇÃO, e este é o único limite que o cliente fechou com
+ * número: **amarelo dez dias antes do vencimento**, vermelho quando vencer.
+ * Confirmado duas vezes na mesma conversa.
+ *
+ * O critério de PROCESSO PARADO NUM SETOR saiu em 17/09/2026, junto com a
+ * tramitação (ver docs/pontos-para-reuniao.md, ponto #23). Ele lia o movimento
+ * sem data de saída; sem tela que registre movimento, o dado não existe mais.
+ * Decisão do cliente: o farol fica com dois critérios em vez de inventar um
+ * substituto — "sem documento novo há N dias" mede outra coisa e usaria o
+ * mesmo nome. **O que se perde:** obra parada, dentro do prazo e com medição
+ * em dia agora fica verde. O farol passa a ser alerta de prazo, não de
+ * andamento.
+ *
+ * O LIMITE DE PRAZO CONTINUA PROVISÓRIO. Ele confirmou a lógica, não o número
+ * de dias. Calibrar com a tela aberta.
+ *
+ * Todo o resto do sistema consome apenas `calcularFarol`, e o resultado nunca
+ * é persistido: obra fica amarela pela passagem do tempo, sem ninguém salvar
+ * nada, então coluna cacheada só teria como envelhecer errado.
  *
  * Ver docs/pontos-para-reuniao.md, ponto #1.
  */
 export const LIMITES_PROVISORIOS = {
   /** Dias de antecedência do término em que a obra passa a AMARELO. */
   diasAlertaPrazo: 30,
-  /** Dias sem movimentação de tramitação até AMARELO. */
-  diasParadoAlerta: 15,
-  /** Dias sem movimentação de tramitação até VERMELHO. */
-  diasParadoCritico: 30,
   /**
-   * Distância aceitável entre avanço físico e tempo decorrido do prazo, em
-   * pontos percentuais, antes de acender o alerta de execução atrasada.
+   * Dias de antecedência do vencimento da medição em que a obra passa a
+   * AMARELO. **Não é provisório**: número dado pelo cliente em 09/09/2026.
+   * Numa obra mensal (30 dias corridos), acende a partir do 20º dia.
    */
-  desvioExecucaoAlerta: 10,
-  desvioExecucaoCritico: 25,
+  diasAlertaMedicao: 10,
 } as const;
 
 export type EntradaFarol = {
   status: StatusObra;
   dataOrdemInicio: Date | null;
-  dataPrevistaTermino: Date | null;
-  /** Avanço físico acumulado (0–100), da última medição. */
-  percentualExecutado: number | null;
-  /** Dias desde a entrada no setor atual sem saída registrada. */
-  diasParado: number | null;
+  /**
+   * Término que vale hoje — o do contrato mais o prazo adicional já aprovado
+   * em rerratificação. Vem de `terminoVigente`, em `modules/obras/prazo.ts`.
+   * Não é `Obra.dataPrevistaTermino` cru: obra prorrogada acenderia vermelho
+   * por um prazo que o órgão já estendeu.
+   */
+  dataTerminoVigente: Date | null;
+  /**
+   * Dias de prazo que faltam, já descontada a suspensão — `Prazo.diasRestantes`.
+   * Quando vem, manda sobre a data: com suspensão, dias de calendário até o
+   * término e dias de prazo restantes deixam de ser o mesmo número, e o que o
+   * cliente pediu é que o prazo fique parado enquanto a obra está suspensa.
+   */
+  diasParaTermino?: number | null;
+  /**
+   * Dias até o vencimento da próxima medição, negativo quando já venceu.
+   * `null` quando não há prazo a cobrar — obra sem ordem de início,
+   * finalizada, ou periodicidade personalizada sem intervalo.
+   * Vem de `modules/medicoes/periodicidade.ts`.
+   */
+  diasParaMedicao: number | null;
   agora?: Date;
 };
 
@@ -42,6 +76,14 @@ export type ResultadoFarol = {
   farol: Farol;
   /** Motivos legíveis — o usuário precisa saber por que a luz está vermelha. */
   motivos: string[];
+  /**
+   * O motivo que determinou a cor — o primeiro entre os do pior nível.
+   *
+   * Existe porque o cartão do painel tem uma linha, não seis: numa obra
+   * vermelha por medição vencida *e* prazo apertado, mostrar "faltam 12 dias
+   * para o término" seria mostrar o motivo errado.
+   */
+  motivoPrincipal: string | null;
 };
 
 export function calcularFarol(e: EntradaFarol): ResultadoFarol {
@@ -49,27 +91,47 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
   const motivos: string[] = [];
 
   if (e.status === StatusObra.FINALIZADA) {
-    return { farol: Farol.VERDE, motivos: ["Obra finalizada."] };
+    return {
+      farol: Farol.VERDE,
+      motivos: ["Obra finalizada."],
+      motivoPrincipal: "Obra finalizada.",
+    };
   }
   if (e.status === StatusObra.CANCELADA) {
-    return { farol: Farol.CINZA, motivos: ["Obra cancelada."] };
+    return {
+      farol: Farol.CINZA,
+      motivos: ["Obra cancelada."],
+      motivoPrincipal: "Obra cancelada.",
+    };
   }
   if (e.status === StatusObra.PARALISADA) {
-    return { farol: Farol.VERMELHO, motivos: ["Obra paralisada."] };
+    return {
+      farol: Farol.VERMELHO,
+      motivos: ["Obra paralisada."],
+      motivoPrincipal: "Obra paralisada.",
+    };
   }
   if (e.status === StatusObra.PLANEJAMENTO && !e.dataOrdemInicio) {
-    return { farol: Farol.CINZA, motivos: ["Sem ordem de início."] };
+    return {
+      farol: Farol.CINZA,
+      motivos: ["Sem ordem de início."],
+      motivoPrincipal: "Sem ordem de início.",
+    };
   }
 
   let nivel = 0; // 0 verde, 1 amarelo, 2 vermelho
+  const niveis: number[] = [];
   const subir = (n: number, motivo: string) => {
     nivel = Math.max(nivel, n);
     motivos.push(motivo);
+    niveis.push(n);
   };
 
-  // 1. Prazo contratual.
-  if (e.dataPrevistaTermino) {
-    const diasRestantes = diasEntre(agora, e.dataPrevistaTermino);
+  // 1. Prazo contratual, já com as prorrogações aprovadas.
+  const diasRestantes =
+    e.diasParaTermino ??
+    (e.dataTerminoVigente ? diasEntre(agora, e.dataTerminoVigente) : null);
+  if (diasRestantes !== null) {
     if (diasRestantes < 0) {
       subir(2, `Prazo vencido há ${Math.abs(diasRestantes)} dia(s).`);
     } else if (diasRestantes <= LIMITES_PROVISORIOS.diasAlertaPrazo) {
@@ -77,53 +139,32 @@ export function calcularFarol(e: EntradaFarol): ResultadoFarol {
     }
   }
 
-  // 2. Processo parado em um setor.
-  if (e.diasParado !== null) {
-    if (e.diasParado >= LIMITES_PROVISORIOS.diasParadoCritico) {
-      subir(2, `Processo parado há ${e.diasParado} dias.`);
-    } else if (e.diasParado >= LIMITES_PROVISORIOS.diasParadoAlerta) {
-      subir(1, `Processo parado há ${e.diasParado} dias.`);
+  // 2. Prazo da próxima medição.
+  if (e.diasParaMedicao !== null) {
+    if (e.diasParaMedicao < 0) {
+      subir(2, `Medição vencida há ${Math.abs(e.diasParaMedicao)} dia(s).`);
+    } else if (e.diasParaMedicao <= LIMITES_PROVISORIOS.diasAlertaMedicao) {
+      subir(1, `Medição vence em ${e.diasParaMedicao} dia(s).`);
     }
   }
 
-  // 3. Avanço físico contra tempo decorrido.
-  const desvio = desvioExecucao(e, agora);
-  if (desvio !== null) {
-    if (desvio >= LIMITES_PROVISORIOS.desvioExecucaoCritico) {
-      subir(2, `Execução ${desvio} p.p. atrás do previsto pelo prazo.`);
-    } else if (desvio >= LIMITES_PROVISORIOS.desvioExecucaoAlerta) {
-      subir(1, `Execução ${desvio} p.p. atrás do previsto pelo prazo.`);
-    }
+  if (motivos.length === 0) {
+    motivos.push("Dentro do prazo e sem pendências.");
+    niveis.push(0);
   }
-
-  if (motivos.length === 0) motivos.push("Dentro do prazo e sem pendências.");
-  return { farol: [Farol.VERDE, Farol.AMARELO, Farol.VERMELHO][nivel], motivos };
-}
-
-/**
- * Quantos pontos percentuais o avanço físico está atrás do tempo decorrido.
- * Devolve null quando falta dado para comparar.
- */
-function desvioExecucao(e: EntradaFarol, agora: Date): number | null {
-  if (
-    !e.dataOrdemInicio ||
-    !e.dataPrevistaTermino ||
-    e.percentualExecutado === null
-  ) {
-    return null;
-  }
-  const prazoTotal = diasEntre(e.dataOrdemInicio, e.dataPrevistaTermino);
-  if (prazoTotal <= 0) return null;
-
-  const decorrido = diasDesde(e.dataOrdemInicio, agora);
-  const percentualEsperado = Math.min(100, (decorrido / prazoTotal) * 100);
-  const desvio = percentualEsperado - e.percentualExecutado;
-  return desvio > 0 ? Math.round(desvio) : null;
+  return {
+    farol: [Farol.VERDE, Farol.AMARELO, Farol.VERMELHO][nivel],
+    motivos,
+    motivoPrincipal: motivos[niveis.indexOf(nivel)] ?? null,
+  };
 }
 
 export const ROTULOS_FAROL: Record<Farol, string> = {
   VERDE: "Em dia",
   AMARELO: "Atenção",
   VERMELHO: "Crítico",
-  CINZA: "Sem dados",
+  // Cobre dois casos — obra sem ordem de início e obra cancelada —, então não
+  // pode ser "Não iniciada". "Sem dados" descrevia o sistema, não a obra.
+  CINZA: "Não avaliada",
 };
+

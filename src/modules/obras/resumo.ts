@@ -18,7 +18,12 @@ import {
   type SituacaoMedicao,
 } from "@/modules/medicoes/periodicidade";
 
-import { prazoTranscorrido, type Prazo } from "./prazo";
+import { prazoTranscorrido, terminoVigente, type Prazo } from "./prazo";
+import {
+  diasSuspensosDesde,
+  suspensaoEmCurso,
+  type Suspensao,
+} from "./suspensao";
 
 /**
  * Tudo que o painel e a aba Resumo mostram sobre uma obra, num lugar só.
@@ -32,27 +37,40 @@ export type ObraParaResumo = {
   valorContratado: Decimal | string | number;
   valorAditivado: Decimal | string | number;
   dataOrdemInicio: Date | null;
+  /** Do contrato assinado — nunca reescrito por rerratificação. */
   dataPrevistaTermino: Date | null;
+  /** Prorrogação já aprovada, cache de `impactoDasRerratificacoes`. */
+  prazoAditivadoDias: number;
   periodicidadeMedicao: PeriodicidadeMedicao;
   intervaloMedicaoDias: number | null;
+  /** Suspensões de prazo. Ausente = nenhuma. */
+  suspensoes?: Suspensao[];
 };
 
 export type ResumoObra = {
   financeiro: ResumoFinanceiro;
   prazo: Prazo | null;
-  /** Maior tempo parado num setor, entre os processos em aberto. */
-  diasParado: number | null;
+  /**
+   * Término contratual mais a prorrogação aprovada. Fica no resumo, e não só
+   * dentro de `prazo`, porque o cartão do painel mostra a data mesmo em obra
+   * sem ordem de início — onde `prazo` é `null`.
+   */
+  terminoVigente: Date | null;
+  /** Dias de suspensão somados ao término vigente. */
+  diasSuspensos: number;
+  /** Início da suspensão que vale hoje; `null` se a obra não está suspensa. */
+  suspensaDesde: Date | null;
   /** Vencimento da próxima medição; `null` quando não há prazo a cobrar. */
   medicao: SituacaoMedicao | null;
   farol: Farol;
   motivosFarol: string[];
+  /** O motivo que determinou a cor — o que cabe numa linha do cartão. */
+  motivoPrincipalFarol: string | null;
 };
 
 export function resumoDaObra(
   obra: ObraParaResumo,
   medicoes: MedicaoParaCalculo[] = [],
-  /** Maior tempo parado num setor, entre os processos em aberto. */
-  diasParado: number | null = null,
   agora: Date = new Date(),
 ): ResumoObra {
   const financeiro = resumoFinanceiro(
@@ -60,10 +78,23 @@ export function resumoDaObra(
     obra.valorAditivado,
     medicoes,
   );
+  const suspensoes = obra.suspensoes ?? [];
+  // Da ordem de início: suspensão só existe depois dela (a tela recusa antes),
+  // e obra sem ordem de início não tem prazo correndo para suspender.
+  const diasSuspensos = obra.dataOrdemInicio
+    ? diasSuspensosDesde(suspensoes, obra.dataOrdemInicio, agora)
+    : 0;
+  const vigente = terminoVigente(
+    obra.dataPrevistaTermino,
+    obra.prazoAditivadoDias,
+    diasSuspensos,
+  );
   const prazo = prazoTranscorrido(
     obra.dataOrdemInicio,
     obra.dataPrevistaTermino,
     agora,
+    obra.prazoAditivadoDias,
+    suspensoes,
   );
 
   // A lista chega ordenada por competência, mas não custa não depender disso:
@@ -79,24 +110,30 @@ export function resumoDaObra(
     intervaloMedicaoDias: obra.intervaloMedicaoDias,
     dataOrdemInicio: obra.dataOrdemInicio,
     ultimaMedicaoEm,
+    suspensoes,
     agora,
   });
 
-  const { farol, motivos } = calcularFarol({
+  const { farol, motivos, motivoPrincipal } = calcularFarol({
     status: obra.status,
     dataOrdemInicio: obra.dataOrdemInicio,
-    dataPrevistaTermino: obra.dataPrevistaTermino,
-    // Sem medição não há avanço físico informado. Zero seria mentira — diria
-    // "0% executado" e acenderia o alerta de atraso numa obra recém-iniciada.
-    percentualExecutado:
-      financeiro.quantidadeMedicoes > 0
-        ? financeiro.percentualExecutado.toNumber()
-        : null,
-    diasParado,
+    dataTerminoVigente: vigente,
+    diasParaTermino: prazo?.diasRestantes,
+    diasParaMedicao: medicao?.diasRestantes ?? null,
     agora,
   });
 
-  return { financeiro, prazo, medicao, diasParado, farol, motivosFarol: motivos };
+  return {
+    financeiro,
+    prazo,
+    terminoVigente: vigente,
+    diasSuspensos,
+    suspensaDesde: suspensaoEmCurso(suspensoes, agora)?.dataInicio ?? null,
+    medicao,
+    farol,
+    motivosFarol: motivos,
+    motivoPrincipalFarol: motivoPrincipal,
+  };
 }
 
 export type TotaisPainel = {
@@ -107,8 +144,6 @@ export type TotaisPainel = {
   saldoAMedir: Decimal;
   /** Obras cuja próxima medição já venceu — o KPI do mockup. */
   medicoesAtrasadas: number;
-  /** Obras com processo parado em algum setor há 10 dias ou mais. */
-  processosParados: number;
 };
 
 /**
@@ -117,12 +152,6 @@ export type TotaisPainel = {
  * exatamente do mesmo jeito — indicador que diverge entre a tela e o PDF é
  * problema que só aparece na frente do cliente.
  */
-/**
- * Dias de parada a partir dos quais o painel conta a obra como "processo
- * parado". Vem do mockup, que rotula o indicador "Processos parados +10 dias".
- */
-export const DIAS_PARA_CONTAR_PARADO = 10;
-
 export function totaisDoPainel(
   obras: Array<{ status: StatusObra; resumo: ResumoObra }>,
 ): TotaisPainel {
@@ -140,8 +169,5 @@ export function totaisDoPainel(
     ),
     saldoAMedir: obras.reduce((s, o) => s.plus(o.resumo.financeiro.saldoAMedir), zero),
     medicoesAtrasadas: obras.filter((o) => o.resumo.medicao?.atrasada).length,
-    processosParados: obras.filter(
-      (o) => (o.resumo.diasParado ?? 0) >= DIAS_PARA_CONTAR_PARADO,
-    ).length,
   };
 }

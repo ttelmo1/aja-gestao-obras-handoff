@@ -1,15 +1,87 @@
+import { notFound } from "next/navigation";
+
 import { Card } from "@/components/ui/card";
-import { Vazio } from "@/components/ui/vazio";
+import {
+  BarraDeFiltrosAuditoria,
+  PaginacaoAuditoria,
+} from "@/components/ui/filtros-auditoria";
+import { LinhaDoTempo, SemEventos } from "@/components/ui/linha-do-tempo";
 import { exigirPermissao } from "@/lib/guarda";
+import { prisma } from "@/lib/prisma";
+import {
+  condicaoDeAuditoria,
+  lerFiltrosAuditoria,
+  POR_PAGINA,
+  pularRegistros,
+  temFiltroAuditoria,
+} from "@/modules/auditoria/filtros";
+
+import { carregarObra } from "../dados";
 
 export const metadata = { title: "Histórico" };
+export const dynamic = "force-dynamic";
 
-/** Aba prevista no mockup; o conteúdo chega na etapa 10. */
-export default async function HistoricoPage() {
-  await exigirPermissao("obra", "ver");
+/**
+ * Aba Histórico — a linha do tempo do mockup, alimentada pela trilha de
+ * auditoria que grava desde a etapa 0 (requisitos.md 1.8).
+ *
+ * A tabela é append-only por trigger no banco: nada aqui edita ou apaga —
+ * nem o administrador, que também só tem leitura de auditoria na matriz.
+ * Quem enxerga a trilha é decisão de perfil: hoje só ADMINISTRADOR e GESTOR,
+ * e por isso a aba Histórico não aparece para os outros dois (ver `abas.tsx`).
+ * Se o cliente quiser a trilha visível para todos, é uma linha na matriz.
+ */
+export default async function HistoricoPage({
+  params,
+  searchParams,
+}: PageProps<"/obras/[id]/historico">) {
+  await exigirPermissao("auditoria", "ver");
+  const { id } = await params;
+  const filtros = lerFiltrosAuditoria(await searchParams);
+
+  const obra = await carregarObra(id);
+  if (!obra) notFound();
+
+  const where = condicaoDeAuditoria(filtros, obra.id);
+  const [eventos, total] = await Promise.all([
+    prisma.auditoria.findMany({
+      where,
+      orderBy: { criadoEm: "desc" },
+      skip: pularRegistros(filtros),
+      take: POR_PAGINA,
+    }),
+    prisma.auditoria.count({ where }),
+  ]);
+
+  const base = `/obras/${obra.id}/historico`;
+  const ultimaPagina = Math.max(1, Math.ceil(total / POR_PAGINA));
+
   return (
-    <Card titulo="Histórico">
-      <Vazio mensagem="A linha do tempo da obra entra na etapa 10." />
-    </Card>
+    <div className="flex flex-col gap-4">
+      <Card titulo="Histórico da Obra">
+        <p className="mb-4 text-sm text-[var(--muted)]">
+          Registro automático de toda ação relevante, com autor, data e hora.
+          É somente leitura — nem o administrador altera ou apaga.
+        </p>
+        <BarraDeFiltrosAuditoria base={base} filtros={filtros} total={total} />
+      </Card>
+
+      <Card
+        titulo={`Linha do tempo (página ${filtros.pagina} de ${ultimaPagina})`}
+      >
+        {eventos.length === 0 ? (
+          <SemEventos filtrado={temFiltroAuditoria(filtros)} />
+        ) : (
+          <>
+            <LinhaDoTempo eventos={eventos} />
+            <PaginacaoAuditoria
+              base={base}
+              filtros={filtros}
+              ultimaPagina={ultimaPagina}
+            />
+          </>
+        )}
+      </Card>
+    </div>
   );
 }

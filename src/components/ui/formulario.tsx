@@ -27,8 +27,20 @@ export function Campo({
   );
 }
 
-export const classeInput =
-  "w-full rounded-lg border border-[var(--border)] bg-[var(--surface-sutil)] px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:bg-[var(--surface)] focus:ring-2 focus:ring-[var(--primary)]/15 disabled:opacity-60";
+/**
+ * Aparência do campo, sem largura.
+ *
+ * A largura fica de fora porque quem manda nela é o contexto: no formulário o
+ * campo ocupa a coluna inteira (`classeInput`), na barra de filtros ele divide
+ * a linha com os outros. Embutir `w-full` aqui obrigaria cada uso a tentar
+ * desfazê-lo com `w-auto` — duas classes de mesma especificidade, onde vence a
+ * ordem do CSS gerado e não a ordem em que foram escritas.
+ */
+export const classeCampo =
+  "rounded-lg border border-[var(--border)] bg-[var(--surface-sutil)] px-3 py-2.5 text-sm outline-none transition-colors focus:border-[var(--primary)] focus:bg-[var(--surface)] focus:ring-2 focus:ring-[var(--primary)]/15 disabled:opacity-60";
+
+/** Campo de formulário: ocupa a largura da coluna. */
+export const classeInput = `w-full ${classeCampo}`;
 
 /**
  * Botões do mockup: navio para a ação principal, dourado para a ação de

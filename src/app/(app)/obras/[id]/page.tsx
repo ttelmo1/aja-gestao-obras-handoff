@@ -7,9 +7,11 @@ import { formatarData } from "@/lib/date-br";
 import { exigirPermissao } from "@/lib/guarda";
 import { formatarBRL, formatarPercentual } from "@/lib/money";
 import { ROTULOS_ESFERA } from "@/modules/cadastros/rotulos";
+import { exigeOperador, situacaoDoOperador } from "@/modules/obras/operador";
 import { resumoDaObra } from "@/modules/obras/resumo";
 
-import { carregarObra, diasParadoDe } from "./dados";
+import { carregarObra } from "./dados";
+import { BlocoOperador } from "./operador";
 
 export const metadata = { title: "Resumo da obra" };
 export const dynamic = "force-dynamic";
@@ -18,7 +20,7 @@ export default async function ResumoObraPage({
   params,
   searchParams,
 }: PageProps<"/obras/[id]">) {
-  await exigirPermissao("obra", "ver");
+  const usuario = await exigirPermissao("obra", "ver");
   const { id } = await params;
   const { criada } = await searchParams;
 
@@ -26,20 +28,45 @@ export default async function ResumoObraPage({
   if (!obra) notFound();
 
   const agora = new Date();
-  const { financeiro, prazo, medicao, diasParado, farol, motivosFarol } =
-    resumoDaObra(obra, obra.medicoes, diasParadoDe(obra, agora), agora);
+  const {
+    financeiro,
+    prazo,
+    terminoVigente,
+    diasSuspensos,
+    suspensaDesde,
+    medicao,
+    farol,
+    motivosFarol,
+  } = resumoDaObra(
+    obra,
+    obra.medicoes,
+    agora,
+  );
+
+  const operador = situacaoDoOperador({
+    operadorId: obra.operadorId,
+    operadorNome: obra.operador?.nome ?? null,
+    operadorAssumidoEm: obra.operadorAssumidoEm,
+    operadorLiberadoEm: obra.operadorLiberadoEm,
+    operadorObservacao: obra.operadorObservacao,
+  });
 
   return (
     <div className="flex flex-col gap-4">
       {criada && <Alerta tipo="sucesso">Obra cadastrada.</Alerta>}
 
+      {suspensaDesde && (
+        <p className="rounded-lg border-l-4 border-[var(--gold)] bg-[#fff9ed] p-3 text-[13px]">
+          <strong>Prazo suspenso desde {formatarData(suspensaDesde)}.</strong>{" "}
+          Prazo e ciclo das medições estão parados e voltam a contar na data
+          final da suspensão, na aba Contrato.
+        </p>
+      )}
+
       <Card titulo="Indicadores da obra">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Dado rotulo="Prazo transcorrido">
             {prazo ? `${prazo.percentualTranscorrido}%` : "—"}
-          </Dado>
-          <Dado rotulo="Execução física">
-            {formatarPercentual(financeiro.percentualExecutado)}
           </Dado>
           <Dado rotulo="% medido">
             {formatarPercentual(financeiro.percentualMedido)}
@@ -51,15 +78,6 @@ export default async function ResumoObraPage({
             <span className="tabular">{formatarBRL(financeiro.saldoAMedir)}</span>
           </Dado>
           <Dado rotulo="Medições">{financeiro.quantidadeMedicoes}</Dado>
-          <Dado rotulo="Maior tempo parado">
-            {diasParado === null ? (
-              "—"
-            ) : (
-              <span className={diasParado >= 10 ? "text-[var(--danger)]" : undefined}>
-                {diasParado} dia(s)
-              </span>
-            )}
-          </Dado>
           <Dado rotulo="Próxima medição">
             {medicao ? (
               <span
@@ -82,10 +100,6 @@ export default async function ResumoObraPage({
           />
         )}
         <Progresso
-          rotulo="Execução física"
-          percentual={financeiro.percentualExecutado.toNumber()}
-        />
-        <Progresso
           rotulo="Financeiro medido"
           percentual={financeiro.percentualMedido.toNumber()}
           tom="ouro"
@@ -96,31 +110,56 @@ export default async function ResumoObraPage({
         </div>
       </Card>
 
+      {/* Só em atenção ou crítico: obra em dia não tem o que atribuir
+          (requisitos.md 1.2). */}
+      {exigeOperador(farol) && (
+        <Card titulo="Operador">
+          <BlocoOperador
+            obraId={obra.id}
+            situacao={operador}
+            souEu={obra.operadorId === usuario.id}
+          />
+        </Card>
+      )}
+
       <Card titulo="Informações gerais">
         <Dados colunas={3}>
           <Dado rotulo="Contratante">{obra.contratante.nome}</Dado>
           <Dado rotulo="Esfera">
             {obra.contratante.esfera ? ROTULOS_ESFERA[obra.contratante.esfera] : "—"}
           </Dado>
-          <Dado rotulo="Responsável técnico">
-            {obra.responsavel
-              ? `${obra.responsavel.nome}${obra.responsavel.registro ? ` (${obra.responsavel.registro})` : ""}`
-              : "—"}
-          </Dado>
           <Dado rotulo="Assinatura">{formatarData(obra.dataAssinatura) || "—"}</Dado>
           <Dado rotulo="Ordem de início">
             {formatarData(obra.dataOrdemInicio) || "—"}
           </Dado>
           <Dado rotulo="Prazo">{obra.prazoDias ? `${obra.prazoDias} dias` : "—"}</Dado>
+          {/* Do contrato assinado. Rerratificação não mexe nesta data — o
+              prazo aprovado aparece na linha de baixo. */}
           <Dado rotulo="Término previsto">
             {formatarData(obra.dataPrevistaTermino) || "—"}
           </Dado>
-          <Dado rotulo="Término real">
-            {formatarData(obra.dataTerminoReal) || "—"}
+          <Dado rotulo="Término vigente">
+            {formatarData(terminoVigente) || "—"}
+            {obra.prazoAditivadoDias > 0 && (
+              <span className="block text-[11px] font-normal text-[var(--muted)]">
+                +{obra.prazoAditivadoDias} dia(s) de rerratificação
+              </span>
+            )}
+            {diasSuspensos > 0 && (
+              <span className="block text-[11px] font-normal text-[var(--muted)]">
+                +{diasSuspensos} dia(s) de suspensão
+              </span>
+            )}
           </Dado>
           <Dado rotulo="Dias restantes">
             {prazo ? (prazo.vencido ? `vencido há ${-prazo.diasRestantes}` : prazo.diasRestantes) : "—"}
           </Dado>
+          {/* Só quando a obra acabou de fato: em obra em andamento a linha
+              vazia convidava a digitar ali o término prorrogado, que é
+              derivado e vive acima. */}
+          {obra.dataTerminoReal && (
+            <Dado rotulo="Término efetivo">{formatarData(obra.dataTerminoReal)}</Dado>
+          )}
         </Dados>
 
         {obra.observacoes && (

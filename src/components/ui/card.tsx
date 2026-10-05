@@ -1,20 +1,30 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 
 /**
  * Painel branco de canto arredondado — o `.panel` do mockup. É o contêiner
  * padrão de conteúdo em todas as telas.
  */
 export function Card({
+  id,
   titulo,
   acao,
   children,
 }: {
+  /**
+   * Âncora do painel, para um atalho `href="#id"` levar até ele. O
+   * `scroll-mt` evita que o topo do painel fique embaixo do cabeçalho fixo.
+   */
+  id?: string;
   titulo?: string;
   acao?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-[14px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--sombra-card)]">
+    <section
+      id={id}
+      className="scroll-mt-4 rounded-[14px] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--sombra-card)]"
+    >
       {(titulo || acao) && (
         <div className="flex items-center justify-between gap-3 border-b border-[var(--border)] px-5 py-4">
           {titulo && (
@@ -38,19 +48,39 @@ export function Indicador({
   rotulo,
   valor,
   detalhe,
+  href,
+  alerta = false,
 }: {
   rotulo: string;
   valor: string;
   detalhe?: string;
+  /** Quando existe, o quadro inteiro vira link para o detalhe. */
+  href?: string;
+  /** Valor em vermelho — há pendência a olhar. */
+  alerta?: boolean;
 }) {
-  return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--sombra-card)]">
+  const conteudo = (
+    <>
       <p className="text-[13px] text-[var(--muted)]">{rotulo}</p>
-      <p className="tabular mt-1.5 text-2xl font-bold text-[var(--primary)]">
+      <p
+        className={`tabular mt-1.5 text-2xl font-bold ${alerta ? "text-[var(--danger)]" : "text-[var(--primary)]"}`}
+      >
         {valor}
       </p>
       {detalhe && <p className="mt-1 text-xs text-[var(--muted)]">{detalhe}</p>}
-    </div>
+    </>
+  );
+  const classe =
+    "block rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-[var(--sombra-card)]";
+
+  if (!href) return <div className={classe}>{conteudo}</div>;
+  return (
+    <Link
+      href={href}
+      className={`${classe} transition-all hover:-translate-y-0.5 hover:shadow-[var(--sombra-hover)]`}
+    >
+      {conteudo}
+    </Link>
   );
 }
 

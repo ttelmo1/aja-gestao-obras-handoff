@@ -13,10 +13,18 @@ import { BotaoSair } from "./sair";
  * `exigirUsuario` roda antes de qualquer página filha: é aqui que a sessão
  * vira barreira de verdade, não no `proxy.ts`.
  */
+/**
+ * O menu lista só o que existe.
+ *
+ * "Documentos" e "Relatórios" ficaram aqui desde a etapa 1 apontando para
+ * rotas que nunca foram criadas — dois 404 no menu principal. A central de
+ * documentos é por obra, como no mockup ("Central de Documentos da Obra"), e
+ * por isso não volta ao topo; "Relatórios" retorna na etapa 11, junto com a
+ * tela.
+ */
 const NAVEGACAO: Array<{ href: string; rotulo: string; recurso: Recurso }> = [
   { href: "/obras", rotulo: "Painel de Obras", recurso: "obra" },
-  { href: "/documentos", rotulo: "Documentos", recurso: "documento" },
-  { href: "/relatorios", rotulo: "Relatórios", recurso: "relatorio" },
+  { href: "/auditoria", rotulo: "Auditoria", recurso: "auditoria" },
   { href: "/cadastros", rotulo: "Cadastros", recurso: "cadastro" },
   { href: "/usuarios", rotulo: "Usuários", recurso: "usuario" },
 ];

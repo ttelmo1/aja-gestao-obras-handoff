@@ -32,10 +32,14 @@ export const usuarioAtual = cache(async (): Promise<UsuarioAtual | null> => {
   return sessao?.usuario ?? null;
 });
 
-/** Para páginas: sem sessão válida, volta para o login. */
+/**
+ * Para páginas: sem sessão válida, volta para o login — passando por
+ * `/sessao-expirada`, que apaga o cookie. Ir direto para `/login` com o cookie
+ * ainda no navegador faria o `proxy.ts` devolver para `/obras` em laço.
+ */
 export async function exigirUsuario(): Promise<UsuarioAtual> {
   const usuario = await usuarioAtual();
-  if (!usuario) redirect("/login");
+  if (!usuario) redirect("/sessao-expirada");
   return usuario;
 }
 

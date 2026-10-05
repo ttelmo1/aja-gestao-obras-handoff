@@ -64,7 +64,15 @@ async function enviar(
     JSON.stringify(arquivos.map((a) => ({ nome: a.name, tamanho: a.size, tipo: a.type }))),
   );
 
-  const preparo = await prepararEnvio(pedido);
+  // As actions também passam pela rede: sem o `catch`, uma queda de conexão
+  // aqui virava exceção e derrubava a página inteira em vez de uma mensagem
+  // na janela.
+  let preparo: Awaited<ReturnType<typeof prepararEnvio>>;
+  try {
+    preparo = await prepararEnvio(pedido);
+  } catch {
+    return { erro: "Não foi possível falar com o servidor. Verifique a conexão e tente de novo." };
+  }
   if ("erro" in preparo) return { erro: preparo.erro };
 
   const ids = preparo.envios.map((e) => e.id);
@@ -93,7 +101,16 @@ async function enviar(
   }
 
   aoProgredir(100);
-  return confirmarEnvio(String(dados.get("obraId") ?? ""), ids);
+  try {
+    return await confirmarEnvio(String(dados.get("obraId") ?? ""), ids);
+  } catch {
+    // Os bytes chegaram, mas o documento não foi criado. Se nem o
+    // cancelamento passar, a limpeza diária apaga quando a autorização vencer.
+    await cancelarEnvio(ids).catch(() => {});
+    return {
+      erro: "O arquivo foi enviado, mas a conexão caiu antes de concluir. Envie de novo.",
+    };
+  }
 }
 
 /**

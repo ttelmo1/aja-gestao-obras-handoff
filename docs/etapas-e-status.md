@@ -1729,7 +1729,20 @@ sem deixar arquivo parcial; 20 senhas erradas em paralelo terminam
 bloqueadas (sem a trava, o contador ficaria em 1); `/envios/` e
 `/api/cron/` respondem 401 sem passar pelo proxy.
 
-**Falta verificar:** o fluxo pela tela, logado (envio pequeno, grande,
-vários, formato proibido, cancelamento e download), e o driver `s3` contra
-um bucket R2 de verdade — em especial se o R2 aplica o `Content-Length`
-assinado.
+**Verificado pela tela, logado, com o driver `disco` (05/10/2026):** PDF de
+49 KB; PDF de 40 MB com a porcentagem subindo no botão (6% → 96%, com o
+envio limitado a 8 MB/s) e o hash no banco igual ao do arquivo original;
+dois arquivos de uma vez; `.dwg` recusado com a mensagem de engenharia;
+download do arquivo de 40 MB íntegro, com o tipo e o nome certos; envio
+derrubado no meio e confirmação derrubada, as duas com mensagem na janela e
+sem sobrar autorização nem arquivo; limpeza diária apagando um envio vencido
+e o arquivo dele (e recusando chamada sem segredo ou com segredo errado);
+freio barrando a 6ª senha errada.
+
+**Corrigido no teste:** se a conexão caísse durante uma das Server Actions do
+envio (preparo ou confirmação), a exceção escapava e a página inteira
+quebrava ("This page couldn't load"). Agora vira mensagem na janela, e a
+confirmação que falha tenta cancelar o envio.
+
+**Falta verificar:** o driver `s3` contra um bucket R2 de verdade — em
+especial se o R2 aplica o `Content-Length` assinado.

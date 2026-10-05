@@ -11,10 +11,10 @@ import { ROTULOS_TIPO_DOCUMENTO } from "@/modules/documentos/rotulos";
 
 import {
   dispensarDocumento,
-  enviarDocumentos,
   exigirDocumento,
   type EstadoDocumento,
 } from "./acoes";
+import { rotuloDoEnvio, useEnvioDireto } from "./envio-direto";
 
 const LIMITE_MB = Math.round(TAMANHO_MAXIMO_BYTES / 1024 / 1024);
 
@@ -45,10 +45,11 @@ export function IncluirDocumento({
   const rotulo = ROTULOS_TIPO_DOCUMENTO[tipo];
   const varios = medicaoId !== undefined || aceitaMaisDeUm(tipo);
   const sufixo = `${medicaoId ?? obraId}-${tipo}`;
+  const { acao, progresso } = useEnvioDireto();
 
   return (
     <ModalFormulario
-      acao={enviarDocumentos}
+      acao={acao}
       campos={{ obraId, medicaoId, tipo }}
       titulo={`Incluir · ${rotulo}`}
       descricao={
@@ -59,7 +60,7 @@ export function IncluirDocumento({
             : `O arquivo fica vinculado ao contrato da obra como ${rotulo}. Cada tipo entra uma vez — havendo mais de um arquivo do mesmo assunto, envie os demais como “Outro”.`
       }
       rotuloEnvio="Enviar documento"
-      rotuloEnviando="Enviando…"
+      rotuloEnviando={rotuloDoEnvio(progresso)}
       varianteEnvio="destaque"
       gatilho="Incluir"
     >

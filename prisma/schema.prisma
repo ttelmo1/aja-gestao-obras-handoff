@@ -670,3 +670,47 @@ model ArquivoBlob {
   conteudo        Bytes
   criadoEm        DateTime @default(now())
 }
+
+// ============================================================
+// Envio de documento em três passos (etapa 15)
+// ============================================================
+
+/// Envio autorizado e ainda não confirmado.
+///
+/// O navegador não manda o arquivo ao sistema: pede autorização
+/// (`prepararEnvio`), envia os bytes ao armazenamento e volta para confirmar
+/// (`confirmarEnvio`). Esta linha é o que foi autorizado no primeiro passo —
+/// obra, vínculos, tipo, tamanho, quem pediu —, e a confirmação só aceita o
+/// `id`: nada do que o navegador manda no fim é confiado além disso.
+///
+/// **Sem chave estrangeira, de propósito.** A limpeza diária usa estas linhas
+/// para achar e apagar os arquivos de envios abandonados. Com cascata, apagar
+/// a obra levaria as linhas e deixaria os arquivos no bucket sem nada que
+/// aponte para eles. Os vínculos são conferidos no `prepararEnvio` e de novo
+/// pelas chaves de `Documento` na confirmação.
+model EnvioPendente {
+  id               String        @id @default(uuid())
+  caminhoRelativo  String        @unique
+  nomeArmazenado   String
+  nomeOriginal     String
+  mimeType         String
+  tamanhoBytes     BigInt
+  tipo             TipoDocumento
+  descricao        String?
+  obraId           String
+  medicaoId        String?
+  etapaObraId      String?
+  movimentoId      String?
+  rerratificacaoId String?
+  usuarioId        String
+  /// Quando os bytes passaram pela rota `/envios/[id]` (drivers locais).
+  /// No envio direto ao bucket fica nulo — a confirmação consulta o bucket.
+  recebidoEm       DateTime?
+  /// Só nos drivers locais, onde o servidor vê os bytes passarem.
+  hashSha256       String?
+  criadoEm         DateTime      @default(now())
+  expiraEm         DateTime
+
+  @@index([expiraEm])
+}
+

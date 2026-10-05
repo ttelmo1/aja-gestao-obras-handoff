@@ -10,7 +10,8 @@ import {
   type TIPOS_POR_CONTEXTO,
 } from "@/modules/documentos/rotulos";
 
-import { enviarDocumentos, type EstadoDocumento } from "./acoes";
+import type { EstadoDocumento } from "./acoes";
+import { rotuloDoEnvio, useEnvioDireto } from "./envio-direto";
 
 const LIMITE_MB = Math.round(TAMANHO_MAXIMO_BYTES / 1024 / 1024);
 
@@ -37,8 +38,9 @@ export function EnviarDocumentos({
   rerratificacaoId?: string;
   titulo?: string;
 }) {
+  const { acao, progresso } = useEnvioDireto();
   const [estado, aoEnviar, pendente] = useEnvioSemReset<EstadoDocumento>(
-    enviarDocumentos,
+    acao,
     undefined,
   );
   const sufixo = movimentoId ?? medicaoId ?? etapaObraId ?? obraId;
@@ -106,7 +108,7 @@ export function EnviarDocumentos({
 
       <div>
         <Botao type="submit" variante="destaque" disabled={pendente}>
-          {pendente ? "Enviando…" : "Enviar documento"}
+          {pendente ? rotuloDoEnvio(progresso) : "Enviar documento"}
         </Botao>
       </div>
     </form>

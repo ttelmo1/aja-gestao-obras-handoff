@@ -37,5 +37,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.svg$).*)"],
+  // `envios/` fica de fora: o proxy guarda em memória só os primeiros 10 MB
+  // do corpo, e o upload chegaria cortado à rota (ver `app/envios/[id]`).
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|envios/|.*\\.svg$).*)"],
 };

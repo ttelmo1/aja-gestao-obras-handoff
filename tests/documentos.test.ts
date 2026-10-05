@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
 
 import { caminhoDaObra, resolverDentroDe } from "@/modules/documentos/caminho";
@@ -165,12 +166,17 @@ describe("tamanho legível", () => {
 });
 
 describe("caminho dentro do armazenamento", () => {
-  const RAIZ = "/srv/aja/storage";
+  // A raiz e o esperado passam por resolve/join porque o retorno é caminho de
+  // disco, e disco no Windows usa "\" e tem letra de unidade: comparar com o
+  // texto POSIX cru passaria aqui e quebraria no servidor do cliente, que é
+  // onde isso roda de verdade.
+  const RAIZ = resolve("/srv/aja/storage");
+  const dentroDaRaiz = (...partes: string[]) => join(RAIZ, ...partes);
 
   it("aceita caminho normal de obra", () => {
     assert.equal(
       resolverDentroDe(RAIZ, "obras/abc/arquivo.pdf"),
-      "/srv/aja/storage/obras/abc/arquivo.pdf",
+      dentroDaRaiz("obras", "abc", "arquivo.pdf"),
     );
   });
 
@@ -194,11 +200,14 @@ describe("caminho dentro do armazenamento", () => {
   it("normaliza ponto e barras redundantes sem reclamar", () => {
     assert.equal(
       resolverDentroDe(RAIZ, "./obras/abc/./arquivo.pdf"),
-      "/srv/aja/storage/obras/abc/arquivo.pdf",
+      dentroDaRaiz("obras", "abc", "arquivo.pdf"),
     );
   });
 
-  it("o arquivo da obra mora na pasta da obra", () => {
+  it("o arquivo da obra mora na pasta da obra, sempre com barra normal", () => {
+    // Sem sep do sistema de propósito: este valor vai para o banco. Gravado
+    // como "obras\obra-1\uuid.pdf" no Windows, um dump restaurado em Linux ou
+    // macOS leria isso como um nome de arquivo só, e o documento não abriria.
     assert.equal(caminhoDaObra("obra-1", "uuid.pdf"), "obras/obra-1/uuid.pdf");
   });
 });

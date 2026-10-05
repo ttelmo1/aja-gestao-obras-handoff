@@ -18,9 +18,18 @@ import type { ArquivoSalvo, Driver } from "./tipos";
  * rota que confere permissão.
  */
 
-/** Raiz absoluta do armazenamento, resolvida a cada chamada a partir do env. */
+/**
+ * Raiz absoluta do armazenamento, resolvida a cada chamada a partir do env.
+ *
+ * `turbopackIgnore` porque o caminho só é conhecido em runtime, e sem a marca
+ * o Turbopack conclui que o projeto inteiro pode ser lido daqui e inclui todo
+ * o código-fonte (e a `public/`) no build — foi o que obrigou o empacotador a
+ * limpar `docs/`, `tests/` e a própria `storage/` do pacote. A pasta é
+ * escolhida pelo `.env` da instalação de propósito: no servidor do cliente ela
+ * fica no disco grande, fora da pasta da aplicação.
+ */
 function raiz(): string {
-  return resolve(process.cwd(), env().STORAGE_DIR);
+  return resolve(/*turbopackIgnore: true*/ process.cwd(), env().STORAGE_DIR);
 }
 
 /** Caminho relativo do banco em absoluto, recusando o que escapar da raiz. */

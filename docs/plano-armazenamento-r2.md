@@ -139,15 +139,41 @@ do Next 16 em `node_modules/next/dist/docs/` (convenção do projeto).
 - `throttle.ts` vira funções puras sobre um registro; persistência em
   `src/app/(auth)/acoes.ts`. Ajustar `tests/` do freio.
 
-### Fase 6 — Migração dos arquivos atuais (~2h)
+### Fase 6 — Migração dos arquivos atuais (~2h) ✅
 
-- Script `scripts/migrar-blobs-para-s3.ts`: lê cada `ArquivoBlob` e grava no
-  bucket **com a mesma chave** (`caminhoRelativo`) — `Documento` não muda.
-  Idempotente (pula o que já existe com o mesmo tamanho), com relatório no
-  final.
-- Depois de conferido em produção: apagar as linhas de `ArquivoBlob`. A
-  tabela pode sair numa migration posterior; o driver `db` some junto se não
-  houver mais uso.
+`npm run storage:migrar` (`scripts/migrar-arquivos-para-bucket.ts`) copia cada
+`ArquivoBlob` para o bucket **com a mesma chave** (`caminhoRelativo`) —
+`Documento` não muda. Sem `--executar`, só simula e lista.
+
+- **Só lê o banco e só acrescenta no bucket.** Não apaga nem altera linha, não
+  sobrescreve objeto. O ambiente continua lendo do banco até o
+  `STORAGE_DRIVER` mudar — dá para rodar com o cliente usando a homologação.
+- **Idempotente:** o que já está no bucket com o mesmo tamanho é pulado.
+  Objeto de mesmo nome e outro tamanho é **conflito**: não sobrescreve e o
+  script sai com código 1.
+- **Conferência byte a byte:** o MD5 calculado tem de bater com o ETag que o
+  bucket devolve, e o tamanho com o `HEAD` depois da gravação.
+- Lê um arquivo por vez do banco (a lista vem só com os tamanhos).
+- Relata **órfãos** (bytes sem documento, não copiados) e **documentos sem
+  arquivo** em lugar nenhum.
+
+**Roteiro da virada na homologação** (depois da fase 7):
+
+1. Com a homologação ainda em `STORAGE_DRIVER=db`, rodar da máquina do
+   desenvolvedor apontando para o Neon da homologação (`DATABASE_URL`) e para
+   o bucket de homologação (`S3_*`): primeiro sem `--executar`, conferir o
+   resumo, depois com `--executar`.
+2. No momento da troca: rodar `--executar` de novo — leva só o que entrou
+   desde a primeira rodada.
+3. Trocar `STORAGE_DRIVER` para `s3` (com as `S3_*`) na Vercel e fazer o
+   redeploy.
+4. Abrir alguns documentos antigos e enviar um novo.
+5. **Só depois**, com o sistema rodando sobre o bucket e um backup do banco
+   feito: apagar as linhas de `ArquivoBlob`. A tabela e o driver `db` saem
+   numa migration posterior.
+
+Se algo der errado no passo 4, voltar `STORAGE_DRIVER` para `db` desfaz a
+troca: os bytes continuam no banco.
 
 ### Fase 7 — Infraestrutura (~2h, fora do código)
 

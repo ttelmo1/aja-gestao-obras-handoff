@@ -1690,7 +1690,7 @@ fora do provedor.
 | 3 | Download por redirecionamento | ~1h | ✅ |
 | 4 | Limpeza de envios abandonados (cron) | ~1h | ✅ |
 | 5 | Freio de login no banco | ~2h | ✅ |
-| 6 | Migração de `ArquivoBlob` para o bucket | ~2h | ⬜ |
+| 6 | Migração de `ArquivoBlob` para o bucket | ~2h | ✅ script pronto; roda na homologação depois da fase 7 |
 | 7 | Infraestrutura (contas da AJA, buckets, CORS, domínio) | ~2h | ⬜ |
 | 8 | Backup diário para outro provedor | ~2h | ⬜ |
 | 9 | Validação em homolog e documentação | ~2h | ⬜ |
@@ -1756,3 +1756,18 @@ original), com tipo e nome — inclusive acentuado — corretos.
 **Nota para a fase 6:** documentos gravados antes com outro driver (disco ou
 `ArquivoBlob`) passam a responder 410 quando o ambiente troca para `s3`,
 até a migração copiar os arquivos para o bucket.
+
+### Fase 6 — feito em 05/10/2026
+
+`npm run storage:migrar` copia `ArquivoBlob` para o bucket com a mesma chave,
+sem apagar nem sobrescrever nada; simula por padrão. Roteiro da virada em
+[`plano-armazenamento-r2.md`](plano-armazenamento-r2.md), fase 6.
+
+**Ensaiado contra o R2** (bucket `aja-obras-dev`), com o banco local montado
+como a homologação — 30 documentos em `ArquivoBlob`, um já no bucket, um
+conflito e um órfão: a simulação classificou os quatro casos sem gravar; a
+execução copiou os 30 (38,6 MB) conferindo MD5 contra ETag, recusou o
+conflito sem sobrescrever (saída com código 1) e pulou o órfão; a segunda
+execução não copiou nada. Com o sistema em `STORAGE_DRIVER=s3`, documentos
+antigos abriram pelo bucket com hash igual ao gravado no banco, inclusive o
+de 40 MB.

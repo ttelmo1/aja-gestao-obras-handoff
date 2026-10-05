@@ -172,6 +172,29 @@ async function urlDeDownload(
   );
 }
 
+/**
+ * Grava bytes numa chave já decidida e devolve o ETag. Fora do contrato dos
+ * drivers: serve só à migração de `ArquivoBlob` para o bucket, que precisa
+ * manter o `caminhoRelativo` que o banco já guarda — o `salvarArquivo` sorteia
+ * um caminho novo.
+ */
+export async function gravarNoBucket(
+  caminhoRelativo: string,
+  bytes: Uint8Array,
+  tipoConteudo: string,
+): Promise<string | undefined> {
+  const resposta = await s3().send(
+    new PutObjectCommand({
+      Bucket: bucket(),
+      Key: caminhoRelativo,
+      Body: bytes,
+      ContentType: tipoConteudo,
+      ContentLength: bytes.byteLength,
+    }),
+  );
+  return resposta.ETag;
+}
+
 export const s3Driver: Driver = {
   salvarArquivo,
   abrirArquivo,

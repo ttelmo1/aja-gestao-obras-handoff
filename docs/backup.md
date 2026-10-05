@@ -90,11 +90,16 @@ ser da mesma versão ou mais nova.
 | `BACKUP_S3_ACCESS_KEY_ID` / `BACKUP_S3_SECRET_ACCESS_KEY` | chave do B2 |
 | `HEALTHCHECK_URL` (opcional) | URL de um check do Healthchecks.io, período de 1 dia |
 
-### 5. Primeira execução
+### 5. Primeira execução e chave de ligar
 
 *Actions → Backup diário → Run workflow*. Conferir no B2 que apareceram
 `banco/diario/<hoje>.dump.enc` e `documentos/`. Depois, **fazer o ensaio de
 restauração** abaixo — só então o backup conta como funcionando.
+
+Só então ligar o agendamento: *Settings → Secrets and variables → Actions →
+Variables → New repository variable* — `BACKUP_ATIVO` = `true`. Sem essa
+variável o agendamento diário é pulado (o disparo manual funciona sempre).
+Para desligar, apagar a variável ou mudar o valor.
 
 > O agendamento só vale com o arquivo do workflow na **branch padrão** do
 > repositório. Enquanto ele estiver só em `dev`, o backup não roda sozinho.

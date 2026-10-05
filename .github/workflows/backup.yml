@@ -24,6 +24,12 @@ concurrency:
 
 jobs:
   backup:
+    # Chave de ligar: o agendamento só roda com a variável de repositório
+    # BACKUP_ATIVO = true (Settings → Secrets and variables → Actions →
+    # Variables). Sem ela o job é pulado, em vez de falhar todo dia por falta
+    # de segredos. O disparo manual roda sempre — é como se testa antes de
+    # ligar.
+    if: github.event_name == 'workflow_dispatch' || vars.BACKUP_ATIVO == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     env:

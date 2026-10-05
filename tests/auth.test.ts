@@ -17,12 +17,12 @@ import {
 } from "@/modules/auth/token";
 import {
   BLOQUEIO_MS,
-  bloqueadoPor,
   JANELA_MS,
-  limparFalhas,
-  registrarFalha,
-  tamanhoDoFreio,
   TENTATIVAS_ATE_BLOQUEIO,
+  aposFalha,
+  esquecivel,
+  segundosDeBloqueio,
+  type RegistroFreio,
 } from "@/modules/auth/throttle";
 
 describe("política de senha", () => {
@@ -96,39 +96,32 @@ describe("tokens", () => {
   });
 });
 
+/** `n` (≥ 1) senhas erradas seguidas, todas no instante `agora`. */
+function falhas(n: number, agora: number): RegistroFreio {
+  let r = aposFalha(null, agora);
+  for (let i = 1; i < n; i++) r = aposFalha(r, agora);
+  return r;
+}
+
 describe("freio de tentativas de login", () => {
   // A chave é o e-mail, não `email|ip`: o IP vinha de um header que o próprio
-  // cliente escolhe, então rotacioná-lo dava tentativas infinitas.
+  // cliente escolhe, então rotacioná-lo dava tentativas infinitas. A chave
+  // separa as contas — cada uma tem o seu registro.
   it("libera enquanto está abaixo do limite", () => {
-    const chave = "abaixo@exemplo.com";
-    limparFalhas(chave);
-    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO - 1; i++) registrarFalha(chave);
-    assert.equal(bloqueadoPor(chave), 0);
+    const agora = Date.now();
+    const r = falhas(TENTATIVAS_ATE_BLOQUEIO - 1, agora);
+    assert.equal(segundosDeBloqueio(r, agora), 0);
   });
 
   it("bloqueia ao atingir o limite e solta quando o prazo vence", () => {
-    const chave = "limite@exemplo.com";
-    limparFalhas(chave);
     const agora = Date.now();
-    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha(chave, agora);
-    assert.ok(bloqueadoPor(chave, agora) > 0);
-    assert.equal(bloqueadoPor(chave, agora + BLOQUEIO_MS + 1), 0);
+    const r = falhas(TENTATIVAS_ATE_BLOQUEIO, agora);
+    assert.ok(segundosDeBloqueio(r, agora) > 0);
+    assert.equal(segundosDeBloqueio(r, agora + BLOQUEIO_MS + 1), 0);
   });
 
-  it("o acerto zera o contador", () => {
-    const chave = "acerto@exemplo.com";
-    limparFalhas(chave);
-    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha(chave);
-    limparFalhas(chave);
-    assert.equal(bloqueadoPor(chave), 0);
-  });
-
-  it("uma conta travada não trava as outras", () => {
-    limparFalhas("alvo@exemplo.com");
-    limparFalhas("vizinho@exemplo.com");
-    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha("alvo@exemplo.com");
-    assert.ok(bloqueadoPor("alvo@exemplo.com") > 0);
-    assert.equal(bloqueadoPor("vizinho@exemplo.com"), 0);
+  it("sem registro, pode tentar", () => {
+    assert.equal(segundosDeBloqueio(null, Date.now()), 0);
   });
 });
 
@@ -136,42 +129,32 @@ describe("o freio não acumula registro para sempre", () => {
   it("tentativa isolada muito depois começa contagem nova", () => {
     // Sem janela deslizante, quatro erros hoje somariam com um erro daqui a
     // meses e bloqueariam quem não errou nada.
-    const chave = "espacado@exemplo.com";
-    limparFalhas(chave);
     const agora = Date.now();
-    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO - 1; i++) registrarFalha(chave, agora);
-    registrarFalha(chave, agora + JANELA_MS + 1);
-    assert.equal(bloqueadoPor(chave, agora + JANELA_MS + 1), 0);
+    const r = falhas(TENTATIVAS_ATE_BLOQUEIO - 1, agora);
+    const depois = agora + JANELA_MS + 1;
+    assert.equal(segundosDeBloqueio(aposFalha(r, depois), depois), 0);
   });
 
-  it("registro parado e desbloqueado é esquecido", () => {
-    const antigo = "esquecivel@exemplo.com";
-    const atual = "ativo@exemplo.com";
-    limparFalhas(antigo);
-    limparFalhas(atual);
+  it("contagem nova não solta um bloqueio em curso", () => {
     const agora = Date.now();
-
-    registrarFalha(antigo, agora);
-    const antes = tamanhoDoFreio();
-
-    // Uma falha bem depois dispara a limpeza dos registros vencidos.
-    registrarFalha(atual, agora + BLOQUEIO_MS + JANELA_MS + 1);
-    assert.equal(tamanhoDoFreio(), antes, "o antigo saiu e o novo entrou");
-    assert.equal(bloqueadoPor(antigo, agora + BLOQUEIO_MS + JANELA_MS + 1), 0);
+    const bloqueado = falhas(TENTATIVAS_ATE_BLOQUEIO, agora);
+    // Bloqueio mais longo que a janela não acontece hoje, mas a regra não
+    // pode depender disso: zerar o contador não zera o bloqueio.
+    const longo = { ...bloqueado, bloqueadoAte: agora + JANELA_MS * 2 };
+    const depois = agora + JANELA_MS + 1;
+    assert.ok(segundosDeBloqueio(aposFalha(longo, depois), depois) > 0);
   });
 
-  it("a limpeza não solta quem está cumprindo bloqueio", () => {
-    const chave = "bloqueado@exemplo.com";
-    limparFalhas(chave);
+  it("registro parado e desbloqueado é esquecível", () => {
     const agora = Date.now();
-    for (let i = 0; i < TENTATIVAS_ATE_BLOQUEIO; i++) registrarFalha(chave, agora);
+    const r = aposFalha(null, agora);
+    assert.equal(esquecivel(r, agora), false);
+    assert.equal(esquecivel(r, agora + JANELA_MS + 1), true);
+  });
 
-    // Meio do bloqueio: a falha de outra conta roda a limpeza, e este registro
-    // precisa sobreviver a ela.
-    const meio = agora + BLOQUEIO_MS / 2;
-    registrarFalha("outro@exemplo.com", meio);
-    assert.ok(bloqueadoPor(chave, meio) > 0);
-    limparFalhas("outro@exemplo.com");
-    limparFalhas(chave);
+  it("quem está cumprindo bloqueio não é esquecível", () => {
+    const agora = Date.now();
+    const r = falhas(TENTATIVAS_ATE_BLOQUEIO, agora);
+    assert.equal(esquecivel(r, agora + BLOQUEIO_MS / 2), false);
   });
 });

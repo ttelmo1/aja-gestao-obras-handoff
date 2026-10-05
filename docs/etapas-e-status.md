@@ -44,6 +44,7 @@ Andamento do desenvolvimento. Atualizar ao concluir cada etapa.
 | 12 | Ajustes, integração e testes | ~3h | ⬜ | todas |
 | 13 | Ajustes pós-apresentação à diretoria | ~5,5h | 🟡 | 4, 5, 7, 9 |
 | 14 | Empacotamento e instalação on-premise | fora das 140h | ⬜ | 12 |
+| 15 | Documentos no R2 e preparo para a nuvem | ~21h, fora das 140h | ⬜ | 7 |
 
 A **etapa 14 está fora das 140h contratadas** (`README.md`, "Instalação no
 cliente"): é *"a definir após visita técnica"*. Está no quadro porque **nada
@@ -1670,3 +1671,115 @@ trabalhar. Ver ponto #11 de
 **Data falada para a instalação:** sexta, 11/09/2026, com segunda, 14/09, como
 cenário mais provável. Como os nove itens acima não existem, o prazo depende
 de eles serem construídos antes — e do retorno do checklist.
+
+## Etapa 15 — Documentos no R2 e preparo para a nuvem ⬜
+
+**Fora das 140h contratadas.** Nasce da mudança de 05/10/2026: o sistema vai
+para a nuvem (Vercel + Neon) e a etapa 14 fica só como referência. Plano
+completo, com decisões de desenho e fases, em
+[`plano-armazenamento-r2.md`](plano-armazenamento-r2.md).
+
+Resolve o limite de ~4,5 MB por requisição da Vercel (envio e download direto
+entre navegador e bucket), move o freio de login para o banco e monta backup
+fora do provedor.
+
+| # | Fase | Horas | Estado |
+| --- | --- | --- | --- |
+| 1 | Driver `s3` e configuração | ~3h | ✅ |
+| 2 | Envio em três passos (preparar → enviar → confirmar) | ~6h | ✅ |
+| 3 | Download por redirecionamento | ~1h | ✅ |
+| 4 | Limpeza de envios abandonados (cron) | ~1h | ✅ |
+| 5 | Freio de login no banco | ~2h | ✅ |
+| 6 | Migração de `ArquivoBlob` para o bucket | ~2h | ✅ script pronto; roda na homologação depois da fase 7 |
+| 7 | Infraestrutura (contas da AJA, buckets, CORS, domínio) | ~2h | ⬜ |
+| 8 | Backup diário para outro provedor | ~2h | ✅ pronto; liga quando houver as contas da AJA |
+| 9 | Validação em homolog e documentação | ~2h | ⬜ |
+
+### Feito em 05/10/2026 (fases 1 a 5)
+
+- **Driver `s3`** (`src/lib/storage/s3.ts`): URL assinada de envio com tipo e
+  tamanho na assinatura, link de download de 5 minutos com nome e tipo
+  forçados, `HEAD` para conferir o que chegou. Checksum automático do SDK
+  desligado (`WHEN_REQUIRED`) — ligado, a URL assinada exige um CRC32 que o
+  navegador não manda.
+- **Envio em três passos**: `prepararEnvio` → `PUT` → `confirmarEnvio`, com
+  `cancelarEnvio` quando a tela desiste. Tabela `EnvioPendente` sem chave
+  estrangeira, de propósito (a limpeza precisa achar os arquivos mesmo com a
+  obra apagada). Barra de progresso no botão.
+- **Um fluxo só para os três drivers**: sem bucket, a tela envia para
+  `PUT /envios/[id]`, que grava aos pedaços. A rota fica **fora do `matcher`
+  do proxy** — o proxy guarda só os primeiros 10 MB do corpo, sem erro.
+- **Download**: com bucket, `302` para o link assinado, depois de conferir
+  que o arquivo existe; sem bucket, como antes.
+- **Limpeza**: `GET /api/cron/limpar-envios`, diária às 03h (Brasília) pelo
+  `vercel.json`, exige `CRON_SECRET`.
+- **Freio de login** na tabela `FreioLogin`, com a linha travada
+  (`FOR UPDATE`) a cada falha. A regra continua pura em `throttle.ts`.
+- **`serverActions.bodySizeLimit` saiu** (voltou ao 1 MB padrão): nenhuma
+  action recebe arquivo, e 320 MB para toda action era porta aberta na
+  internet.
+- Trazidos da `prod`, com o mesmo texto, para o merge não conflitar: caminho
+  do documento com barra normal, `dist` fora do `tsconfig` e
+  `turbopackIgnore` no driver de disco.
+
+**Verificado:** 350 testes, tipagem, lint e `next build`. Contra o banco
+local: arquivo de 40 MB gravado aos pedaços pela rota com hash igual ao do
+`shasum` e o processo em ~180 MB; corpo maior que o autorizado interrompido
+sem deixar arquivo parcial; 20 senhas erradas em paralelo terminam
+bloqueadas (sem a trava, o contador ficaria em 1); `/envios/` e
+`/api/cron/` respondem 401 sem passar pelo proxy.
+
+**Verificado pela tela, logado, com o driver `disco` (05/10/2026):** PDF de
+49 KB; PDF de 40 MB com a porcentagem subindo no botão (6% → 96%, com o
+envio limitado a 8 MB/s) e o hash no banco igual ao do arquivo original;
+dois arquivos de uma vez; `.dwg` recusado com a mensagem de engenharia;
+download do arquivo de 40 MB íntegro, com o tipo e o nome certos; envio
+derrubado no meio e confirmação derrubada, as duas com mensagem na janela e
+sem sobrar autorização nem arquivo; limpeza diária apagando um envio vencido
+e o arquivo dele (e recusando chamada sem segredo ou com segredo errado);
+freio barrando a 6ª senha errada.
+
+**Corrigido no teste:** se a conexão caísse durante uma das Server Actions do
+envio (preparo ou confirmação), a exceção escapava e a página inteira
+quebrava ("This page couldn't load"). Agora vira mensagem na janela, e a
+confirmação que falha tenta cancelar o envio.
+
+**Verificado contra o Cloudflare R2 (05/10/2026, bucket `aja-obras-dev`):**
+o R2 **aplica o `Content-Length` e o `Content-Type` assinados** — corpo
+maior que o autorizado e tipo diferente voltam 403 sem gravar nada; o
+objeto sem assinatura não abre (bucket privado). Pela tela: PDF de 49 KB e
+de 40 MB enviados direto ao bucket (o servidor só vê as duas actions, nenhum
+`PUT`), porcentagem subindo no botão, sem erro de CORS; o download responde
+com redirecionamento para o R2 e o arquivo chega íntegro (hash igual ao
+original), com tipo e nome — inclusive acentuado — corretos.
+
+**Nota para a fase 6:** documentos gravados antes com outro driver (disco ou
+`ArquivoBlob`) passam a responder 410 quando o ambiente troca para `s3`,
+até a migração copiar os arquivos para o bucket.
+
+### Fase 6 — feito em 05/10/2026
+
+`npm run storage:migrar` copia `ArquivoBlob` para o bucket com a mesma chave,
+sem apagar nem sobrescrever nada; simula por padrão. Roteiro da virada em
+[`plano-armazenamento-r2.md`](plano-armazenamento-r2.md), fase 6.
+
+**Ensaiado contra o R2** (bucket `aja-obras-dev`), com o banco local montado
+como a homologação — 30 documentos em `ArquivoBlob`, um já no bucket, um
+conflito e um órfão: a simulação classificou os quatro casos sem gravar; a
+execução copiou os 30 (38,6 MB) conferindo MD5 contra ETag, recusou o
+conflito sem sobrescrever (saída com código 1) e pulou o órfão; a segunda
+execução não copiou nada. Com o sistema em `STORAGE_DRIVER=s3`, documentos
+antigos abriram pelo bucket com hash igual ao gravado no banco, inclusive o
+de 40 MB.
+
+### Fase 8 — feito em 05/10/2026
+
+Backup diário em [`backup.md`](backup.md): `scripts/backup/backup.sh`
+(dump cifrado + cópia dos documentos para o Backblaze B2) chamado pelo
+workflow `backup.yml` às 04h, e `scripts/backup/restaurar-banco.sh`.
+**Ensaiado de ponta a ponta** contra o bucket de desenvolvimento no lugar do
+B2 — backup, restauração num banco vazio com as mesmas contagens, documentos
+idênticos (`rclone check`), trava da auditoria restaurada, senha errada
+recusada. Para ligar: contas da AJA (B2, token só de leitura do R2, usuário
+só de leitura no Neon), segredos no GitHub e o workflow na branch padrão —
+o GitHub só agenda a partir dela.

@@ -8,9 +8,20 @@ import { textoOpcional } from "@/lib/campos";
 import { autorizar } from "@/lib/guarda";
 import { prisma } from "@/lib/prisma";
 import { origemDaRequisicao } from "@/lib/sessao";
-import { apagarArquivo, salvarArquivo } from "@/lib/storage";
+import {
+  apagarArquivo,
+  destinoDoEnvio,
+  infoArquivo,
+  novoCaminho,
+} from "@/lib/storage";
 import { AcaoAuditoria, registrar } from "@/modules/auditoria/registrar";
 import { aceitaMaisDeUm } from "@/modules/documentos/acervo";
+import {
+  MAXIMO_ARQUIVOS_POR_ENVIO,
+  VALIDADE_ENVIO_MS,
+  lerArquivosDeclarados,
+  recusaDaConfirmacao,
+} from "@/modules/documentos/envio";
 import { validarArquivo } from "@/modules/documentos/formatos";
 import { ROTULOS_TIPO_DOCUMENTO } from "@/modules/documentos/rotulos";
 
@@ -113,19 +124,25 @@ async function recusaPorRepeticao(
   return null;
 }
 
+export type EnvioPreparado =
+  | { erro: string }
+  | { envios: { id: string; url: string; cabecalhos: Record<string, string> }[] };
+
 /**
- * Upload múltiplo (requisitos.md 1.6). Cada arquivo vira um `Documento`
- * próprio, com o mesmo tipo e a mesma descrição — que é como o mockup
- * apresenta: "é possível anexar mais de um documento à mesma etapa".
+ * Primeiro passo do upload (requisitos.md 1.6, etapa 15): autoriza o envio e
+ * diz à tela para onde mandar cada arquivo.
  *
- * A gravação no disco vem antes da linha no banco, e um arquivo que grave e
- * depois falhe no banco é removido: arquivo órfão no disco ninguém encontra,
- * mas linha órfã no banco vira botão de download quebrado na tela.
+ * O arquivo não passa por aqui. A plataforma corta requisições acima de
+ * ~4,5 MB, e os documentos chegam a 300 MB — então a tela manda só nome,
+ * tamanho e tipo, e todas as checagens que antes olhavam o arquivo (sessão,
+ * permissão, vínculos, formato, repetição de tipo) acontecem sobre essa
+ * declaração. O que foi autorizado fica gravado em `EnvioPendente`, e a
+ * confirmação confere no armazenamento se o que chegou bate com ele.
+ *
+ * Valida todos antes de autorizar qualquer um: melhor recusar o lote inteiro
+ * do que deixar metade subir e reclamar da outra metade.
  */
-export async function enviarDocumentos(
-  _estado: EstadoDocumento,
-  formData: FormData,
-): Promise<EstadoDocumento> {
+export async function prepararEnvio(formData: FormData): Promise<EnvioPreparado> {
   const permissao = await autorizar("documento", "criar");
   if (!permissao.ok) return { erro: permissao.erro };
 
@@ -150,62 +167,141 @@ export async function enviarDocumentos(
   const problema = await vinculosValidos(dados);
   if (problema) return { erro: problema };
 
-  const arquivos = formData
-    .getAll("arquivos")
-    .filter((a): a is File => a instanceof File && a.size > 0);
-  if (arquivos.length === 0) return { erro: "Selecione ao menos um arquivo." };
+  const declarados = lerArquivosDeclarados(String(formData.get("arquivos") ?? ""));
+  if (!declarados.ok) return { erro: declarados.erro };
+  const arquivos = declarados.arquivos;
 
   const recusa = await recusaPorRepeticao(dados, arquivos.length);
   if (recusa) return { erro: recusa };
 
-  // Valida todos antes de gravar qualquer um: melhor recusar o lote inteiro
-  // do que deixar metade no disco e reclamar da outra metade.
-  const validados: { arquivo: File; mime: string }[] = [];
-  for (const arquivo of arquivos) {
-    const check = validarArquivo(arquivo.name, arquivo.type, arquivo.size);
-    if (!check.ok) return { erro: `${arquivo.name}: ${check.motivo}` };
-    validados.push({ arquivo, mime: check.mimeNormalizado });
+  const validados: { nome: string; tamanho: number; mime: string }[] = [];
+  for (const a of arquivos) {
+    const check = validarArquivo(a.nome, a.tipo, a.tamanho);
+    if (!check.ok) return { erro: `${a.nome}: ${check.motivo}` };
+    validados.push({ nome: a.nome, tamanho: a.tamanho, mime: check.mimeNormalizado });
+  }
+
+  const expiraEm = new Date(Date.now() + VALIDADE_ENVIO_MS);
+  const envios = [];
+  for (const a of validados) {
+    const { nomeArmazenado, caminhoRelativo } = novoCaminho(dados.obraId, a.nome);
+    const pendente = await prisma.envioPendente.create({
+      data: {
+        caminhoRelativo,
+        nomeArmazenado,
+        nomeOriginal: a.nome,
+        mimeType: a.mime,
+        tamanhoBytes: BigInt(a.tamanho),
+        tipo: dados.tipo,
+        descricao: dados.descricao,
+        obraId: dados.obraId,
+        medicaoId: dados.medicaoId,
+        etapaObraId: dados.etapaObraId,
+        movimentoId: dados.movimentoId,
+        rerratificacaoId: dados.rerratificacaoId,
+        usuarioId: permissao.usuario.id,
+        expiraEm,
+      },
+      select: { id: true },
+    });
+    const destino = await destinoDoEnvio(pendente.id, caminhoRelativo, a.tamanho, a.mime);
+    envios.push({ id: pendente.id, ...destino });
+  }
+
+  return { envios };
+}
+
+const idsSchema = z.array(z.string().min(1)).min(1).max(MAXIMO_ARQUIVOS_POR_ENVIO);
+
+/** Apaga os arquivos que chegaram e as autorizações. Nunca lança. */
+async function descartarEnvios(
+  pendentes: { id: string; caminhoRelativo: string }[],
+): Promise<void> {
+  await Promise.allSettled(pendentes.map((p) => apagarArquivo(p.caminhoRelativo)));
+  await prisma.envioPendente
+    .deleteMany({ where: { id: { in: pendentes.map((p) => p.id) } } })
+    .catch(() => {});
+}
+
+/**
+ * Último passo do upload: confere no armazenamento o que chegou e só então
+ * cria os `Documento`. Cada arquivo vira um documento próprio, com o mesmo
+ * tipo e a mesma descrição — que é como o mockup apresenta: "é possível
+ * anexar mais de um documento à mesma etapa".
+ *
+ * Do navegador só se aceita o `id` de cada envio; obra, vínculos, tipo e
+ * tamanho vêm da autorização gravada. Se qualquer arquivo do lote não
+ * conferir, o lote inteiro é descartado — documento pela metade numa medição
+ * é pior que pedir o envio de novo.
+ */
+export async function confirmarEnvio(
+  obraId: string,
+  ids: string[],
+): Promise<EstadoDocumento> {
+  const permissao = await autorizar("documento", "criar");
+  if (!permissao.ok) return { erro: permissao.erro };
+
+  const analise = idsSchema.safeParse(ids);
+  if (!analise.success) return { erro: "Envio inválido." };
+
+  const pendentes = await prisma.envioPendente.findMany({
+    where: { id: { in: analise.data } },
+  });
+  if (pendentes.length !== new Set(analise.data).size) {
+    return { erro: "Envio não encontrado. Envie o arquivo de novo." };
+  }
+
+  const quem = { usuarioId: permissao.usuario.id, obraId };
+  const agora = new Date();
+  for (const p of pendentes) {
+    const motivo = recusaDaConfirmacao(p, quem, await infoArquivo(p.caminhoRelativo), agora);
+    if (motivo) {
+      // Envio de outra pessoa não é descartado por quem não é dono dele.
+      if (p.usuarioId === quem.usuarioId) await descartarEnvios(pendentes);
+      return { erro: motivo };
+    }
+  }
+
+  // De novo, agora que os arquivos chegaram: dois envios do mesmo tipo
+  // autorizados em paralelo passariam os dois pela checagem do preparo.
+  const primeiro = pendentes[0];
+  const recusa = await recusaPorRepeticao(
+    {
+      obraId,
+      tipo: primeiro.tipo,
+      descricao: primeiro.descricao,
+      medicaoId: primeiro.medicaoId,
+      etapaObraId: primeiro.etapaObraId,
+      movimentoId: primeiro.movimentoId,
+      rerratificacaoId: primeiro.rerratificacaoId,
+    },
+    pendentes.length,
+  );
+  if (recusa) {
+    await descartarEnvios(pendentes);
+    return { erro: recusa };
   }
 
   const { ip } = await origemDaRequisicao();
-  const salvos: string[] = [];
-  const gravados: {
-    arquivo: File;
-    mime: string;
-    salvo: Awaited<ReturnType<typeof salvarArquivo>>;
-  }[] = [];
-
   try {
-    // Grava todos os arquivos primeiro e só então abre uma única transação
-    // para as linhas. Duas razões: uma transação por arquivo faria a falha do
-    // terceiro apagar do disco os dois primeiros, cujas linhas já teriam
-    // comitado, deixando registro apontando para arquivo inexistente; e
-    // manter a escrita em disco dentro da transação esbarraria no timeout
-    // padrão do Prisma num lote grande.
-    for (const { arquivo, mime } of validados) {
-      const salvo = await salvarArquivo(arquivo, dados.obraId);
-      salvos.push(salvo.caminhoRelativo);
-      gravados.push({ arquivo, mime, salvo });
-    }
-
     await prisma.$transaction(async (tx) => {
-      for (const { arquivo, mime, salvo } of gravados) {
+      for (const p of pendentes) {
         const documento = await tx.documento.create({
           data: {
-            nomeOriginal: arquivo.name,
-            nomeArmazenado: salvo.nomeArmazenado,
-            caminhoRelativo: salvo.caminhoRelativo,
-            mimeType: mime,
-            extensao: salvo.nomeArmazenado.split(".").pop() ?? "",
-            tamanhoBytes: BigInt(salvo.tamanhoBytes),
-            hashSha256: salvo.hashSha256,
-            tipo: dados.tipo,
-            descricao: dados.descricao,
-            obraId: dados.obraId,
-            medicaoId: dados.medicaoId,
-            etapaObraId: dados.etapaObraId,
-            movimentoId: dados.movimentoId,
-            rerratificacaoId: dados.rerratificacaoId,
+            nomeOriginal: p.nomeOriginal,
+            nomeArmazenado: p.nomeArmazenado,
+            caminhoRelativo: p.caminhoRelativo,
+            mimeType: p.mimeType,
+            extensao: p.nomeArmazenado.split(".").pop() ?? "",
+            tamanhoBytes: p.tamanhoBytes,
+            hashSha256: p.hashSha256,
+            tipo: p.tipo,
+            descricao: p.descricao,
+            obraId: p.obraId,
+            medicaoId: p.medicaoId,
+            etapaObraId: p.etapaObraId,
+            movimentoId: p.movimentoId,
+            rerratificacaoId: p.rerratificacaoId,
             enviadoPorId: permissao.usuario.id,
           },
         });
@@ -215,30 +311,53 @@ export async function enviarDocumentos(
             acao: AcaoAuditoria.CRIAR,
             entidade: "Documento",
             entidadeId: documento.id,
-            obraId: dados.obraId,
-            descricao: `Documento "${arquivo.name}" enviado.`,
+            obraId: p.obraId,
+            descricao: `Documento "${p.nomeOriginal}" enviado.`,
             dadosDepois: {
-              nome: arquivo.name,
-              tipo: dados.tipo,
-              tamanhoBytes: salvo.tamanhoBytes,
+              nome: p.nomeOriginal,
+              tipo: p.tipo,
+              tamanhoBytes: Number(p.tamanhoBytes),
             },
           },
           tx,
         );
       }
+      await tx.envioPendente.deleteMany({
+        where: { id: { in: pendentes.map((p) => p.id) } },
+      });
     });
   } catch (erro) {
-    await Promise.all(salvos.map((c) => apagarArquivo(c).catch(() => {})));
+    // Arquivo sem linha ninguém encontra; linha sem arquivo vira botão de
+    // download quebrado. Se a transação falhou, os arquivos saem.
+    await descartarEnvios(pendentes);
     throw erro;
   }
 
-  revalidatePath(`/obras/${dados.obraId}`, "layout");
+  revalidatePath(`/obras/${obraId}`, "layout");
   return {
     sucesso:
-      arquivos.length === 1
+      pendentes.length === 1
         ? "Documento enviado."
-        : `${arquivos.length} documentos enviados.`,
+        : `${pendentes.length} documentos enviados.`,
   };
+}
+
+/**
+ * A tela desistiu no meio (falha de rede, erro do armazenamento): apaga o que
+ * chegou. Se nem isto rodar, a limpeza diária apaga quando a autorização
+ * vencer.
+ */
+export async function cancelarEnvio(ids: string[]): Promise<void> {
+  const usuario = await autorizar("documento", "criar");
+  if (!usuario.ok) return;
+  const analise = idsSchema.safeParse(ids);
+  if (!analise.success) return;
+
+  const pendentes = await prisma.envioPendente.findMany({
+    where: { id: { in: analise.data }, usuarioId: usuario.usuario.id },
+    select: { id: true, caminhoRelativo: true },
+  });
+  await descartarEnvios(pendentes);
 }
 
 /**

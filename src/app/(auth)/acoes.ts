@@ -5,7 +5,7 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { criarSessao, encerrarSessao, encerrarSessoesDoUsuario, limparSessoesVencidas, origemDaRequisicao } from "@/lib/sessao";
-import { bloqueadoPor, limparFalhas, registrarFalha } from "@/modules/auth/throttle";
+import { bloqueadoPor, limparFalhas, registrarFalha } from "@/lib/freio-login";
 import { AcaoAuditoria, registrar } from "@/modules/auditoria/registrar";
 import { conferirSenha, hashSenha, HASH_FALSO, senhaSchema } from "@/modules/auth/senha";
 import { DURACAO_TOKEN_SENHA_MS, expiraEm, expirou, gerarToken, hashToken } from "@/modules/auth/token";
@@ -48,7 +48,7 @@ export async function entrar(
   // alguns minutos errando a senha de propósito — bloqueio temporário e
   // registrado, contra uma força bruta que antes passava direto.
   const chave = email;
-  const segundos = bloqueadoPor(chave);
+  const segundos = await bloqueadoPor(chave);
   if (segundos > 0) {
     const minutos = Math.ceil(segundos / 60);
     return { erro: `Tentativas demais. Espere ${minutos} minuto(s) e tente de novo.` };
@@ -70,11 +70,11 @@ export async function entrar(
   const confere = await conferirSenha(senha, hashParaComparar);
 
   if (!usuario || !usuario.ativo || !confere) {
-    registrarFalha(chave);
+    await registrarFalha(chave);
     return { erro: "E-mail ou senha incorretos." };
   }
 
-  limparFalhas(chave);
+  await limparFalhas(chave);
   await limparSessoesVencidas();
   await criarSessao(usuario.id);
   await prisma.usuario.update({

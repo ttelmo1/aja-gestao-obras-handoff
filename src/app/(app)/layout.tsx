@@ -70,7 +70,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
       </main>
 
       <footer className="border-t border-[var(--border)] px-6 py-3 text-center text-xs text-[var(--muted)]">
-        AJA Grupo Empresarial — uso interno, rede local
+        AJA Grupo Empresarial — uso interno
       </footer>
     </div>
   );

@@ -1,4 +1,4 @@
-import { join, resolve, sep } from "node:path";
+import { posix, resolve, sep } from "node:path";
 
 /**
  * Resolução de caminho dentro do armazenamento.
@@ -26,7 +26,15 @@ export function resolverDentroDe(raiz: string, caminhoRelativo: string): string 
  * Uma pasta por obra mantém o diretório navegável para quem for fazer backup
  * ou precisar dos arquivos sem o sistema — o servidor é do cliente, e um dia
  * alguém abre essa pasta no Finder.
+ *
+ * **Sempre com barra normal, mesmo no Windows** (`posix.join`, não `join`).
+ * Este valor é gravado no banco, em `Documento.caminhoRelativo`, e precisa ser
+ * o mesmo texto em qualquer sistema: gravado como `obras\<id>\<uuid>.pdf` no
+ * servidor do cliente, um dump restaurado em Linux ou macOS leria isso como um
+ * nome de arquivo só, e nenhum documento abriria. O caminho no banco é lógico;
+ * quem traduz para o disco é `resolverDentroDe`, e `resolve` aceita os dois
+ * sentidos de barra no Windows.
  */
 export function caminhoDaObra(obraId: string, nomeArmazenado: string): string {
-  return join("obras", obraId, nomeArmazenado);
+  return posix.join("obras", obraId, nomeArmazenado);
 }

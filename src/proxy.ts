@@ -37,5 +37,12 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.svg$).*)"],
+  // Ficam de fora:
+  // - `envios/`: o proxy guarda em memória só os primeiros 10 MB do corpo, e
+  //   o upload chegaria cortado à rota (ver `app/envios/[id]`);
+  // - `api/cron/`: o Vercel Cron chama sem cookie e seria mandado ao login. A
+  //   rota confere o próprio segredo.
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|envios/|api/cron/|.*\\.svg$).*)",
+  ],
 };

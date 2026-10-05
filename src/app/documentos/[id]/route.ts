@@ -1,4 +1,4 @@
-import { abrirArquivo } from "@/lib/storage";
+import { abrirArquivo, infoArquivo, linkDeDownload } from "@/lib/storage";
 import { usuarioAtual } from "@/lib/guarda";
 import { prisma } from "@/lib/prisma";
 import { pode } from "@/modules/auth/permissoes";
@@ -14,6 +14,10 @@ import { abreInline, tipoDeConteudo } from "@/modules/documentos/formatos";
  *
  * Documento excluído (exclusão lógica) também não é servido — some da tela e
  * some do download; o registro fica só para a auditoria.
+ *
+ * Com bucket (`STORAGE_DRIVER=s3`), as checagens são as mesmas, mas o arquivo
+ * não passa por aqui: a resposta é um redirecionamento para um link assinado
+ * de poucos minutos. A plataforma não devolve mais que ~4,5 MB por resposta.
  */
 export async function GET(
   _request: Request,
@@ -40,17 +44,31 @@ export async function GET(
     return new Response("Documento não encontrado.", { status: 404 });
   }
 
-  const conteudo = await abrirArquivo(documento.caminhoRelativo);
-  if (!conteudo) {
-    // O registro existe mas o arquivo sumiu do disco — backup restaurado pela
-    // metade, pasta movida à mão. Dizer isso é mais útil que um 404 seco.
-    return new Response(
-      "O arquivo não está no armazenamento do servidor. Verifique a pasta de documentos.",
-      { status: 410 },
-    );
+  // O registro existe mas o arquivo sumiu — backup restaurado pela metade,
+  // pasta ou bucket mexido à mão. Dizer isso é mais útil que um 404 seco.
+  const sumiu = new Response(
+    "O arquivo não está no armazenamento do servidor. Verifique a pasta de documentos.",
+    { status: 410 },
+  );
+  const inline = abreInline(documento.extensao);
+
+  const link = linkDeDownload(documento.caminhoRelativo, {
+    nomeArquivo: documento.nomeOriginal,
+    tipoConteudo: tipoDeConteudo(documento.extensao),
+    inline,
+  });
+  if (link) {
+    // Conferir antes de redirecionar: o link assinado de um arquivo que não
+    // existe abre uma página de erro do bucket, em XML.
+    if (!(await infoArquivo(documento.caminhoRelativo))) return sumiu;
+    return new Response(null, {
+      status: 302,
+      headers: { Location: await link, "Cache-Control": "private, no-store" },
+    });
   }
 
-  const inline = abreInline(documento.extensao);
+  const conteudo = await abrirArquivo(documento.caminhoRelativo);
+  if (!conteudo) return sumiu;
 
   return new Response(conteudo, {
     headers: {

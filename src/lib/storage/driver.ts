@@ -1,6 +1,7 @@
 import { env } from "../env";
 import { db } from "./db";
 import { disco } from "./disco";
+import { s3Driver } from "./s3";
 import type { Driver } from "./tipos";
 
 /**
@@ -11,5 +12,12 @@ import type { Driver } from "./tipos";
  * carga do módulo.
  */
 export function driver(): Driver {
-  return env().STORAGE_DRIVER === "db" ? db : disco;
+  switch (env().STORAGE_DRIVER) {
+    case "s3":
+      return s3Driver;
+    case "db":
+      return db;
+    default:
+      return disco;
+  }
 }

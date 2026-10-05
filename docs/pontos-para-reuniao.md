@@ -38,7 +38,7 @@ Ordenados por custo de mudar, do mais caro para o mais barato.
 | 8 | Exclusão de registros — só documento ativo trava; senha do administrador em aberto | 🟡 | Baixo |
 | 9 | Retenções além do ISS | 🔴 | Médio |
 | 10 | Conteúdo dos relatórios — público e layout confirmados | 🟡 | Médio |
-| 11 | Forma de instalação no servidor | 🔴 | Médio |
+| 11 | Forma de instalação — virou nuvem em 05/10; provedor em aberto | 🔴 | Médio |
 | 12 | Recuperação de senha sem servidor de e-mail | 🟡 | Baixo |
 | 13 | Periodicidade da medição — mensal e amarelo 10 dias antes confirmados | 🟡 | Baixo |
 | 14 | Consórcio: contrato com duas empresas | 🟡 | Baixo |
@@ -477,7 +477,46 @@ ela não depende da resposta. O que a resposta define são as colunas e as
 consultas. Vale levar um relatório impresso à reunião: é mais fácil o cliente
 dizer o que falta olhando uma folha do que descrevendo do zero.
 
-## 11. Como o sistema será instalado no servidor 🟡
+## 11. Como o sistema será instalado no servidor 🔴 virou nuvem, provedor em aberto
+
+> ### 🔄 Mudou em 05/10/2026 — o sistema vai para a nuvem
+>
+> A diretoria (Júnior) pediu para "jogar pra internet, fica mais fácil". O
+> engenheiro do cliente repassou, mandou um acesso WinSCP da HostGator e, na
+> conversa seguinte, desistiu dela: a conta é **pessoal** dele, administrada pelo
+> Henrique, com outros produtos dele no mesmo plano, e é **hospedagem
+> compartilhada só PHP** — não roda Node nem PostgreSQL. Ele pediu indicação de
+> outra hospedagem e quer o sistema no ar o quanto antes, acessado por um botão no
+> site da AJA.
+>
+> **Tudo o que está abaixo deste quadro é histórico do plano on-premise.** O kit
+> Windows (etapa 14) fica no repositório só como referência.
+>
+> **Opções em avaliação:**
+>
+> | | VPS (Hostinger KVM 2 ou StayCloud) | Vercel + Neon + Cloudflare R2 |
+> |---|---|---|
+> | Arquivos de até 300 MB | Configuração (proxy e `proxy.ts`) | Upload direto do navegador ao R2 (desenvolvimento) |
+> | Operação | Servidor, patches, backup e firewall por nossa conta | Quase nenhuma |
+> | Freio de login (em memória) | Funciona (um processo só) | **Não funciona** — precisa ir para o banco |
+> | Cobrança | Real | Dólar |
+>
+> **Em aberto com o cliente:**
+>
+> - Qual opção, e **contas no nome e no cartão da AJA** — o próprio engenheiro
+>   quer separar as coisas da empresa do cadastro pessoal dele.
+> - **Dado real na nuvem.** Em 09/09 o Júnior não queria nada público e o
+>   combinado era a base de teste ser descartável. Agora o cliente usa a
+>   homologação com obras reais e o sistema inteiro vai para a internet: confirmar
+>   se a base da homologação **vira a produção** ou se começa do zero.
+> - Endereço: subdomínio de `ajaempresarial.com.br` (registro DNS feito pelo
+>   Henrique) ou o endereço do provedor.
+> - Responsável por pagamento da hospedagem e por receber alertas de queda e de
+>   falha de backup — o contrato punha backup e disponibilidade com o cliente
+>   porque o servidor era dele.
+> - **Aditivo de escopo**: o contrato diz *"100% on-premise, sem nuvem, sem
+>   domínio público"*, e a instalação estava fora das 140h.
+> - Trocar a senha do acesso WinSCP, que foi mandada por mensagem.
 
 O contrato diz que a instalação é *"a definir após visita técnica à
 infraestrutura do cliente"* e está fora das 140h.
@@ -1221,8 +1260,9 @@ Registrados para não voltarem à mesa:
 - **Rerratificação guarda só o agregado** (percentual alcançado e valor
   impactado), sem detalhamento item a item — isso já consta na planilha
   apresentada ao órgão, que fica anexada.
-- **Armazenamento 100% local**, sem nuvem. Arquivos grandes (~300MB) não são
-  problema porque residem no servidor da empresa.
+- ~~**Armazenamento 100% local**, sem nuvem.~~ **Reaberto em 05/10/2026**: o
+  sistema vai para a nuvem (ponto #11). Arquivos de ~300MB voltam a ser
+  problema na Vercel, que corta requisições acima de ~4,5MB.
 - **Uma obra tem exatamente um contrato** (ponto #4, confirmado em
   04/09/2026): sem lotes, sem contratos complementares, sem guarda-chuva.
 - **Banco novo**, sem migração de dados legados.
@@ -1263,6 +1303,7 @@ Registrados para não voltarem à mesa:
   de prazos da empresa.
 - **Senha do administrador.** O seed cria um admin com senha padrão. Trocar na
   instalação é obrigatório.
-- **Acesso por tablet/celular** na obra: os requisitos pedem responsividade,
-  mas o acesso é só pela rede local. Confirmar se existe Wi-Fi da empresa
-  alcançando quem vai usar em campo — senão a responsividade não é usada.
+- **Acesso por tablet/celular** na obra: os requisitos pedem responsividade.
+  Com o sistema na internet (05/10/2026) o acesso de fora do escritório passa a
+  existir — confirmar quem vai usar de fora, já que em 09/09 o engenheiro em
+  campo não acessava o sistema.

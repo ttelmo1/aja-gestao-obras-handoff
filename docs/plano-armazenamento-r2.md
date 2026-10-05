@@ -191,12 +191,14 @@ troca: os bytes continuam no banco.
 - Revisar `serverActions.bodySizeLimit` (320 MB) em `next.config.ts`: sem
   arquivo passando por Server Action, volta a um valor pequeno.
 
-### Fase 8 — Backup (~2h)
+### Fase 8 — Backup (~2h) ✅
 
-- GitHub Actions agendado, diário: `pg_dump` do Neon e cópia do bucket
-  (`rclone sync`) para Backblaze B2, conta da AJA. Retenção definida no B2.
-- Aviso de falha por e-mail (falha do próprio workflow, ou Healthchecks.io).
-- Restauração testada uma vez antes de liberar para o cliente.
+`scripts/backup/backup.sh`, rodado todo dia pelo
+`.github/workflows/backup.yml`: dump do Neon cifrado (AES-256) e cópia dos
+documentos do R2 para o Backblaze B2, conta da AJA. Retenção por regra do
+bucket (35 dias de diários, 13 meses de mensais). Restauração com
+`scripts/backup/restaurar-banco.sh`. Configuração, segredos e roteiro de
+restauração em [`backup.md`](backup.md).
 
 ### Fase 9 — Validação e documentação (~2h)
 

@@ -1692,7 +1692,7 @@ fora do provedor.
 | 5 | Freio de login no banco | ~2h | ✅ |
 | 6 | Migração de `ArquivoBlob` para o bucket | ~2h | ✅ script pronto; roda na homologação depois da fase 7 |
 | 7 | Infraestrutura (contas da AJA, buckets, CORS, domínio) | ~2h | ⬜ |
-| 8 | Backup diário para outro provedor | ~2h | ⬜ |
+| 8 | Backup diário para outro provedor | ~2h | ✅ pronto; liga quando houver as contas da AJA |
 | 9 | Validação em homolog e documentação | ~2h | ⬜ |
 
 ### Feito em 05/10/2026 (fases 1 a 5)
@@ -1771,3 +1771,15 @@ conflito sem sobrescrever (saída com código 1) e pulou o órfão; a segunda
 execução não copiou nada. Com o sistema em `STORAGE_DRIVER=s3`, documentos
 antigos abriram pelo bucket com hash igual ao gravado no banco, inclusive o
 de 40 MB.
+
+### Fase 8 — feito em 05/10/2026
+
+Backup diário em [`backup.md`](backup.md): `scripts/backup/backup.sh`
+(dump cifrado + cópia dos documentos para o Backblaze B2) chamado pelo
+workflow `backup.yml` às 04h, e `scripts/backup/restaurar-banco.sh`.
+**Ensaiado de ponta a ponta** contra o bucket de desenvolvimento no lugar do
+B2 — backup, restauração num banco vazio com as mesmas contagens, documentos
+idênticos (`rclone check`), trava da auditoria restaurada, senha errada
+recusada. Para ligar: contas da AJA (B2, token só de leitura do R2, usuário
+só de leitura no Neon), segredos no GitHub e o workflow na branch padrão —
+o GitHub só agenda a partir dela.

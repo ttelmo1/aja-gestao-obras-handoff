@@ -1,16 +1,16 @@
 import { createReadStream } from "node:fs";
-import { mkdir, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, rm, stat, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { Readable } from "node:stream";
 
 import { env } from "../env";
 import { resolverDentroDe } from "@/modules/documentos/caminho";
-import { prepararArquivo } from "./comum";
-import type { ArquivoSalvo, Driver } from "./tipos";
+import { consumirCorpo, prepararArquivo } from "./comum";
+import type { ArquivoSalvo, Driver, InfoArquivo } from "./tipos";
 
 /**
- * Armazenamento no disco do servidor do cliente — o driver da instalação
- * on-premise, e o padrão.
+ * Armazenamento em pasta local — o padrão, usado no desenvolvimento. Foi o
+ * driver da instalação on-premise, abandonada em 05/10/2026.
  *
  * A pasta fica **fora de `public/`**: qualquer coisa em `public/` é servida
  * pelo Next sem passar por autenticação, e bastaria adivinhar o nome do
@@ -65,11 +65,38 @@ async function abrirArquivo(
   ) as ReadableStream<Uint8Array>;
 }
 
-async function arquivoExiste(caminhoRelativo: string): Promise<boolean> {
+async function infoArquivo(caminhoRelativo: string): Promise<InfoArquivo | null> {
   try {
-    return (await stat(caminhoAbsoluto(caminhoRelativo))).isFile();
+    const info = await stat(caminhoAbsoluto(caminhoRelativo));
+    return info.isFile() ? { tamanhoBytes: info.size } : null;
   } catch {
-    return false;
+    return null;
+  }
+}
+
+/**
+ * Grava o envio recebido pela rota `/envios/[id]` pedaço a pedaço, sem juntar
+ * o arquivo na memória. Se o tamanho não conferir, o que já foi escrito sai.
+ */
+async function gravarFluxo(
+  caminhoRelativo: string,
+  corpo: ReadableStream<Uint8Array>,
+  tamanhoEsperado: number,
+) {
+  const destino = caminhoAbsoluto(caminhoRelativo);
+  await mkdir(dirname(destino), { recursive: true });
+
+  const arquivo = await open(destino, "wx"); // wx: nunca sobrescreve
+  let completo = false;
+  try {
+    const gravado = await consumirCorpo(corpo, tamanhoEsperado, async (pedaco) => {
+      await arquivo.write(pedaco);
+    });
+    completo = true;
+    return gravado;
+  } finally {
+    await arquivo.close();
+    if (!completo) await rm(destino, { force: true });
   }
 }
 
@@ -89,6 +116,7 @@ async function apagarArquivo(caminhoRelativo: string): Promise<void> {
 export const disco: Driver = {
   salvarArquivo,
   abrirArquivo,
-  arquivoExiste,
+  infoArquivo,
   apagarArquivo,
+  gravarFluxo,
 };

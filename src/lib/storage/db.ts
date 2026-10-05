@@ -1,6 +1,6 @@
 import { prisma } from "../prisma";
-import { prepararArquivo } from "./comum";
-import type { ArquivoSalvo, Driver } from "./tipos";
+import { consumirCorpo, prepararArquivo } from "./comum";
+import type { ArquivoSalvo, Driver, InfoArquivo } from "./tipos";
 
 /**
  * Armazenamento dos bytes no próprio Postgres (`ArquivoBlob`).
@@ -10,10 +10,10 @@ import type { ArquivoSalvo, Driver } from "./tipos";
  * instâncias diferentes não enxergam o mesmo disco. Com os bytes no banco, o
  * cliente sobe um documento hoje e baixa amanhã de outra máquina.
  *
- * Não é o driver da instalação real: um `bytea` por documento infla o dump do
- * banco e passa o arquivo inteiro pela conexão. Para os poucos MB de uma
- * demonstração — e com o teto de corpo da plataforma bem abaixo disso — é a
- * troca certa.
+ * Não é o driver de produção: um `bytea` por documento infla o dump do banco
+ * e passa o arquivo inteiro pela conexão, e o teto de corpo da plataforma
+ * (~4,5 MB) continua valendo para o envio. Fica até os arquivos da
+ * homologação serem migrados para o bucket (`STORAGE_DRIVER=s3`).
  */
 
 async function salvarArquivo(
@@ -52,12 +52,29 @@ async function abrirArquivo(
   });
 }
 
-async function arquivoExiste(caminhoRelativo: string): Promise<boolean> {
-  const registro = await prisma.arquivoBlob.findUnique({
-    where: { caminhoRelativo },
-    select: { caminhoRelativo: true },
+async function infoArquivo(caminhoRelativo: string): Promise<InfoArquivo | null> {
+  // `octet_length` no banco: buscar a coluna para medir traria o arquivo
+  // inteiro pela conexão só para saber o tamanho.
+  const linhas = await prisma.$queryRaw<{ tamanho: number }[]>`
+    SELECT octet_length("conteudo")::int AS tamanho
+    FROM "ArquivoBlob" WHERE "caminhoRelativo" = ${caminhoRelativo}`;
+  return linhas[0] ? { tamanhoBytes: linhas[0].tamanho } : null;
+}
+
+/** Junta o envio recebido pela rota `/envios/[id]` e grava numa linha só. */
+async function gravarFluxo(
+  caminhoRelativo: string,
+  corpo: ReadableStream<Uint8Array>,
+  tamanhoEsperado: number,
+) {
+  const pedacos: Uint8Array[] = [];
+  const gravado = await consumirCorpo(corpo, tamanhoEsperado, async (p) => {
+    pedacos.push(p);
   });
-  return registro !== null;
+  await prisma.arquivoBlob.create({
+    data: { caminhoRelativo, conteudo: Buffer.concat(pedacos) },
+  });
+  return gravado;
 }
 
 async function apagarArquivo(caminhoRelativo: string): Promise<void> {
@@ -71,6 +88,7 @@ async function apagarArquivo(caminhoRelativo: string): Promise<void> {
 export const db: Driver = {
   salvarArquivo,
   abrirArquivo,
-  arquivoExiste,
+  infoArquivo,
   apagarArquivo,
+  gravarFluxo,
 };

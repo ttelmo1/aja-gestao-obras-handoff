@@ -1,19 +1,25 @@
 import "server-only";
 
 import { driver } from "./driver";
-import type { ArquivoSalvo } from "./tipos";
+import type {
+  ArquivoSalvo,
+  DestinoEnvio,
+  InfoArquivo,
+  OpcoesDownload,
+} from "./tipos";
 
 /**
  * Fachada do armazenamento de documentos.
  *
- * O driver é escolhido por `STORAGE_DRIVER` (ver `driver.ts`): `disco` na
- * instalação on-premise, `db` no deploy de demonstração. A API é a mesma nos
- * dois, então rota e Server Action não sabem qual está ativo.
+ * O driver é escolhido por `STORAGE_DRIVER` (ver `driver.ts`): `s3` em
+ * produção, `disco` no desenvolvimento, `db` na demonstração antiga. A API é a
+ * mesma nos três, então rota e Server Action não sabem qual está ativo.
  *
  * A resolução acontece a cada chamada, e não no topo do módulo, para que o
  * `env()` já esteja validado quando a primeira requisição chegar.
  */
-export type { ArquivoSalvo };
+export type { ArquivoSalvo, DestinoEnvio };
+export { novoCaminho, TamanhoNaoConfere } from "./comum";
 
 export function salvarArquivo(
   arquivo: File,
@@ -28,8 +34,47 @@ export function abrirArquivo(
   return driver().abrirArquivo(caminhoRelativo);
 }
 
-export function arquivoExiste(caminhoRelativo: string): Promise<boolean> {
-  return driver().arquivoExiste(caminhoRelativo);
+export function infoArquivo(caminhoRelativo: string): Promise<InfoArquivo | null> {
+  return driver().infoArquivo(caminhoRelativo);
+}
+
+/**
+ * Para onde o navegador manda os bytes de um envio autorizado.
+ *
+ * Com bucket, direto para ele (URL assinada). Sem bucket, para a rota
+ * `/envios/[id]` do próprio sistema, que grava pelo driver local. A tela faz
+ * o mesmo `PUT` nos dois casos — o desenvolvimento local exercita o mesmo
+ * código da produção.
+ */
+export function destinoDoEnvio(
+  envioId: string,
+  caminhoRelativo: string,
+  tamanhoBytes: number,
+  tipoConteudo: string,
+): Promise<DestinoEnvio> {
+  const d = driver();
+  if (d.urlDeEnvio) return d.urlDeEnvio(caminhoRelativo, tamanhoBytes, tipoConteudo);
+  return Promise.resolve({
+    url: `/envios/${envioId}`,
+    cabecalhos: { "Content-Type": tipoConteudo },
+  });
+}
+
+/** `null` quando o driver não recebe envio pelo servidor (o `s3`). */
+export function gravarFluxo(
+  caminhoRelativo: string,
+  corpo: ReadableStream<Uint8Array>,
+  tamanhoEsperado: number,
+): Promise<{ tamanhoBytes: number; hashSha256: string }> | null {
+  return driver().gravarFluxo?.(caminhoRelativo, corpo, tamanhoEsperado) ?? null;
+}
+
+/** `null` quando o driver não tem link direto — aí a rota serve os bytes. */
+export function linkDeDownload(
+  caminhoRelativo: string,
+  opcoes: OpcoesDownload,
+): Promise<string> | null {
+  return driver().urlDeDownload?.(caminhoRelativo, opcoes) ?? null;
 }
 
 export function apagarArquivo(caminhoRelativo: string): Promise<void> {

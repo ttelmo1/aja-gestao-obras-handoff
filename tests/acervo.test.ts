@@ -164,13 +164,15 @@ describe("acervo do contrato", () => {
 
 describe("os documentos necessários de cada tela", () => {
   // A lista que a Fernanda mandou em 21/09/2026, na ordem em que ela veio —
-  // menos "Medições contratuais", que saiu em 24/09/2026.
-  it("o contrato cobra os dezesseis documentos do cliente, na ordem", () => {
+  // menos "Medições contratuais", que saiu em 24/09/2026, e mais a planilha
+  // orçamentária, que entrou em 09/10/2026.
+  it("o contrato cobra os dezessete documentos do cliente, na ordem", () => {
     assert.deepEqual(ESPERADOS_DA_OBRA, [
       TipoDocumento.TERMO_ADJUDICACAO,
       TipoDocumento.TERMO_HOMOLOGACAO,
       TipoDocumento.EMPENHO,
       TipoDocumento.CONTRATO,
+      TipoDocumento.PLANILHA_ORCAMENTARIA,
       TipoDocumento.PUBLICACAO_EXTRATO_CONTRATO,
       TipoDocumento.APOLICE_SEGURO,
       TipoDocumento.PUBLICACAO_COMISSAO_FISCALIZACAO,
@@ -193,6 +195,7 @@ describe("os documentos necessários de cada tela", () => {
     assert.ok(ehOpcional(TipoDocumento.APOSTILAMENTO));
     assert.ok(ehOpcional(TipoDocumento.OUTRO));
     assert.equal(ehOpcional(TipoDocumento.CONTRATO), false);
+    assert.equal(ehOpcional(TipoDocumento.PLANILHA_ORCAMENTARIA), false);
 
     const linhas = acervoDoContrato({
       esperados: ESPERADOS_DA_OBRA,

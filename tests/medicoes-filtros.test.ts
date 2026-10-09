@@ -27,10 +27,15 @@ describe("filtros da aba de medições", () => {
     assert.deepEqual(numeros(f), [1, 2, 3, 4, 5]);
   });
 
-  it("pagamento pendente é toda medição no processo que não foi paga", () => {
+  it("pagamento pendente é toda medição protocolada que não foi paga", () => {
     const f = lerFiltrosMedicao({ pagamento: "pendente" });
     assert.equal(temFiltroMedicao(f), true);
-    assert.deepEqual(numeros(f), [2, 3, 4]);
+    assert.deepEqual(numeros(f), [2, 3]);
+  });
+
+  // 09/10/2026: rascunho não soma com as aprovadas.
+  it("rascunho não é pendência de pagamento", () => {
+    assert.equal(pagamentoPendente(StatusMedicao.RASCUNHO), false);
   });
 
   // Rejeitada saiu do ciclo: ninguém espera pagamento dela.

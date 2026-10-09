@@ -52,11 +52,17 @@ export function temFiltroMedicao(f: FiltrosMedicao): boolean {
 }
 
 /**
- * Pagamento pendente: a medição está no processo e ainda não foi paga.
- * `REJEITADA` não conta — ela saiu do ciclo, ninguém espera pagamento dela.
+ * Pagamento pendente: a medição foi protocolada no órgão e ainda não foi paga.
+ *
+ * - `REJEITADA` não conta — ela saiu do ciclo, ninguém espera pagamento dela.
+ * - `RASCUNHO` também não, desde o pedido do Junior pela Fernanda em
+ *   09/10/2026: separar as medições em rascunho *"para não somar com o total
+ *   das que já estão aprovadas"*. Rascunho ainda não foi entregue ao órgão —
+ *   nem pode ser marcado como pago (`podeMarcarComoPaga`). Na lista de
+ *   pagamentos pendentes ele aparece num bloco à parte, fora da soma.
  */
 export function pagamentoPendente(status: StatusMedicao): boolean {
-  return emAndamento(status);
+  return emAndamento(status) && status !== StatusMedicao.RASCUNHO;
 }
 
 export function filtrarMedicoes<M extends { status: StatusMedicao }>(

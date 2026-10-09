@@ -14,6 +14,9 @@ export const ROTULOS_TIPO_DOCUMENTO: Record<TipoDocumento, string> = {
   TERMO_HOMOLOGACAO: "Termo de homologação",
   EMPENHO: "Empenho",
   CONTRATO: "Contrato",
+  // Pedido do Junior pela Fernanda em 09/10/2026 — "Planilha Orçamentária,
+  // precisa ter", documento obrigatório. Vem junto do contrato.
+  PLANILHA_ORCAMENTARIA: "Planilha orçamentária",
   PUBLICACAO_EXTRATO_CONTRATO: "Publicação do extrato de contrato",
   APOLICE_SEGURO: "Apólice de seguro / Risco engenharia",
   PUBLICACAO_COMISSAO_FISCALIZACAO: "Publicação de comissão de fiscalização",
@@ -68,13 +71,15 @@ export const TIPOS_POR_CONTEXTO: Record<
 > = {
   // A lista de documentos do contrato, dita pelo cliente em 21/09/2026 e
   // nesta ordem — sem "Medições contratuais", que saiu em 24/09/2026 porque
-  // documento de medição fica só na medição. `OUTRO` fecha a lista: é a linha por onde entra o que não
+  // documento de medição fica só na medição. A planilha orçamentária entrou
+  // depois do contrato em 09/10/2026. `OUTRO` fecha a lista: é a linha por onde entra o que não
   // tem tipo próprio, e a única que se repete sem limite.
   obra: [
     TipoDocumento.TERMO_ADJUDICACAO,
     TipoDocumento.TERMO_HOMOLOGACAO,
     TipoDocumento.EMPENHO,
     TipoDocumento.CONTRATO,
+    TipoDocumento.PLANILHA_ORCAMENTARIA,
     TipoDocumento.PUBLICACAO_EXTRATO_CONTRATO,
     TipoDocumento.APOLICE_SEGURO,
     TipoDocumento.PUBLICACAO_COMISSAO_FISCALIZACAO,

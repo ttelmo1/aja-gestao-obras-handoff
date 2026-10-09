@@ -1599,6 +1599,25 @@ Pedidos da Fernanda ao lançar as obras reais na homologação.
     tipo), o farol durante a suspensão e se suspensa é o mesmo que Paralisada
     — ponto #26.
 
+16. ✅ **Pedidos de 09/10/2026.** Do Junior pela Fernanda.
+
+    | Pedido | Estado |
+    | --- | --- |
+    | Medições em rascunho separadas na lista de pagamentos pendentes, fora do total | ✅ |
+    | "Planilha orçamentária" na aba Documentos, obrigatória | ✅ |
+
+    **Rascunho deixou de ser pagamento pendente.** `pagamentoPendente`, em
+    `modules/medicoes/filtros.ts`, passou a valer só para Protocolada e
+    Aprovada. Assim o quadro do painel, a lista, o indicador da aba Medições
+    e o filtro "Pagamento pendente" continuam respondendo igual. Os
+    rascunhos aparecem num bloco à parte, abaixo da lista, com total próprio
+    (`medicoesEmRascunho`).
+
+    **Planilha orçamentária é tipo novo** (`PLANILHA_ORCAMENTARIA`), logo
+    depois do contrato na lista. Fica separada do tipo genérico "Planilha",
+    que continua sendo usado na rerratificação. Ela é cobrada e aceita um
+    arquivo só: a planilha de aditivo vai na rerratificação.
+
 ## Etapa 14 — Empacotamento e instalação on-premise ⬜
 
 **Fora das 140h contratadas.** Plano completo, com o desenho físico e o

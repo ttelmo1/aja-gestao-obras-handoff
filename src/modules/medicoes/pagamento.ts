@@ -116,9 +116,28 @@ export type LinhaPagamentoPendente = {
 export function pagamentosPendentes(
   obras: ObraComMedicoes[],
 ): LinhaPagamentoPendente[] {
+  return linhasDasObras(obras, (m) => pagamentoPendente(m.status));
+}
+
+/**
+ * Medições em rascunho, na mesma ordem — o bloco que fica abaixo da lista de
+ * pagamentos pendentes, com total próprio. Pedido do Junior pela Fernanda em
+ * 09/10/2026: *"separe as medições em rascunho"*, *"para não somar com o total
+ * das que já estão aprovadas"*.
+ */
+export function medicoesEmRascunho(
+  obras: ObraComMedicoes[],
+): LinhaPagamentoPendente[] {
+  return linhasDasObras(obras, (m) => m.status === StatusMedicao.RASCUNHO);
+}
+
+function linhasDasObras(
+  obras: ObraComMedicoes[],
+  entra: (m: ObraComMedicoes["medicoes"][number]) => boolean,
+): LinhaPagamentoPendente[] {
   return obras.flatMap((o) =>
     o.medicoes
-      .filter((m) => pagamentoPendente(m.status))
+      .filter(entra)
       .sort((a, b) => a.numero - b.numero)
       .map((m) => ({
         obraId: o.id,

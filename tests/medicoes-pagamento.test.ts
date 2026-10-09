@@ -5,6 +5,7 @@ import { StatusMedicao } from "@/generated/prisma/enums";
 import {
   erroNaDataDoPagamento,
   erroNaSituacaoPeloFormulario,
+  medicoesEmRascunho,
   pagamentosPendentes,
   podeMarcarComoPaga,
   totalPendente,
@@ -72,6 +73,7 @@ describe("pagamentos pendentes do painel", () => {
         { id: "a8", numero: 8, competencia, status: StatusMedicao.APROVADA, valorMedido: "730778.06" },
         { id: "a7", numero: 7, competencia, status: StatusMedicao.PAGA, valorMedido: "1267794.67" },
         { id: "a9", numero: 9, competencia, status: StatusMedicao.PROTOCOLADA, valorMedido: "100.00" },
+        { id: "a10", numero: 10, competencia, status: StatusMedicao.RASCUNHO, valorMedido: "50000.00" },
       ],
     },
     {
@@ -81,11 +83,12 @@ describe("pagamentos pendentes do painel", () => {
       medicoes: [
         { id: "b1", numero: 1, competencia, status: StatusMedicao.REJEITADA, valorMedido: "5.00" },
         { id: "b2", numero: 2, competencia, status: StatusMedicao.APROVADA, valorMedido: "24240.31" },
+        { id: "b3", numero: 3, competencia, status: StatusMedicao.RASCUNHO, valorMedido: "0.50" },
       ],
     },
   ];
 
-  it("lista só o que não foi pago nem rejeitado, na ordem das obras e das medições", () => {
+  it("lista só o que foi protocolado e não pago, na ordem das obras e das medições", () => {
     const linhas = pagamentosPendentes(obras);
     assert.deepEqual(
       linhas.map((l) => l.medicaoId),
@@ -97,6 +100,15 @@ describe("pagamentos pendentes do painel", () => {
     const total = totalPendente(pagamentosPendentes(obras));
     assert.equal(total.quantidade, 3);
     assert.equal(total.valor.toFixed(2), "755118.37");
+  });
+
+  it("rascunhos ficam num bloco à parte, com total próprio", () => {
+    const linhas = medicoesEmRascunho(obras);
+    assert.deepEqual(
+      linhas.map((l) => l.medicaoId),
+      ["a10", "b3"],
+    );
+    assert.equal(totalPendente(linhas).valor.toFixed(2), "50000.50");
   });
 
   it("sem pendência, zero", () => {
